@@ -21,7 +21,8 @@ def _import_pages():
 
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
+if __name__ in {"__main__", "__mp_main__"}:
     _import_pages()
     # Start server
     port = int(os.environ.get('PORT', 8080))

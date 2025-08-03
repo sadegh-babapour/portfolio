@@ -8,6 +8,7 @@ NAV_LINKS = [
     ('Resume', '/resume'),
     ('Projects', '/projects'),
     ('Contact', '/contact'),
+    ('Dashboard', '/dashboard')
 ]
 
 HEADER_PROPS = dict(

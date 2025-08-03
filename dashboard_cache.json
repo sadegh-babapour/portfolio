@@ -1,0 +1,190 @@
+{
+  "cache_date": "2025-08-03",
+  "last_updated": "2025-08-03T17:21:25.732827",
+  "data": {
+    "daily_stats": [
+      {
+        "id": 4,
+        "date": "2024-08-04",
+        "total_attendance": 3850,
+        "general_admissions": 2600,
+        "member_admissions": 1250,
+        "daily_revenue": 68290.0,
+        "weather_condition": "Sunny",
+        "is_weekend": true,
+        "special_event": null,
+        "created_at": "2025-08-03T22:44:59.695003"
+      },
+      {
+        "id": 3,
+        "date": "2024-08-03",
+        "total_attendance": 4100,
+        "general_admissions": 2800,
+        "member_admissions": 1300,
+        "daily_revenue": 72350.25,
+        "weather_condition": "Partly Cloudy",
+        "is_weekend": true,
+        "special_event": null,
+        "created_at": "2025-08-03T22:44:59.695003"
+      },
+      {
+        "id": 2,
+        "date": "2024-08-02",
+        "total_attendance": 3200,
+        "general_admissions": 2100,
+        "member_admissions": 1100,
+        "daily_revenue": 58420.75,
+        "weather_condition": "Sunny",
+        "is_weekend": false,
+        "special_event": "Summer Concert",
+        "created_at": "2025-08-03T22:44:59.695003"
+      },
+      {
+        "id": 1,
+        "date": "2024-08-01",
+        "total_attendance": 2450,
+        "general_admissions": 1820,
+        "member_admissions": 630,
+        "daily_revenue": 45670.5,
+        "weather_condition": "Sunny",
+        "is_weekend": false,
+        "special_event": null,
+        "created_at": "2025-08-03T22:44:59.695003"
+      }
+    ],
+    "membership_summary": [
+      {
+        "id": 3,
+        "period_date": "2024-08-02",
+        "new_memberships": 38,
+        "renewals": 95,
+        "expirations": 12,
+        "active_members": 8476,
+        "membership_revenue": 13680.0,
+        "membership_type": "Annual",
+        "created_at": "2025-08-03T22:44:59.695003"
+      },
+      {
+        "id": 4,
+        "period_date": "2024-08-02",
+        "new_memberships": 30,
+        "renewals": 75,
+        "expirations": 10,
+        "active_members": 2115,
+        "membership_revenue": 4800.0,
+        "membership_type": "Monthly",
+        "created_at": "2025-08-03T22:44:59.695003"
+      },
+      {
+        "id": 1,
+        "period_date": "2024-08-01",
+        "new_memberships": 45,
+        "renewals": 120,
+        "expirations": 15,
+        "active_members": 8450,
+        "membership_revenue": 15750.0,
+        "membership_type": "Annual",
+        "created_at": "2025-08-03T22:44:59.695003"
+      },
+      {
+        "id": 2,
+        "period_date": "2024-08-01",
+        "new_memberships": 25,
+        "renewals": 80,
+        "expirations": 8,
+        "active_members": 2100,
+        "membership_revenue": 4200.0,
+        "membership_type": "Monthly",
+        "created_at": "2025-08-03T22:44:59.695003"
+      }
+    ],
+    "revenue_summary": [
+      {
+        "id": 4,
+        "date": "2024-08-04",
+        "admission_revenue": 44290.0,
+        "membership_revenue": 14250.0,
+        "food_beverage_revenue": 22180.6,
+        "merchandise_revenue": 7680.4,
+        "parking_revenue": 3850.0,
+        "total_revenue": 92251.0,
+        "created_at": "2025-08-03T22:44:59.695003"
+      },
+      {
+        "id": 3,
+        "date": "2024-08-03",
+        "admission_revenue": 48350.25,
+        "membership_revenue": 12680.0,
+        "food_beverage_revenue": 24750.8,
+        "merchandise_revenue": 8950.75,
+        "parking_revenue": 4100.0,
+        "total_revenue": 98831.8,
+        "created_at": "2025-08-03T22:44:59.695003"
+      },
+      {
+        "id": 2,
+        "date": "2024-08-02",
+        "admission_revenue": 35820.75,
+        "membership_revenue": 18480.0,
+        "food_beverage_revenue": 18920.5,
+        "merchandise_revenue": 6890.5,
+        "parking_revenue": 3200.0,
+        "total_revenue": 83311.75,
+        "created_at": "2025-08-03T22:44:59.695003"
+      },
+      {
+        "id": 1,
+        "date": "2024-08-01",
+        "admission_revenue": 28450.5,
+        "membership_revenue": 15750.0,
+        "food_beverage_revenue": 12680.75,
+        "merchandise_revenue": 4590.25,
+        "parking_revenue": 2200.0,
+        "total_revenue": 63671.5,
+        "created_at": "2025-08-03T22:44:59.695003"
+      }
+    ],
+    "member_visits": [
+      {
+        "id": 3,
+        "visit_date": "2024-08-02",
+        "member_type": "Annual",
+        "visit_count": 720,
+        "avg_visit_duration": 7.2,
+        "guest_count": 298,
+        "peak_hour": 15,
+        "created_at": "2025-08-03T22:44:59.695003"
+      },
+      {
+        "id": 4,
+        "visit_date": "2024-08-02",
+        "member_type": "Monthly",
+        "visit_count": 205,
+        "avg_visit_duration": 4.8,
+        "guest_count": 89,
+        "peak_hour": 14,
+        "created_at": "2025-08-03T22:44:59.695003"
+      },
+      {
+        "id": 1,
+        "visit_date": "2024-08-01",
+        "member_type": "Annual",
+        "visit_count": 630,
+        "avg_visit_duration": 6.5,
+        "guest_count": 245,
+        "peak_hour": 14,
+        "created_at": "2025-08-03T22:44:59.695003"
+      },
+      {
+        "id": 2,
+        "visit_date": "2024-08-01",
+        "member_type": "Monthly",
+        "visit_count": 180,
+        "avg_visit_duration": 4.2,
+        "guest_count": 67,
+        "peak_hour": 13,
+        "created_at": "2025-08-03T22:44:59.695003"
+      }
+    ]
+  }
+}

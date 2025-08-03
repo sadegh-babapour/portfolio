@@ -2,6 +2,7 @@ from fastapi.staticfiles import StaticFiles
 from nicegui import ui
 from nicegui import app as fastapi_app
 import os
+from dotenv import load_dotenv
 
 # Mount static
 fastapi_app.mount('/static', StaticFiles(directory='static'), name='static')
@@ -17,6 +18,7 @@ def _import_pages():
     import app.pages.resume
     import app.pages.projects
     import app.pages.contact
+    import app.pages.dashboard
 
 
 

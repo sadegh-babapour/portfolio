@@ -1,5 +1,4 @@
-nicegui
-fastapi
-uvicorn
-python-dotenv
-supabase
+fastapi==0.116.1
+nicegui==2.22.1
+python-dotenv==1.1.1
+supabase==2.17.0

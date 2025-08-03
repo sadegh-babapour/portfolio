@@ -1,6 +1,7 @@
 from fastapi.staticfiles import StaticFiles
 from nicegui import ui
 from nicegui import app as fastapi_app
+import os
 
 # Mount static
 fastapi_app.mount('/static', StaticFiles(directory='static'), name='static')
@@ -17,7 +18,11 @@ def _import_pages():
     import app.pages.projects
     import app.pages.contact
 
-_import_pages()
 
-# Start server
-ui.run(title='My Portfolio SPA', dark=False)
+
+
+if __name__ == "__main__":
+    _import_pages()
+    # Start server
+    port = int(os.environ.get('PORT', 8080))
+    ui.run(title='My Portfolio SPA',port=port, host='0.0.0.0', dark=False)

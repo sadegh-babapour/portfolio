@@ -22,26 +22,26 @@ def get_supabase_client():
     key = os.environ.get("SUPABASE_KEY")
     return create_client(url, key)
 
-# # Data fetching functions
-# def fetch_daily_stats():
-#     supabase = get_supabase_client()
-#     response = supabase.table('daily_stats').select("*").order('date', desc=True).limit(30).execute()
-#     return response.data
+# Data fetching functions
+def fetch_daily_stats():
+    supabase = get_supabase_client()
+    response = supabase.table('daily_stats').select("*").order('date', desc=True).limit(30).execute()
+    return response.data
 
-# def fetch_membership_summary():
-#     supabase = get_supabase_client()
-#     response = supabase.table('membership_summary').select("*").order('period_date', desc=True).execute()
-#     return response.data
+def fetch_membership_summary():
+    supabase = get_supabase_client()
+    response = supabase.table('membership_summary').select("*").order('period_date', desc=True).execute()
+    return response.data
 
-# def fetch_revenue_summary():
-#     supabase = get_supabase_client()
-#     response = supabase.table('revenue_summary').select("*").order('date', desc=True).limit(30).execute()
-#     return response.data
+def fetch_revenue_summary():
+    supabase = get_supabase_client()
+    response = supabase.table('revenue_summary').select("*").order('date', desc=True).limit(30).execute()
+    return response.data
 
-# def fetch_member_visits():
-#     supabase = get_supabase_client()
-#     response = supabase.table('member_visits').select("*").order('visit_date', desc=True).execute()
-#     return response.data
+def fetch_member_visits():
+    supabase = get_supabase_client()
+    response = supabase.table('member_visits').select("*").order('visit_date', desc=True).execute()
+    return response.data
 
 def get_cached_dashboard_data():
     """

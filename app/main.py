@@ -27,5 +27,6 @@ def _import_pages():
 if __name__ in {"__main__", "__mp_main__"}:
     _import_pages()
     # Start server
-    port = int(os.environ.get('PORT', 443))
-    ui.run(title='My Portfolio SPA',port=port, host='0.0.0.0', dark=False)
+    # port = int(os.environ.get('PORT', 443))
+    ui.run(title='My Portfolio SPA',port=int(os.getenv("PORT", default=443)), host='0.0.0.0', dark=False)
+    

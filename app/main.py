@@ -1,17 +1,29 @@
 from fastapi.staticfiles import StaticFiles
 from nicegui import ui
 from nicegui import app as fastapi_app
+import asyncio
 import os
+import logging
 from dotenv import load_dotenv
 
-# Mount static
+load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s — %(message)s",
+)
+
+# Mount static files
 fastapi_app.mount('/static', StaticFiles(directory='static'), name='static')
 
-# Import components
-# from app.components.navbar import drawer, with_layout
+# Components
 from app.components.footer import footer
 
-# Register pages (each uses @with_layout)
+# DB pool + poller (transit map)
+from app.services.db import init_pool
+from app.services.poller import start_poller
+
+
 def _import_pages():
     import app.pages.home
     import app.pages.about
@@ -19,14 +31,21 @@ def _import_pages():
     import app.pages.projects
     import app.pages.contact
     import app.pages.dashboard
+    # import app.pages.transit_map   # NEW
 
 
+@fastapi_app.on_startup
+async def startup():
+    """Initialise DB pool and launch the transit poller as a background task."""
+    init_pool()
+    asyncio.create_task(start_poller())
 
 
-# if __name__ == "__main__":
 if __name__ in {"__main__", "__mp_main__"}:
     _import_pages()
-    # Start server
-    # port = int(os.environ.get('PORT', 443))
-    ui.run(title='My Portfolio SPA',port=int(os.getenv("PORT", default=443)), host='0.0.0.0', dark=False)
-    
+    ui.run(
+        title='My Portfolio',
+        port=int(os.getenv("PORT", default=8080)),
+        host='0.0.0.0',
+        dark=False,
+    )

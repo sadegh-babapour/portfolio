@@ -31,7 +31,7 @@ def _import_pages():
     import app.pages.projects
     import app.pages.contact
     import app.pages.dashboard
-    # import app.pages.transit_map   # NEW
+    import app.pages.transit_map   # NEW
 
 
 @fastapi_app.on_startup

@@ -58,7 +58,7 @@ def _decode_feed(raw_bytes: bytes) -> list[dict]:
 
 async def poll_once() -> int:
     """Fetch feed, decode, write to DB. Returns number of vehicles written."""
-    async with httpx.AsyncClient(timeout=15) as client:
+    async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
         resp = await client.get(FEED_URL)
         resp.raise_for_status()
 

@@ -1,109 +1,265 @@
-# app/pages/transit_map.py
-# Live Calgary Transit map — Leaflet.js via NiceGUI ui.html
-# Refreshes every 30 seconds, shows current + ghost positions,
-# colours stale buses orange, supports route and quadrant filtering.
+# # app/pages/transit_map.py
+# import asyncio
+# import random
+# from nicegui import ui
+# from app.components.navbar import with_layout
+# from app.services.db import fetch_latest_vehicles, fetch_route_ids
+# from app.services import poller as poller_service
 
+# QUADRANTS_FILTER = ['All', 'NE', 'NW', 'SE', 'SW']
+
+# QUADRANT_COLOURS = {
+#     'NE': '#4A90D9',
+#     'NW': '#A78BFA',
+#     'SE': '#34D399',
+#     'SW': '#FB923C',
+# }
+# STALE_COLOUR   = '#F87171'
+# DEFAULT_COLOUR = '#4A90D9'
+
+# TILE_DARK  = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+# TILE_LIGHT = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+# TILE_ATTRIBUTION = '© OpenStreetMap contributors © CARTO'
+
+# MAX_PER_QUADRANT = 5
+
+
+# def _colour(v: dict) -> str:
+#     if v['is_stale']:
+#         return STALE_COLOUR
+#     return QUADRANT_COLOURS.get(v['quadrant'], DEFAULT_COLOUR)
+
+
+# def _sample_vehicles(vehicles: list[dict]) -> list[dict]:
+#     """Return up to MAX_PER_QUADRANT vehicles per quadrant."""
+#     buckets: dict[str, list] = {}
+#     for v in vehicles:
+#         q = v['quadrant'] or 'XX'
+#         buckets.setdefault(q, []).append(v)
+#     result = []
+#     for q, group in buckets.items():
+#         result.extend(random.sample(group, min(MAX_PER_QUADRANT, len(group))))
+#     return result
+
+
+# @ui.page('/transit')
+# @with_layout
+# def transit_map_page():
+#     ui.page_title('Calgary Transit Live Map')
+
+#     current_layers = []
+#     dark_mode      = {'on': True}
+#     countdown      = {'value': 30}
+
+#     # ── header ─────────────────────────────────────────────────────
+#     with ui.row().classes('w-full items-center gap-4 px-4 pt-4 flex-wrap'):
+#         ui.label('🚌 Calgary Transit — Live Map').classes('text-2xl font-bold flex-1')
+#         vehicle_count  = ui.label('').classes('text-grey')
+#         countdown_label = ui.label('Next refresh: 30s').classes('text-grey text-sm')
+#         map_toggle     = ui.button('☀️ Light map').props('flat').classes('ml-2')
+
+#     # ── controls ───────────────────────────────────────────────────
+#     with ui.row().classes('w-full items-center gap-4 px-4 pb-1 flex-wrap'):
+#         quadrant_select = ui.select(
+#             options=QUADRANTS_FILTER,
+#             value='All',
+#             label='Quadrant',
+#         ).classes('w-28')
+
+#         route_ids    = fetch_route_ids()
+#         route_select = ui.select(
+#             options=['All routes'] + route_ids,
+#             value='All routes',
+#             label='Route',
+#         ).classes('w-36')
+
+#         resample_btn = ui.button('🔀 Resample').props('flat')
+
+#         # poller controls
+#         with ui.row().classes('items-center gap-2 ml-auto'):
+#             poller_status = ui.label('● Poller running').classes('text-green text-sm')
+
+#             def pause_poller():
+#                 poller_service.pause()
+#                 poller_status.set_text('⏸ Poller paused')
+#                 poller_status.classes(remove='text-green', add='text-orange')
+#                 pause_btn.set_visibility(False)
+#                 resume_btn.set_visibility(True)
+
+#             def resume_poller():
+#                 poller_service.resume()
+#                 poller_status.set_text('● Poller running')
+#                 poller_status.classes(remove='text-orange', add='text-green')
+#                 pause_btn.set_visibility(True)
+#                 resume_btn.set_visibility(False)
+
+#             pause_btn  = ui.button('⏸ Pause', on_click=pause_poller).props('flat color=orange')
+#             resume_btn = ui.button('▶ Resume', on_click=resume_poller).props('flat color=green')
+#             resume_btn.set_visibility(False)
+
+#     # ── legend ─────────────────────────────────────────────────────
+#     with ui.row().classes('gap-4 px-4 pb-2 items-center flex-wrap'):
+#         for quad, colour in QUADRANT_COLOURS.items():
+#             with ui.row().classes('items-center gap-1'):
+#                 ui.html(f'<span style="display:inline-block;width:12px;height:12px;'
+#                         f'border-radius:50%;background:{colour}"></span>')
+#                 ui.label(quad).classes('text-sm')
+#         with ui.row().classes('items-center gap-1'):
+#             ui.html(f'<span style="display:inline-block;width:12px;height:12px;'
+#                     f'border-radius:50%;background:{STALE_COLOUR}"></span>')
+#             ui.label('Stale').classes('text-sm')
+#         with ui.row().classes('items-center gap-1'):
+#             ui.html('<span style="display:inline-block;width:12px;height:12px;'
+#                     'border-radius:50%;background:#aaa;opacity:0.35"></span>')
+#             ui.label('Ghost').classes('text-sm')
+
+#     # ── map ────────────────────────────────────────────────────────
+#     m = ui.leaflet(
+#         center=(51.0447, -114.0719),
+#         zoom=11,
+#     ).classes('w-full').style('height:640px')
+
+#     m.clear_layers()
+#     tile_layer_state = {
+#         'layer': m.tile_layer(
+#             url_template=TILE_DARK,
+#             options={'attribution': TILE_ATTRIBUTION, 'maxZoom': 19, 'subdomains': 'abcd'},
+#         )
+#     }
+
+#     # ── tile toggle ────────────────────────────────────────────────
+#     def toggle_map_style():
+#         if tile_layer_state['layer']:
+#             m.remove_layer(tile_layer_state['layer'])
+#         if dark_mode['on']:
+#             tile_layer_state['layer'] = m.tile_layer(
+#                 url_template=TILE_LIGHT,
+#                 options={'attribution': TILE_ATTRIBUTION, 'maxZoom': 19, 'subdomains': 'abcd'},
+#             )
+#             dark_mode['on'] = False
+#             map_toggle.set_text('🌙 Dark map')
+#         else:
+#             tile_layer_state['layer'] = m.tile_layer(
+#                 url_template=TILE_DARK,
+#                 options={'attribution': TILE_ATTRIBUTION, 'maxZoom': 19, 'subdomains': 'abcd'},
+#             )
+#             dark_mode['on'] = True
+#             map_toggle.set_text('☀️ Light map')
+
+#     map_toggle.on('click', lambda _: toggle_map_style())
+
+#     # ── refresh ────────────────────────────────────────────────────
+#     async def refresh(resample: bool = False):
+#         countdown['value'] = 30
+#         loop = asyncio.get_event_loop()
+
+#         route = route_select.value
+#         quad  = quadrant_select.value
+
+#         all_vehicles = await loop.run_in_executor(
+#             None,
+#             lambda: fetch_latest_vehicles(
+#                 route_id=None if route == 'All routes' else route,
+#                 quadrant=None if quad  == 'All'        else quad,
+#             )
+#         )
+
+#         display = _sample_vehicles(all_vehicles)
+#         vehicle_count.set_text(
+#             f'{len(all_vehicles)} total · {len(display)} shown '
+#             f'({MAX_PER_QUADRANT}/quadrant)'
+#         )
+
+#         for layer in current_layers:
+#             m.remove_layer(layer)
+#         current_layers.clear()
+
+#         for v in display:
+#             colour    = _colour(v)
+#             speed_kmh = round(v['speed'] * 3.6, 1) if v['speed'] else 0
+#             tooltip   = (
+#                 f"Route {v['route_id'] or '?'} | "
+#                 f"Vehicle {v['vehicle_id']} | "
+#                 f"{speed_kmh} km/h | "
+#                 f"{'⚠️ Stale' if v['is_stale'] else '✅ Moving'}"
+#             )
+
+#             if v['prev_lat'] and v['prev_lon']:
+#                 ghost = m.generic_layer(
+#                     name='circleMarker',
+#                     args=[
+#                         [v['prev_lat'], v['prev_lon']],
+#                         {'radius': 5, 'color': colour, 'fillColor': colour,
+#                          'fillOpacity': 0.25, 'opacity': 0.25, 'weight': 1},
+#                     ],
+#                 )
+#                 current_layers.append(ghost)
+
+#             dot = m.generic_layer(
+#                 name='circleMarker',
+#                 args=[
+#                     [v['lat'], v['lon']],
+#                     {'radius': 8, 'color': 'white', 'fillColor': colour,
+#                      'fillOpacity': 0.95, 'opacity': 1, 'weight': 2},
+#                 ],
+#             )
+#             dot.run_method('bindTooltip', tooltip, {'permanent': False, 'sticky': True})
+#             current_layers.append(dot)
+
+#     # ── countdown tick ─────────────────────────────────────────────
+#     def tick():
+#         countdown['value'] = max(0, countdown['value'] - 1)
+#         countdown_label.set_text(f'Next refresh: {countdown["value"]}s')
+
+#     route_select.on('update:model-value',    lambda _: asyncio.ensure_future(refresh(resample=True)))
+#     quadrant_select.on('update:model-value', lambda _: asyncio.ensure_future(refresh(resample=True)))
+#     resample_btn.on('click',                 lambda _: asyncio.ensure_future(refresh(resample=True)))
+
+#     ui.timer(1.0, tick)
+#     ui.timer(30.0, refresh)
+#     ui.timer(1.5, lambda: asyncio.ensure_future(refresh()), once=True)
+# app/pages/transit_map.py
+import asyncio
+import random
 from nicegui import ui
 from app.components.navbar import with_layout
 from app.services.db import fetch_latest_vehicles, fetch_route_ids
+from app.services import poller as poller_service
+from app.services import schedule
 
-QUADRANTS = ['All', 'NE', 'NW', 'SE', 'SW']
+QUADRANTS_FILTER = ['All', 'NE', 'NW', 'SE', 'SW']
 
-# Quadrant tint colours (marker fill)
 QUADRANT_COLOURS = {
-    'NE': '#4A90D9',   # blue
-    'NW': '#7B68EE',   # purple
-    'SE': '#50C878',   # green
-    'SW': '#FF8C00',   # orange
+    'NE': '#4A90D9',
+    'NW': '#A78BFA',
+    'SE': '#34D399',
+    'SW': '#FB923C',
 }
-STALE_COLOUR  = '#FF4444'   # red — same position as last fetch
+STALE_COLOUR   = '#F87171'
 DEFAULT_COLOUR = '#4A90D9'
 
+TILE_DARK  = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+TILE_LIGHT = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+TILE_ATTRIBUTION = '© OpenStreetMap contributors © CARTO'
 
-def _vehicles_to_js(vehicles: list[dict]) -> str:
-    """Serialise vehicle list to a JS array literal for Leaflet."""
-    items = []
+MAX_PER_QUADRANT = 5
+
+
+def _colour(v: dict) -> str:
+    if v['is_stale']:
+        return STALE_COLOUR
+    return QUADRANT_COLOURS.get(v['quadrant'], DEFAULT_COLOUR)
+
+
+def _sample_vehicles(vehicles: list[dict]) -> list[dict]:
+    buckets: dict[str, list] = {}
     for v in vehicles:
-        colour = STALE_COLOUR if v['is_stale'] else QUADRANT_COLOURS.get(v['quadrant'], DEFAULT_COLOUR)
-        prev = ''
-        if v['prev_lat'] and v['prev_lon']:
-            prev = f"[{v['prev_lat']},{v['prev_lon']}]"
-        else:
-            prev = 'null'
-        label = f"Route {v['route_id'] or '?'} — Vehicle {v['vehicle_id']}"
-        speed_kmh = round(v['speed'] * 3.6, 1) if v['speed'] else 0
-        popup = (
-            f"<b>{label}</b><br>"
-            f"Speed: {speed_kmh} km/h<br>"
-            f"Bearing: {v['bearing'] or '?'}°<br>"
-            f"Quadrant: {v['quadrant'] or '?'}<br>"
-            f"{'⚠️ Stale position' if v['is_stale'] else '✅ Moving'}"
-        )
-        items.append(
-            f"{{lat:{v['lat']},lon:{v['lon']},"
-            f"prev:{prev},"
-            f"colour:'{colour}',"
-            f"popup:{repr(popup)}}}"
-        )
-    return '[' + ','.join(items) + ']'
-
-
-MAP_HTML = """
-<div id="transit-map" style="width:100%;height:600px;border-radius:8px;"></div>
-<script>
-(function() {
-  // Only initialise once
-  if (window._transitMapReady) { return; }
-  window._transitMapReady = true;
-
-  var map = L.map('transit-map').setView([51.0447, -114.0719], 11);
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors',
-    maxZoom: 18
-  }).addTo(map);
-
-  window._transitMap     = map;
-  window._transitMarkers = [];   // current position markers
-  window._ghostMarkers   = [];   // previous position markers
-
-  window.updateTransitMarkers = function(vehicles) {
-    // Clear existing
-    window._transitMarkers.forEach(function(m) { map.removeLayer(m); });
-    window._ghostMarkers.forEach(function(m)   { map.removeLayer(m); });
-    window._transitMarkers = [];
-    window._ghostMarkers   = [];
-
-    vehicles.forEach(function(v) {
-      // Ghost dot (previous position)
-      if (v.prev) {
-        var ghost = L.circleMarker(v.prev, {
-          radius: 5,
-          fillColor: v.colour,
-          color: v.colour,
-          fillOpacity: 0.25,
-          opacity: 0.25,
-          weight: 1
-        }).addTo(map);
-        window._ghostMarkers.push(ghost);
-      }
-
-      // Current position marker
-      var marker = L.circleMarker([v.lat, v.lon], {
-        radius: 7,
-        fillColor: v.colour,
-        color: '#ffffff',
-        fillOpacity: 0.9,
-        opacity: 1,
-        weight: 1.5
-      }).bindPopup(v.popup).addTo(map);
-
-      window._transitMarkers.push(marker);
-    });
-  };
-})();
-</script>
-"""
+        q = v['quadrant'] or 'XX'
+        buckets.setdefault(q, []).append(v)
+    result = []
+    for group in buckets.values():
+        result.extend(random.sample(group, min(MAX_PER_QUADRANT, len(group))))
+    return result
 
 
 @ui.page('/transit')
@@ -111,82 +267,195 @@ MAP_HTML = """
 def transit_map_page():
     ui.page_title('Calgary Transit Live Map')
 
-    # ── state ──────────────────────────────────────────────────────
-    selected_route    = {'value': None}
-    selected_quadrant = {'value': None}
+    # record that someone is viewing the page
+    schedule.record_activity()
 
-    # ── header row ─────────────────────────────────────────────────
-    with ui.row().classes('w-full items-center gap-4 px-4 pt-4'):
+    current_layers = []
+    dark_mode      = {'on': True}
+    countdown      = {'value': 30}
+
+    # ── header ─────────────────────────────────────────────────────
+    with ui.row().classes('w-full items-center gap-4 px-4 pt-4 flex-wrap'):
         ui.label('🚌 Calgary Transit — Live Map').classes('text-2xl font-bold flex-1')
+        vehicle_count   = ui.label('').classes('text-grey')
+        countdown_label = ui.label('Next refresh: 30s').classes('text-grey text-sm')
+        map_toggle      = ui.button('☀️ Light map').props('flat').classes('ml-2')
 
-        vehicle_count = ui.label('').classes('text-grey')
-
-        # Route filter
-        route_ids = fetch_route_ids()
-        route_options = ['All routes'] + route_ids
-        route_select = ui.select(
-            options=route_options,
-            value='All routes',
-            label='Route',
-        ).classes('w-36')
-
-        # Quadrant filter
+    # ── controls ───────────────────────────────────────────────────
+    with ui.row().classes('w-full items-center gap-4 px-4 pb-1 flex-wrap'):
         quadrant_select = ui.select(
-            options=QUADRANTS,
+            options=QUADRANTS_FILTER,
             value='All',
             label='Quadrant',
         ).classes('w-28')
 
+        route_ids    = fetch_route_ids()
+        route_select = ui.select(
+            options=['All routes'] + route_ids,
+            value='All routes',
+            label='Route',
+        ).classes('w-36')
+
+        resample_btn = ui.button('🔀 Resample').props('flat')
+
+        # ── poller controls ────────────────────────────────────────
+        with ui.row().classes('items-center gap-2 ml-auto'):
+            in_hours = schedule.is_operating_hours()
+            if in_hours:
+                status_text  = '● Poller running'
+                status_class = 'text-green'
+            else:
+                status_text  = '⏸ Outside hours (09:00–18:00 MST)'
+                status_class = 'text-orange'
+
+            poller_status = ui.label(status_text).classes(f'text-sm {status_class}')
+
+            def pause_poller():
+                poller_service.pause()
+                poller_status.set_text('⏸ Poller paused')
+                poller_status.classes(remove='text-green text-yellow', add='text-orange')
+                pause_btn.set_visibility(False)
+                resume_btn.set_visibility(True)
+
+            def resume_poller():
+                poller_service.resume()
+                if schedule.is_operating_hours():
+                    poller_status.set_text('● Poller running')
+                    poller_status.classes(remove='text-orange text-yellow', add='text-green')
+                else:
+                    poller_status.set_text('▶ Manual override — pauses after 10min inactivity')
+                    poller_status.classes(remove='text-orange text-green', add='text-yellow')
+                pause_btn.set_visibility(True)
+                resume_btn.set_visibility(False)
+
+            pause_btn  = ui.button('⏸ Pause',  on_click=pause_poller).props('flat color=orange')
+            resume_btn = ui.button('▶ Resume', on_click=resume_poller).props('flat color=green')
+
+            # show correct initial button state
+            if not in_hours or not schedule.should_poll():
+                pause_btn.set_visibility(False)
+            else:
+                resume_btn.set_visibility(False)
+
     # ── legend ─────────────────────────────────────────────────────
-    with ui.row().classes('gap-4 px-4 pb-2 items-center'):
+    with ui.row().classes('gap-4 px-4 pb-2 items-center flex-wrap'):
         for quad, colour in QUADRANT_COLOURS.items():
             with ui.row().classes('items-center gap-1'):
                 ui.html(f'<span style="display:inline-block;width:12px;height:12px;'
-                        f'border-radius:50%;background:{colour};"></span>')
+                        f'border-radius:50%;background:{colour}"></span>')
                 ui.label(quad).classes('text-sm')
         with ui.row().classes('items-center gap-1'):
             ui.html(f'<span style="display:inline-block;width:12px;height:12px;'
-                    f'border-radius:50%;background:{STALE_COLOUR};"></span>')
-            ui.label('Stale / delayed').classes('text-sm')
+                    f'border-radius:50%;background:{STALE_COLOUR}"></span>')
+            ui.label('Stale').classes('text-sm')
         with ui.row().classes('items-center gap-1'):
             ui.html('<span style="display:inline-block;width:12px;height:12px;'
-                    'border-radius:50%;background:#aaa;opacity:0.4;"></span>')
-            ui.label('Ghost (prev position)').classes('text-sm')
+                    'border-radius:50%;background:#aaa;opacity:0.35"></span>')
+            ui.label('Ghost').classes('text-sm')
 
-    # ── map container ───────────────────────────────────────────────
-    with ui.column().classes('w-full px-4 pb-4'):
-        # Leaflet CSS + JS
-        ui.html('<link rel="stylesheet" '
-                'href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>')
-        ui.html('<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>')
+    # ── map ────────────────────────────────────────────────────────
+    m = ui.leaflet(
+        center=(51.0447, -114.0719),
+        zoom=11,
+    ).classes('w-full').style('height:620px')
 
-        map_element = ui.html(MAP_HTML).classes('w-full')
+    m.clear_layers()
+    tile_layer_state = {
+        'layer': m.tile_layer(
+            url_template=TILE_DARK,
+            options={'attribution': TILE_ATTRIBUTION, 'maxZoom': 19, 'subdomains': 'abcd'},
+        )
+    }
 
-    # ── refresh function ────────────────────────────────────────────
-    def refresh():
+    # ── tile toggle ────────────────────────────────────────────────
+    def toggle_map_style():
+        if tile_layer_state['layer']:
+            m.remove_layer(tile_layer_state['layer'])
+        if dark_mode['on']:
+            tile_layer_state['layer'] = m.tile_layer(
+                url_template=TILE_LIGHT,
+                options={'attribution': TILE_ATTRIBUTION, 'maxZoom': 19, 'subdomains': 'abcd'},
+            )
+            dark_mode['on'] = False
+            map_toggle.set_text('🌙 Dark map')
+        else:
+            tile_layer_state['layer'] = m.tile_layer(
+                url_template=TILE_DARK,
+                options={'attribution': TILE_ATTRIBUTION, 'maxZoom': 19, 'subdomains': 'abcd'},
+            )
+            dark_mode['on'] = True
+            map_toggle.set_text('☀️ Light map')
+
+    map_toggle.on('click', lambda _: toggle_map_style())
+
+    # ── refresh ────────────────────────────────────────────────────
+    async def refresh(resample: bool = False):
+        countdown['value'] = 30
+        schedule.record_activity()
+        loop = asyncio.get_event_loop()
+
         route = route_select.value
         quad  = quadrant_select.value
 
-        route_filter = None if route == 'All routes' else route
-        quad_filter  = None if quad  == 'All'        else quad
-
-        vehicles = fetch_latest_vehicles(
-            route_id=route_filter,
-            quadrant=quad_filter,
+        all_vehicles = await loop.run_in_executor(
+            None,
+            lambda: fetch_latest_vehicles(
+                route_id=None if route == 'All routes' else route,
+                quadrant=None if quad  == 'All'        else quad,
+            )
         )
 
-        count = len(vehicles)
-        vehicle_count.set_text(f'{count} vehicles')
+        display = _sample_vehicles(all_vehicles)
+        vehicle_count.set_text(
+            f'{len(all_vehicles)} total · {len(display)} shown '
+            f'({MAX_PER_QUADRANT}/quadrant)'
+        )
 
-        js_data = _vehicles_to_js(vehicles)
-        ui.run_javascript(f'if(window.updateTransitMarkers) updateTransitMarkers({js_data});')
+        for layer in current_layers:
+            m.remove_layer(layer)
+        current_layers.clear()
 
-    # Wire filter changes to immediate refresh
-    route_select.on('update:model-value', lambda _: refresh())
-    quadrant_select.on('update:model-value', lambda _: refresh())
+        for v in display:
+            colour    = _colour(v)
+            speed_kmh = round(v['speed'] * 3.6, 1) if v['speed'] else 0
+            tooltip   = (
+                f"Route {v['route_id'] or '?'} | "
+                f"Vehicle {v['vehicle_id']} | "
+                f"{speed_kmh} km/h | "
+                f"{'⚠️ Stale' if v['is_stale'] else '✅ Moving'}"
+            )
 
-    # Auto-refresh every 30 seconds
+            if v['prev_lat'] and v['prev_lon']:
+                ghost = m.generic_layer(
+                    name='circleMarker',
+                    args=[
+                        [v['prev_lat'], v['prev_lon']],
+                        {'radius': 5, 'color': colour, 'fillColor': colour,
+                         'fillOpacity': 0.25, 'opacity': 0.25, 'weight': 1},
+                    ],
+                )
+                current_layers.append(ghost)
+
+            dot = m.generic_layer(
+                name='circleMarker',
+                args=[
+                    [v['lat'], v['lon']],
+                    {'radius': 8, 'color': 'white', 'fillColor': colour,
+                     'fillOpacity': 0.95, 'opacity': 1, 'weight': 2},
+                ],
+            )
+            dot.run_method('bindTooltip', tooltip, {'permanent': False, 'sticky': True})
+            current_layers.append(dot)
+
+    # ── countdown tick ─────────────────────────────────────────────
+    def tick():
+        countdown['value'] = max(0, countdown['value'] - 1)
+        countdown_label.set_text(f'Next refresh: {countdown["value"]}s')
+
+    route_select.on('update:model-value',    lambda _: asyncio.ensure_future(refresh(resample=True)))
+    quadrant_select.on('update:model-value', lambda _: asyncio.ensure_future(refresh(resample=True)))
+    resample_btn.on('click',                 lambda _: asyncio.ensure_future(refresh(resample=True)))
+
+    ui.timer(1.0, tick)
     ui.timer(30.0, refresh)
-
-    # Initial load
-    refresh()
+    ui.timer(1.5, lambda: asyncio.ensure_future(refresh()), once=True)

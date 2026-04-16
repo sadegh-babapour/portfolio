@@ -153,3 +153,16 @@ def fetch_route_ids() -> list[str]:
             """)
             return [row["route_id"] for row in cur.fetchall()]
             
+def trim_raw_table() -> None:
+    """Delete raw rows older than 2 hours. Called from poller every 10 min."""
+    if not _pool:
+        return
+    with _pool.connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                DELETE FROM vehicle_positions_raw
+                WHERE fetched_at < now() - INTERVAL '2 hours'
+            """)
+            deleted = cur.rowcount
+    if deleted:
+        log.info("Trimmed %d old rows from vehicle_positions_raw.", deleted)

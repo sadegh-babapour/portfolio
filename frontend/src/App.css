@@ -17,6 +17,61 @@ body,
   flex-direction: column;
 }
 
+.portfolio-nav {
+  position: relative;
+  z-index: 1400;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 64px;
+  padding: 10px 24px;
+  background: #5898d4;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
+}
+
+.portfolio-brand {
+  color: inherit;
+  font-size: 22px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.portfolio-nav-desktop {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 20px;
+}
+
+.portfolio-nav-desktop a,
+.portfolio-nav-mobile-links a {
+  color: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.portfolio-nav-desktop a:hover,
+.portfolio-nav-desktop a:focus-visible,
+.portfolio-nav-mobile-links a:hover,
+.portfolio-nav-mobile-links a:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.portfolio-nav-desktop a[aria-current="page"] {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 5px;
+}
+
+.portfolio-nav-mobile {
+  display: none;
+}
+
 .topbar {
   display: flex;
   justify-content: space-between;
@@ -225,6 +280,66 @@ body,
 }
 
 @media (max-width: 900px) {
+  .portfolio-nav {
+    min-height: 56px;
+    padding: 8px 16px;
+  }
+
+  .portfolio-brand {
+    font-size: 19px;
+  }
+
+  .portfolio-nav-desktop {
+    display: none;
+  }
+
+  .portfolio-nav-mobile {
+    display: block;
+  }
+
+  .portfolio-nav-mobile summary {
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    list-style: none;
+  }
+
+  .portfolio-nav-mobile summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .portfolio-nav-mobile-links {
+    position: absolute;
+    top: calc(100% - 4px);
+    right: 12px;
+    display: flex;
+    flex-direction: column;
+    min-width: 230px;
+    overflow: hidden;
+    border: 1px solid #dbe3ec;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #111827;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.2);
+  }
+
+  .portfolio-nav-mobile-links a {
+    padding: 12px 16px;
+    border-bottom: 1px solid #eef2f6;
+  }
+
+  .portfolio-nav-mobile-links a:last-child {
+    border-bottom: 0;
+  }
+
+  .portfolio-nav-mobile-links a[aria-current="page"] {
+    background: #edf6ff;
+    color: #245d91;
+  }
+
   .content {
     display: flex;
     flex-direction: column;

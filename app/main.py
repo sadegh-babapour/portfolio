@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from nicegui import app as fastapi_app
 from nicegui import ui
@@ -21,6 +21,7 @@ logging.basicConfig(
 REPO_ROOT = Path(__file__).resolve().parent.parent
 STATIC_DIR = REPO_ROOT / 'static'
 TRANSIT_FRONTEND_DIR = REPO_ROOT / 'frontend' / 'dist'
+DEFAULT_RESUME_PDF = REPO_ROOT / 'static' / 'resume.pdf'
 
 fastapi_app.mount('/static', StaticFiles(directory=STATIC_DIR), name='static')
 if TRANSIT_FRONTEND_DIR.is_dir():
@@ -33,6 +34,27 @@ else:
     logging.getLogger(__name__).warning(
         'React transit build not found at %s; run npm run build in frontend/',
         TRANSIT_FRONTEND_DIR,
+    )
+
+
+@fastapi_app.get('/resume/document.pdf', include_in_schema=False)
+async def resume_document(download: bool = False):
+    configured_path = os.getenv('RESUME_PDF_PATH')
+    pdf_path = Path(configured_path) if configured_path else DEFAULT_RESUME_PDF
+    if not pdf_path.is_absolute():
+        pdf_path = REPO_ROOT / pdf_path
+
+    if not pdf_path.is_file():
+        raise HTTPException(status_code=404, detail='Resume PDF is not available')
+
+    disposition = 'attachment' if download else 'inline'
+    return FileResponse(
+        pdf_path,
+        media_type='application/pdf',
+        headers={
+            'Content-Disposition': f'{disposition}; filename="resume.pdf"',
+            'Cache-Control': 'public, max-age=3600',
+        },
     )
 
 # ── components ────────────────────────────────────────────────────

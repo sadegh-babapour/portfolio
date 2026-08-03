@@ -65,5 +65,8 @@ node_modules/
 # Temporary user-provided notes may contain personal or deployment details
 docs/temp_doc/
 
+# Personal/runtime documents belong locally and on the Railway volume
+static/resume.pdf
+
 # Historical chat is retained locally and may contain copied credentials
 docs/CHAT_HISTORY_RAW.md

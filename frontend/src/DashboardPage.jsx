@@ -60,8 +60,6 @@ function VehicleDetails({ vehicleId }) {
 
   useEffect(() => {
     if (!vehicleId) {
-      setStops([]);
-      setAlerts([]);
       return;
     }
 

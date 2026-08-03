@@ -1,0 +1,223 @@
+# Architecture
+
+Last reconciled with code and history: 2026-08-03
+
+## Overview
+
+The repository is a NiceGUI personal portfolio containing a newer React-based
+Calgary Transit project. During development the transit feature moved from a
+Python-only prototype to a three-component design:
+
+```text
+Calgary GTFS/GTFS-RT -> Python poller -> PostgreSQL transit schema
+                                             |
+Browser React app <- JSON <- Express API ----+
+       |
+       +-- built bundle served by NiceGUI/FastAPI
+```
+
+This is the intended design, not the fully functioning current deployment. The
+repository still starts only the older NiceGUI process by default and retains
+the older public-schema transit implementation.
+
+## Repository layout
+
+- `app/`: NiceGUI pages, shared layout components, Python API handlers, and
+  legacy transit-related Python services.
+- `frontend/`: React/Vite/Leaflet Calgary Transit application and checked-in
+  production build.
+- `backend/transit_api/`: Express API, PostgreSQL pool, configuration, and SQL
+  service functions for the newer transit schema.
+- `sql/`: older public-schema PostgreSQL DDL used by the NiceGUI transit stack.
+- `poller/`: standalone Python ingestion worker for the newer transit stack.
+- `scripts/db/`: ordered, idempotent migrations for the newer `transit`
+  schema.
+- `scripts/bootstrap_transit_db.py`: schema migration and static GTFS loader.
+- `data/`: static Calgary GTFS and route-category files.
+- `database_backup.sql`: schema-only dump of the newer `transit` model.
+- `dashboard_cache.json`: committed sample data for the unrelated theme-park
+  dashboard.
+- `docs/`: recovery state, architecture, decisions, next actions, session log,
+  source suggestions, and raw historical conversation.
+
+## Application entry points
+
+### NiceGUI web application
+
+- Command: `python -m app.main`.
+- Module: `app/main.py`.
+- Responsibilities:
+  - register Python JSON endpoints;
+  - register NiceGUI portfolio pages;
+  - mount `static/` and the React build;
+  - start the older async VehiclePositions poller and static GTFS updater.
+- Port: `$PORT` or 8086.
+
+### React application
+
+- Development command: `npm run dev` from `frontend/`.
+- Production build: `npm run build` from `frontend/`.
+- Entry: `frontend/src/main.jsx` rendering `frontend/src/App.jsx`.
+- Production API base: `VITE_TRANSIT_API_BASE_URL`, falling back to `/api`.
+
+### Express transit API
+
+- Command: `npm start --prefix backend/transit_api`.
+- Port precedence: `$TRANSIT_API_PORT`, `$PORT`, then 4000.
+- PostgreSQL configuration: individual `PGHOST`, `PGPORT`, `PGDATABASE`,
+  `PGUSER`, and `PGPASSWORD` variables.
+
+### Standalone current-state poller
+
+- Module: `poller/poll_calgary_gtfs_rt_current.py`.
+- It consumes VehiclePositions, TripUpdates, and Alerts feeds and writes the
+  newer `transit` tables.
+- Database configuration accepts `DATABASE_URL`, individual `PG*` variables,
+  or matching command-line arguments; scheduling, kill switch, and retention
+  settings use environment variables.
+- This poller is not started by the current `Procfile`.
+
+## Components and responsibilities
+
+### Portfolio shell
+
+NiceGUI provides navigation, page layouts, static portfolio content, the
+theme-park sample dashboard, and the legacy transit map. FastAPI is exposed
+through NiceGUI and owns the Python JSON routes and static mounts.
+
+### Calgary Transit frontend
+
+React and React Leaflet provide the interactive map. The application:
+
+- requests recent histories and route geometry from Express;
+- plays observations approximately 75 seconds behind the newest data;
+- interpolates only between real observations;
+- marks small movement as stopped and old observations as stale;
+- renders route lines, selected vehicle context, stops, and alerts;
+- adapts the map/detail layout for mobile screens.
+
+The frontend never connects directly to PostgreSQL.
+
+### Transit API
+
+Express owns frontend-facing queries. `db/pool.js` creates the `pg` pool, while
+`services/transitService.js` contains SQL and response grouping. The API reads
+views and tables in the `transit` schema and exposes:
+
+- `GET /` and `GET /api/health`;
+- `GET /api/vehicles`;
+- `GET /api/vehicles/history`;
+- `GET /api/routes/paths`;
+- `GET /api/vehicles/:vehicleId/context`;
+- `GET /api/vehicles/:vehicleId/stops`;
+- `GET /api/vehicles/:vehicleId/alerts`.
+
+### Data ingestion
+
+The intended poller uses three Calgary feeds:
+
+- VehiclePositions for vehicle/trip/coordinate observations;
+- TripUpdates for route references and stop predictions;
+- Alerts for active periods, text, affected routes, and affected stops.
+
+It retains current-state tables for fast API queries and a short raw position
+history for delayed playback and debugging.
+
+The older `app/services/poller.py` and `gtfs_updater.py` serve a different
+public-schema data model and should not be confused with the newer poller.
+
+## Data flow
+
+### Newer intended transit flow
+
+1. The Python poller downloads the three Calgary GTFS-Realtime protobuf feeds.
+2. Vehicle positions are upserted by `vehicle_id`; trip updates by `trip_id`;
+   alerts by feed entity ID.
+3. Static GTFS tables enrich live `trip_id`, route, shape, and stop references.
+4. PostgreSQL views classify in-service and unmatched movements and expose
+   frontend-ready route/stop/alert data.
+5. Express queries PostgreSQL and returns JSON.
+6. React fetches history and paths every 30 seconds, renders delayed playback,
+   and fetches details for the selected vehicle.
+
+### Legacy flow still present
+
+1. NiceGUI startup initializes a Psycopg 3 pool from `DATABASE_URL`.
+2. Its async poller downloads VehiclePositions and writes public-schema latest
+   and raw tables.
+3. Its GTFS updater downloads static GTFS and writes public-schema tables.
+4. NiceGUI pages and Python `/api` handlers query those public-schema tables.
+
+These flows are not interchangeable: their schemas and API contracts differ.
+
+## Database structure
+
+### Newer `transit` schema
+
+The schema-only dump represents these groups:
+
+- Static GTFS: routes, trips, stops, stop times, shapes, calendar, and calendar
+  dates.
+- Route catalog/category data.
+- Current realtime state: vehicle positions, trip updates and stop times,
+  alerts and informed entities.
+- Raw realtime history for diagnostics and delayed playback.
+- Views such as `v_vehicle_dashboard`, `v_trip_upcoming_stops`, route/position
+  enrichment, and active alerts.
+
+The dump does not provide static or realtime rows. The split migrations and
+static loader have been verified against an isolated PostgreSQL 16 database
+using Calgary's current downloadable GTFS archive.
+
+### Older public schema
+
+The older DDL defines vehicle position raw/latest tables, daily samples, GTFS
+trip/stop/stop-time tables, and LRT-specific tables. Python NiceGUI services
+query these unqualified public-schema names.
+
+## External integrations
+
+- Calgary open-data GTFS static ZIP.
+- Calgary VehiclePositions, TripUpdates, and Alerts GTFS-Realtime endpoints.
+- PostgreSQL locally and on the intended Railway environment.
+- Railway for intended web/API/worker hosting.
+- OpenStreetMap and CARTO tiles.
+- Unpkg-hosted Leaflet marker images.
+
+External integrations must be configured without committing credentials.
+
+## Local development flow
+
+The historical intended workflow uses three terminals after loading local
+environment variables:
+
+1. Run the standalone current-state poller against local PostgreSQL.
+2. Run `node backend/transit_api/server.js`.
+3. Run `npm run dev` in `frontend/`, or build React and run
+   `python -m app.main` for integrated static serving.
+
+This workflow has been verified from clean Python and Node dependency installs
+against an isolated PostgreSQL 16 database. A current static GTFS load, one
+complete live poll, all Express endpoint families, and the NiceGUI production
+React mount succeeded on 2026-08-03.
+
+## Deployment flow
+
+The accepted target is one Git repository with three Railway services sharing
+one PostgreSQL database:
+
+1. Web: install Python and frontend dependencies, build React, then run
+   `python -m app.main`.
+2. Transit API: install `backend/transit_api` dependencies, then run its
+   `server.js`.
+3. Poller worker: install Python dependencies, then run the standalone
+   current-state poller.
+
+The web build must receive the public Express API URL through
+`VITE_TRANSIT_API_BASE_URL` at build time. The poller should observe configured
+Calgary operating hours and administrative disable flags.
+
+No `railway.json`, service-specific configuration, production API URL, or
+verified production domain is present. Railway service settings must be
+reconciled with the actual project before configuration files are treated as
+authoritative.

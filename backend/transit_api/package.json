@@ -1,4 +1,12 @@
 {
+  "name": "calgary-transit-api",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check db/pool.js && node --check services/transitService.js && node --check config/transitConfig.js",
+    "test": "node --test"
+  },
   "dependencies": {
     "cors": "^2.8.6",
     "express": "^5.2.1",

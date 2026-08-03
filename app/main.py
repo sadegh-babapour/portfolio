@@ -6,6 +6,7 @@ from nicegui import ui
 import asyncio
 import logging
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -17,13 +18,22 @@ logging.basicConfig(
 )
 
 # ── static mounts ─────────────────────────────────────────────────
-fastapi_app.mount('/static', StaticFiles(directory='static'), name='static')
-# fastapi_app.mount('/map', StaticFiles(directory='frontend/dist', html=True), name='frontend')
-fastapi_app.mount(
-    '/calgary-transit-live',
-    StaticFiles(directory='frontend/dist', html=True),
-    name='calgary-transit-live',
-)
+REPO_ROOT = Path(__file__).resolve().parent.parent
+STATIC_DIR = REPO_ROOT / 'static'
+TRANSIT_FRONTEND_DIR = REPO_ROOT / 'frontend' / 'dist'
+
+fastapi_app.mount('/static', StaticFiles(directory=STATIC_DIR), name='static')
+if TRANSIT_FRONTEND_DIR.is_dir():
+    fastapi_app.mount(
+        '/calgary-transit-live',
+        StaticFiles(directory=TRANSIT_FRONTEND_DIR, html=True),
+        name='calgary-transit-live',
+    )
+else:
+    logging.getLogger(__name__).warning(
+        'React transit build not found at %s; run npm run build in frontend/',
+        TRANSIT_FRONTEND_DIR,
+    )
 
 # ── components ────────────────────────────────────────────────────
 from app.components.footer import footer  # noqa: E402,F401

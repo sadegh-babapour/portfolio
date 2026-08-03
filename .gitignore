@@ -20,6 +20,7 @@ lib64/
 # Virtual environments
 .env
 .venv
+myvenv/
 env/
 venv/
 ENV/
@@ -50,3 +51,16 @@ logs/
 # Cache files — dashboard_cache.json is intentionally committed
 # as static demo data, but exclude any future runtime caches
 *_cache_runtime.json
+
+# JavaScript dependencies. frontend/dist remains tracked until Railway has a
+# verified frontend build step.
+node_modules/
+
+# Local and remote environment profiles
+.env.remote
+
+# Temporary user-provided notes may contain personal or deployment details
+docs/temp_doc/
+
+# Historical chat is retained locally and may contain copied credentials
+docs/CHAT_HISTORY_RAW.md

@@ -1,0 +1,358 @@
+# Technical Decisions
+
+Last reconciled: 2026-08-03
+
+Statuses distinguish an accepted direction from a verified implementation.
+
+## ADR-001: Keep NiceGUI/FastAPI as the portfolio shell
+
+Date: 2026-04-22
+Status: Accepted; currently implemented for the legacy site
+
+### Context
+
+The portfolio already used NiceGUI for its navigation, dashboard, résumé, and
+other pages before the newer transit experience was developed.
+
+### Decision
+
+Keep NiceGUI/FastAPI as the main portfolio web application rather than
+rewriting unrelated working pages.
+
+### Reasons
+
+- Existing portfolio pages and the cached dashboard already use NiceGUI.
+- The transit work can be isolated without disrupting unrelated content.
+- FastAPI can serve static assets and a built React application.
+
+### Consequences
+
+The repository contains more than one frontend technology, and integration
+must handle subpath assets and API routing deliberately.
+
+### Alternatives considered
+
+- Rewrite the complete portfolio in React.
+- Reimplement the interactive transit UI entirely in NiceGUI.
+
+## ADR-002: Use React and Leaflet for the Calgary Transit page
+
+Date: 2026-04-22
+Status: Accepted; substantially implemented
+
+### Context
+
+The map requires responsive controls, vehicle playback, route layers, selected
+vehicle state, animated paths, and mobile interaction.
+
+### Decision
+
+Build the Calgary Transit experience as a React/Vite application using Leaflet
+and React Leaflet.
+
+### Reasons
+
+- The standalone prototype established the desired interaction before Railway
+  integration.
+- React is better suited to the map's client-side state and animation than the
+  older NiceGUI prototype.
+- The user explicitly allowed replacement of older polling/map/frontend code
+  while preserving unrelated portfolio pages.
+
+### Consequences
+
+React needs its own build process and a compatible API. The NiceGUI mount must
+serve subpath-safe asset URLs.
+
+### Alternatives considered
+
+- Continue the NiceGUI Leaflet implementation.
+- Replace the portfolio shell as part of the map work.
+
+## ADR-003: Keep database access behind a transit API
+
+Date: 2026-04-22
+Status: Accepted; implemented in the standalone stack
+
+### Context
+
+The React frontend needs vehicle history, route shapes, stops, and alerts from
+PostgreSQL.
+
+### Decision
+
+React must call an HTTP API and must never connect directly to PostgreSQL.
+
+### Reasons
+
+- Database credentials remain server-side.
+- SQL and response shaping have one owner.
+- The API can evolve independently of map rendering.
+
+### Consequences
+
+The frontend, API, and database contracts must be versioned together and the
+API must be deployed alongside the web application.
+
+### Alternatives considered
+
+- Browser-to-database access.
+- Duplicating complex transit queries in frontend code.
+
+## ADR-004: Retain Express as the initial transit API
+
+Date: 2026-05-07
+Status: Accepted target; not integrated into deployment
+
+### Context
+
+The standalone Express API was working and had already accumulated the SQL and
+response contracts used by the React map.
+
+### Decision
+
+Keep and modularize Express for the first integrated deployment. Consider a
+FastAPI port only after behavior is stable.
+
+### Reasons
+
+- Preserves the working standalone contract.
+- Reduces risk during repository recovery and Railway integration.
+- Avoids combining a backend rewrite with deployment work.
+
+### Consequences
+
+The target deployment has separate Python web and Node API processes.
+
+### Alternatives considered
+
+- Port all Express endpoints to FastAPI before deployment.
+- Fold database queries into the NiceGUI process without first preserving the
+  existing contract.
+
+## ADR-005: Use PostgreSQL `transit` schema as the newer transit model
+
+Date: 2026-04-22
+Status: Accepted; bootstrap verified locally
+
+### Context
+
+Calgary's VehiclePositions feed is sparse and requires enrichment from static
+GTFS, TripUpdates, Alerts, and route-category data.
+
+### Decision
+
+Use normalized static GTFS tables, current realtime tables, short raw history,
+and frontend-ready views under the PostgreSQL `transit` schema.
+
+### Reasons
+
+- `trip_id` can connect sparse vehicle data to routes, shapes, and stops.
+- Current tables make dashboard reads small and predictable.
+- Raw history supports delayed playback and diagnostics.
+- Views centralize Calgary-specific enrichment and classification.
+
+### Consequences
+
+Static GTFS loading and schema migrations are reproducible. The older
+public-schema implementation cannot silently serve as the same data model.
+
+### Alternatives considered
+
+- Store only raw protobuf snapshots.
+- Replace normalized shapes with GeoJSON blobs as the primary source of truth.
+- Continue only with the older public-schema tables.
+
+## ADR-006: Run realtime ingestion as a separate Python poller
+
+Date: 2026-04-22
+Status: Accepted target; code exists but worker deployment is unverified
+
+### Context
+
+The application needs three Calgary feeds refreshed on a schedule without
+coupling ingestion to browser traffic.
+
+### Decision
+
+Use a separate Python process to ingest VehiclePositions, TripUpdates, and
+Alerts. Configure its interval, operating hours, timezone, retention, and kill
+switch through existing environment variables.
+
+### Reasons
+
+- Ingestion can be stopped, monitored, or restarted independently.
+- API and web restarts do not define data freshness.
+- Current-state upserts and short raw retention match dashboard needs.
+
+### Consequences
+
+Deployment requires a worker service and directly declared Python dependencies.
+
+### Alternatives considered
+
+- Poll only from NiceGUI startup.
+- Trigger polling from frontend activity.
+- Schedule every cleanup as a separate database cron job.
+
+## ADR-007: Use delayed real observations for vehicle playback
+
+Date: 2026-04-22
+Status: Accepted and implemented in React
+
+### Context
+
+Calgary updates vehicle positions approximately every 30 seconds. Immediate
+display creates jumps, while invented trajectories would misrepresent the
+feed.
+
+### Decision
+
+Render about 75 seconds behind the latest observation and interpolate only
+between real bounding observations. Use 20 meters as the initial stopped
+threshold and 120 seconds as the stale threshold.
+
+### Reasons
+
+- Provides smoother movement without predicting beyond known points.
+- Leaves enough buffer for normal polling and processing delay.
+- Makes stopped and stale states explicit.
+
+### Consequences
+
+The page is intentionally delayed and needs a short raw history window.
+
+### Alternatives considered
+
+- Display each update immediately with marker jumps.
+- Extrapolate future positions.
+- Let users adjust the playback delay.
+
+## ADR-008: Do not show Calgary LRT as live vehicle markers without positions
+
+Date: 2026-04-22
+Status: Accepted; implemented in page framing
+
+### Context
+
+The recorded feed investigation found LRT TripUpdates but no corresponding LRT
+VehiclePositions.
+
+### Decision
+
+The Calgary vehicle map focuses on buses, BRT/MAX, Express, and featured bus
+routes. LRT route/service information may be added separately, but the UI must
+not imply live train coordinates it does not receive.
+
+### Reasons
+
+- Prevents fabricated or misleading live markers.
+- Keeps the initial page aligned with available data.
+- Leaves TTC/subway work as a separate future discussion.
+
+### Consequences
+
+This decision must be revisited if feed availability changes.
+
+### Alternatives considered
+
+- Infer train positions from TripUpdates.
+- Show static LRT markers as if they were realtime.
+
+## ADR-009: Track the React production bundle during deployment recovery
+
+Date: 2026-08-03
+Status: Temporary; accepted for recovery
+
+### Context
+
+The current Railway web process starts Python from the repository root and no
+verified Railway build command regenerates `frontend/dist`. Ignoring the bundle
+would remove the only artifact that NiceGUI can currently serve.
+
+### Decision
+
+Keep `frontend/dist` tracked until the Railway web service has a verified Node
+install/build phase.
+
+### Reasons
+
+- The regenerated bundle has been smoke-tested at its production subpath.
+- It keeps the existing web deployment model functional while Railway state is
+  recovered.
+- It avoids claiming an unobserved Railway build configuration works.
+
+### Consequences
+
+Source and generated bundle changes must be committed together temporarily.
+Once Railway reliably runs `npm ci` and `npm run build` in `frontend`, remove
+the bundle from source control and update this decision.
+
+### Alternatives considered
+
+- Ignore the bundle immediately and assume Railway builds it.
+- Add unverified service-specific Docker or Railpack configuration.
+
+## ADR-009: Mount the built transit page at `/calgary-transit-live`
+
+Date: 2026-05-07
+Status: Accepted target; current wiring is broken
+
+### Context
+
+The React application is intended to appear as a portfolio page with a clear,
+descriptive URL.
+
+### Decision
+
+Serve the production React bundle through FastAPI at
+`/calgary-transit-live` and expose that route in the NiceGUI navigation.
+
+### Reasons
+
+- Preserves one portfolio-facing domain and navigation shell.
+- Gives the feature a stable descriptive URL.
+
+### Consequences
+
+Vite must build subpath-safe assets, and the navbar must link to the mounted
+route. Neither requirement is currently satisfied.
+
+### Alternatives considered
+
+- Keep the opaque `/map` path.
+- Host the frontend only as an unrelated standalone site.
+
+## ADR-010: Target three Railway services from one repository
+
+Date: 2026-05-07
+Status: Accepted target; not verified or fully configured
+
+### Context
+
+The chosen technologies require a web host, API, and continuously scheduled
+ingestion process.
+
+### Decision
+
+Deploy one repository as three Railway services sharing PostgreSQL:
+
+1. NiceGUI/FastAPI web service that builds and serves React.
+2. Express transit API.
+3. Python GTFS-Realtime poller worker.
+
+### Reasons
+
+- Preserves working component boundaries.
+- Allows independent commands, restarts, and environment variables.
+- Defers an unnecessary API rewrite.
+
+### Consequences
+
+Railway build/start configuration, a production API domain, and service-level
+variables still need to be created and verified.
+
+### Alternatives considered
+
+- One process running all three components.
+- Port Express into FastAPI before the first recovered deployment.

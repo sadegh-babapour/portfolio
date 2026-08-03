@@ -392,7 +392,7 @@ async function getVehicleAlerts(pool, vehicleId) {
       a.stop_name,
       a.description_html
     from selected_vehicle sv
-    left join transit.v_active_alerts a
+    join transit.v_active_alerts a
       on a.route_short_name = sv.route_short_name
     order by a.active_end nulls last, a.feed_entity_id
   `;

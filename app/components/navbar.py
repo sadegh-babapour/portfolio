@@ -10,6 +10,7 @@ NAV_LINKS = [
     ('Contact', '/contact'),
     ('Dashboard', '/dashboard'),
     ('Transit Map', '/transit'),
+    ('Live Map', '/map'),
 ]
 
 HEADER_PROPS = dict(

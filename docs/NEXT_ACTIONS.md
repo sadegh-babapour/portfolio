@@ -33,6 +33,7 @@ Last updated: 2026-08-03
   accepted transit route.
 - [x] Add matching desktop/mobile portfolio navigation inside the standalone
   React transit bundle.
+- [x] Match the NiceGUI desktop/mobile navigation to the deployed React header.
 - [x] Configure React to use the Express API in local and production modes.
 - [x] Add explicit start scripts to the Express package; document all
   service commands.
@@ -75,11 +76,15 @@ Last updated: 2026-08-03
   `ADMIN_KILL_SWITCH` in Railway.
 - [ ] Verify the web page, API health, database freshness, route selection,
   stops, alerts, and mobile layout in production.
+- [ ] Upload `static/resume.pdf` to `/data/resume.pdf` on the `portfolio`
+  volume, set `RESUME_PDF_PATH`, deploy, and verify inline/download behavior.
 
 ## Later
 
-- [ ] Replace sample résumé, project, contact, privacy, and terms content with
-  intended portfolio behavior.
+- [ ] Replace the sample résumé timeline with confirmed employment and
+  education entries.
+- [ ] Replace sample project, contact, privacy, and terms content with intended
+  portfolio behavior.
 - [ ] Decide whether route density/quadrant curation remains a product goal.
 - [ ] Revisit Calgary LRT only if live vehicle positions become available.
 - [ ] Treat future Toronto TTC subway/train work as a separate feature and
@@ -89,15 +94,18 @@ Last updated: 2026-08-03
 
 ## Blocked
 
-- [ ] Verify current production behavior — blocked by the missing Railway/site
-  public URL and lack of Railway project access.
-- [ ] Confirm the remote database contents — blocked until credentials and
-  authorization are handled safely.
+- [ ] Verify live production vehicle behavior — waiting for the poller to run
+  during Calgary operating hours.
+- [ ] Confirm `Storage 3` is the `portfolio` volume mounted at `/data` before
+  uploading the résumé.
 - [ ] Confirm which older transit implementation can be deleted — blocked
-  until the newer end-to-end path runs against a reproducible database.
+  until the newer production path's live polling/selection is verified.
 
 ## Current recommended next task
 
-Remove the one-time transit bootstrap pre-deploy command, verify the poller
-worker's ongoing schedule and flags, then publish and smoke-test the updated web
-bundle.
+Publish the NiceGUI navigation and résumé layout changes, upload the ignored
+résumé PDF to the `portfolio` Railway volume, and smoke-test `/resume` on
+desktop and mobile. Then verify poller freshness and live transit selection
+during Calgary operating hours.
+
+Use `docs/NEXT_SESSION_PROMPT.md` as the ready-to-paste handoff prompt.

@@ -382,3 +382,54 @@ static stop times.
 Database initialization requires access to Calgary's GTFS download endpoint.
 The deleted file remains recoverable from repository history, but new commits
 and deployments no longer carry the oversized artifact.
+
+## ADR-012: Serve the résumé from the portfolio service and attached volume
+
+Date: 2026-08-03
+Status: Accepted; code and Git policy implemented, production upload pending
+
+### Context
+
+The résumé page used an unrelated external sample PDF and a third-party PDF.js
+viewer. A Railway volume is attached to the portfolio service for the actual
+document, but its filesystem path cannot be exposed directly to browsers.
+
+### Decision
+
+Read the configured `RESUME_PDF_PATH` on the server and expose it through the
+same-origin `/resume/document.pdf` route. Use the browser's native PDF renderer
+in a full-width responsive holder on desktop and mobile, with explicit
+open/download fallbacks.
+
+### Consequences
+
+The production service must mount the volume and provide the actual PDF at the
+configured path. The application returns HTTP 404 if that configured file is
+missing, without revealing the internal filesystem path.
+
+The local `static/resume.pdf` and Railway volume copy are intentionally not
+tracked by Git. Other runtime documents may follow this pattern only when they
+have a narrowly configured server-side delivery route; source/build assets
+remain version controlled.
+
+## ADR-013: Keep NiceGUI and React portfolio navigation visually synchronized
+
+Date: 2026-08-03
+Status: Accepted and implemented
+
+### Context
+
+The React transit page cannot inherit NiceGUI components, but users should see
+one consistent portfolio shell while moving between the two frontend stacks.
+
+### Decision
+
+Use the deployed React header as the visual reference for the NiceGUI header:
+the same link order, color, spacing, typography, desktop navigation, mobile
+menu, and current-page treatment.
+
+### Consequences
+
+The link list and styles still have two implementations. Any future navigation
+change must update both `app/components/navbar.py` and
+`frontend/src/PortfolioNav.jsx`/`frontend/src/App.css` in the same change.

@@ -25,17 +25,13 @@ remain in progress.
 ## Version-control state
 
 - Branch: `main`.
-- Local `HEAD`: `eeb44cf` (`checkpoint before Codex repository recovery`).
-- Public GitHub and local `origin/main`: `447ecbf`.
-- The local branch is one commit ahead of the public branch.
-- The checkpoint changes 768 files relative to `origin/main`, including source
-  work, generated dependencies, a virtual environment, data, and sensitive
-  configuration material.
-- `docs/` was untracked when this recovery documentation was started.
-
-Do not push the checkpoint unchanged. In particular, `.env.remote` is tracked
-in the local-only commit and contains configured database fields rather than
-safe placeholders.
+- Local and public baseline: `f58763f` (`Connect production transit frontend`).
+- The recovered frontend/navigation changes have been pushed to `origin/main`.
+- Current résumé and NiceGUI navigation work has passed local verification and
+  is being recorded as the session's local commit; it is not yet pushed or
+  deployed.
+- Secret-bearing environment profiles, dependencies, runtime caches, the large
+  GTFS stop-times export, and the résumé PDF are ignored.
 
 ## Confirmed by current code
 
@@ -95,8 +91,8 @@ rechecked against today's external feeds.
 - NiceGUI mounts `frontend/dist` at `/calgary-transit-live`, and Vite now emits
   production asset URLs for that path. A deployed HTTP smoke test remains.
 - NiceGUI navigation now links to `/calgary-transit-live/`.
-- The React transit bundle now includes matching portfolio navigation; the
-  updated bundle has not yet been verified on Railway.
+- The React transit bundle includes matching portfolio navigation and its
+  current production bundle has been verified at the public site.
 - The production React bundle is built against the public Railway Express API
   at `https://transit-api-production.up.railway.app/api`.
 - The Railway Express API health, vehicle-history, and route-path endpoints
@@ -157,8 +153,11 @@ rechecked against today's external feeds.
 - Calgary Transit static GTFS and three GTFS-Realtime feeds are external data
   sources.
 - OpenStreetMap and CARTO provide map tiles.
-- The current résumé page also references an external sample PDF viewer and
-  sample PDF.
+- The résumé page now uses a same-origin `/resume/document.pdf` endpoint with a
+  full-width responsive desktop/mobile embed and open/download fallbacks. Its
+  local route, headers, file contents, and desktop/narrow layouts are verified.
+  Production must still set `RESUME_PDF_PATH` to the actual PDF on the attached
+  Railway volume.
 
 No external service credentials belong in these documents.
 
@@ -200,7 +199,7 @@ No external service credentials belong in these documents.
 
 ## Unknown or unverified
 
-- Complete live production page behavior after the rebuilt frontend is pushed.
+- Live vehicle markers and selection during the poller's operating window.
 - Remaining Railway healthcheck details and exact worker freshness behavior.
 - Whether any database credentials in the checkpoint have been exposed or
   rotated.

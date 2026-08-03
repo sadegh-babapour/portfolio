@@ -1,5 +1,105 @@
 # Session Log
 
+## 2026-08-03 — NiceGUI shell and résumé closeout
+
+### Goal
+
+Align the NiceGUI pages with the deployed React navigation, correct the résumé
+holder width on desktop/mobile, and leave complete storage/session continuity.
+
+### Changed
+
+- Rebuilt the NiceGUI header to match the React header's link order, desktop
+  layout, mobile dropdown, color, spacing, and active-page state.
+- Made the résumé page and embedded PDF holder explicitly full-width and kept
+  the holder visible at a useful viewport-relative height on mobile.
+- Made relative `RESUME_PDF_PATH` values resolve from the repository root.
+- Preserved `static/resume.pdf` locally while removing it from Git tracking and
+  adding it to `.gitignore`.
+- Added `docs/FILE_STORAGE.md` with the Railway `portfolio` volume upload,
+  configuration, replacement, and verification procedure.
+- Added `docs/NEXT_SESSION_PROMPT.md` as a ready-to-paste continuation prompt.
+- Updated project state, architecture, decisions, next actions, and README.
+
+### Verified
+
+- First-party Python files compile with the host's `python3`.
+- Frontend lint/build pass; incidental regenerated build output was restored
+  because no React source changed in this task.
+- Express syntax and contract tests pass.
+- `git diff --check` passes, and the local résumé remains present while Git
+  reports it ignored and removed from tracking.
+- Created a clean ignored `.venv`, installed `requirements.txt`, and confirmed
+  `pip check` reports no broken requirements.
+- Started the real NiceGUI app locally on port 8091. Home, about, résumé,
+  projects, contact, dashboard, and the mounted React transit route all returned
+  HTTP 200.
+- Verified the inline PDF response is byte-identical to `static/resume.pdf` and
+  the download mode returns an attachment response.
+- Captured and inspected 1440px desktop and 500px narrow screenshots. The
+  matching desktop/mobile navbar and full-width résumé holder render as
+  intended.
+- Local runtime testing caught and fixed an unsupported `sanitize` argument in
+  the first navbar implementation before publication.
+
+### Unresolved
+
+- The résumé file still needs to be uploaded to the running `portfolio` volume
+  and `RESUME_PDF_PATH=/data/resume.pdf` configured in Railway.
+- The NiceGUI changes still need deployment and desktop/mobile visual smoke
+  testing.
+- Transit markers and selection need verification while the poller is active.
+
+### Next
+
+- Publish/deploy these changes, upload the résumé, visually test the résumé and
+  navigation, then verify live transit freshness and selection.
+
+### End-of-session summary
+
+- The recovered transit frontend/API baseline remains deployed at `f58763f`.
+- Today's NiceGUI navigation, résumé delivery/layout, ignored runtime-file
+  policy, Railway volume instructions, and continuity documentation are ready
+  for one local commit.
+- Local verification is complete: clean dependency installation, all portfolio
+  routes returning HTTP 200, exact inline/download PDF behavior, inspected
+  desktop and narrow screenshots, frontend lint/build, Express checks/tests,
+  Python compilation, and clean diff formatting.
+- No production push, Railway variable change, volume upload, or deployment was
+  performed in this session.
+
+## 2026-08-03 — Railway-volume résumé delivery
+
+### Goal
+
+Replace the external sample PDF dependency with a responsive, same-origin
+résumé delivery path backed by Railway storage.
+
+### Changed
+
+- Added `/resume/document.pdf` with inline and download response modes.
+- Added `RESUME_PDF_PATH`, defaulting locally to `static/resume.pdf`.
+- Replaced the external PDF.js iframe with a responsive native desktop embed.
+- Added full-screen and download fallbacks optimized for mobile browsers.
+
+### Verified
+
+- First-party Python files compile successfully.
+- `git diff --check` passes.
+
+### Unresolved
+
+- The actual résumé must be uploaded to `/data/resume.pdf` on the attached
+  `portfolio` volume and configured through `RESUME_PDF_PATH`.
+- Runtime import testing was unavailable because system Python does not have
+  the declared FastAPI dependencies installed.
+- The fictional timeline entries still require confirmed résumé facts.
+
+### Next
+
+- Upload and configure the actual PDF, deploy the route, and verify inline and
+  download behavior on desktop and mobile.
+
 ## 2026-08-03 — Railway transit API and database bootstrap
 
 ### Goal

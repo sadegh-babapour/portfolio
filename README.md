@@ -102,6 +102,11 @@ python -m app.main
 The portfolio listens on `PORT` or 8086. The built React application is served
 at `/calgary-transit-live/`.
 
+The résumé is read locally from the ignored `static/resume.pdf` by default.
+Production reads it from the Railway volume using
+`RESUME_PDF_PATH=/data/resume.pdf`. See `docs/FILE_STORAGE.md` for the upload
+and replacement workflow.
+
 The NiceGUI process still starts an older public-schema transit poller and GTFS
 updater. Those legacy services use `DATABASE_URL` and are separate from the
 newer `transit` schema workflow described above.
@@ -130,6 +135,5 @@ Set `VITE_TRANSIT_API_BASE_URL` to the public API domain plus `/api` during the
 web build. Configure the database through Railway reference variables; never
 put production values in this repository.
 
-Railway service configuration and successful production behavior remain to be
-verified against the actual Railway project before they are described here as
-complete.
+The web, API, and database-backed transit page are deployed. Poller freshness
+and live vehicle interaction remain the next production verification task.

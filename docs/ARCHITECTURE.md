@@ -183,6 +183,10 @@ query these unqualified public-schema names.
 - Railway for intended web/API/worker hosting.
 - OpenStreetMap and CARTO tiles.
 - Unpkg-hosted Leaflet marker images.
+- A Railway volume attached to the NiceGUI `portfolio` service for private
+  runtime documents. The résumé is proxied through the same-origin
+  `/resume/document.pdf` route and is never addressed by its volume path in
+  browser code.
 
 External integrations must be configured without committing credentials.
 
@@ -217,7 +221,15 @@ The web build must receive the public Express API URL through
 `VITE_TRANSIT_API_BASE_URL` at build time. The poller should observe configured
 Calgary operating hours and administrative disable flags.
 
-No `railway.json`, service-specific configuration, production API URL, or
-verified production domain is present. Railway service settings must be
-reconciled with the actual project before configuration files are treated as
-authoritative.
+Service-specific Railway commands remain configured in the Railway dashboard
+rather than `railway.json`. The public portfolio and Express API domains are
+deployed and verified; poller scheduling/freshness still requires an
+operating-hours check.
+
+## Runtime file storage
+
+The repository ignores personal/runtime documents such as
+`static/resume.pdf`. Development keeps a local copy at that path; production
+keeps a separate copy on the `portfolio` Railway volume and selects it through
+`RESUME_PDF_PATH`. This policy does not apply to build inputs or database data.
+See `docs/FILE_STORAGE.md` for the operational procedure.

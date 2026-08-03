@@ -1,42 +1,89 @@
-# from nicegui import ui
+from html import escape
 
-# def create_pdf_viewer(pdf_url: str):
-#     '''Render a responsive PDF viewer iframe.'''
-#     html = f'''
-#     <style>
-#         .responsive-pdf {{
-#             width: calc(100% - 2rem);
-#             height: calc(100vh - 15rem);
-#             min-height: 600px;
-#             border: 1px solid #ddd;
-#             border-radius: 8px;
-#             margin: 0 auto;
-#             display: block;
-#             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-#         }}
-#         @media (min-width: 769px) {{
-#             .responsive-pdf {{ width: calc(100% - 10rem); height: calc(100vh - 10rem); }}
-#         }}
-#     </style>
-#     <iframe
-#         src="https://mozilla.github.io/pdf.js/web/viewer.html?file={pdf_url}&zoom=page-width"
-#         class="responsive-pdf"
-#         loading="lazy">
-#         <p>Your browser does not support iframes. <a href="{pdf_url}">Download the PDF</a>.</p>
-#     </iframe>
-#     '''
-#     ui.html(html)
 from nicegui import ui
 
+
 def create_pdf_viewer(pdf_url: str):
-    '''Responsive PDF iframe.'''
+    """Render a same-origin PDF with desktop embed and mobile fallbacks."""
+    safe_url = escape(pdf_url, quote=True)
+    download_url = f'{safe_url}?download=true'
     html = f"""
     <style>
-      .responsive-pdf {{width:calc(100%-2rem);height:calc(100vh-15rem);min-height:600px;border:1px solid #ddd;border-radius:8px;margin:0 auto;display:block;box-shadow:0 4px 6px rgba(0,0,0,0.1);}}
-      @media (min-width:769px) {{.responsive-pdf {{width:calc(100%-10rem);height:calc(100vh-10rem);}}}}
+      .resume-actions {{
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+      }}
+      .resume-actions a {{
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0.65rem 1rem;
+        border: 1px solid #5898d4;
+        border-radius: 0.5rem;
+        color: #245d91;
+        font-weight: 700;
+        text-decoration: none;
+      }}
+      .resume-actions a.primary {{
+        background: #5898d4;
+        color: white;
+      }}
+      .resume-pdf-frame {{
+        width: 100%;
+        height: clamp(640px, 82vh, 1100px);
+        overflow: hidden;
+        border: 1px solid #d7dde5;
+        border-radius: 0.75rem;
+        background: #f3f4f6;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
+      }}
+      .resume-pdf-frame object {{
+        width: 100%;
+        height: 100%;
+        border: 0;
+      }}
+      .resume-mobile-note {{ display: none; }}
+      @media (max-width: 700px) {{
+        .resume-actions {{ flex-direction: column; }}
+        .resume-actions a {{ width: 100%; }}
+        .resume-mobile-note {{
+          display: block;
+          padding: 1rem;
+          border: 1px solid #d7dde5;
+          border-radius: 0.75rem;
+          background: #f8fafc;
+          color: #475569;
+          line-height: 1.5;
+          margin-bottom: 1rem;
+        }}
+        .resume-pdf-frame {{
+          width: 100%;
+          height: 78vh;
+          min-height: 520px;
+          border-radius: 0.5rem;
+        }}
+      }}
     </style>
-    <iframe src="https://mozilla.github.io/pdf.js/web/viewer.html?file={pdf_url}&zoom=page-width" class="responsive-pdf" loading="lazy">
-      <p>Your browser does not support iframes. <a href="{pdf_url}">Download the PDF</a>.</p>
-    </iframe>
+    <div class="resume-actions">
+      <a class="primary" href="{safe_url}" target="_blank" rel="noopener">
+        Open full-screen PDF
+      </a>
+      <a href="{download_url}">Download PDF</a>
+    </div>
+    <div class="resume-mobile-note">
+      For the clearest mobile view, open the résumé full-screen or download it
+      using the buttons above.
+    </div>
+    <div class="resume-pdf-frame">
+      <object data="{safe_url}#view=FitH" type="application/pdf">
+        <p>
+          Your browser cannot embed this PDF.
+          <a href="{safe_url}" target="_blank" rel="noopener">Open it directly</a>.
+        </p>
+      </object>
+    </div>
     """
-    ui.html(html)
+    ui.html(html).classes('w-full')

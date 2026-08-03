@@ -303,8 +303,6 @@ function VehicleDrawer({ vehicle, onClose }) {
 
   useEffect(() => {
     if (!vehicle?.vehicle_id) {
-      setStops([]);
-      setAlerts([]);
       return;
     }
 
@@ -500,7 +498,6 @@ function App() {
 
   useEffect(() => {
     if (!selectedVehicle?.vehicle_id) {
-      setSelectedContext(null);
       return;
     }
 
@@ -531,7 +528,7 @@ function App() {
     const tick = () => {
       if (!vehicleHistory.length || !latestDataTimestampMs || !historyFetchedAtMs) {
         setVehicles([]);
-        if (selectedVehicle) setSelectedVehicle(null);
+        setSelectedVehicle((current) => (current ? null : current));
         return;
       }
 
@@ -549,12 +546,13 @@ function App() {
       const playbackVehicles = computePlaybackVehicles(vehicleHistory, playbackTimeMs);
       setVehicles(playbackVehicles);
 
-      if (selectedVehicle) {
+      setSelectedVehicle((current) => {
+        if (!current) return current;
         const updatedSelected = playbackVehicles.find(
-          (v) => v.vehicle_id === selectedVehicle.vehicle_id
+          (v) => v.vehicle_id === current.vehicle_id
         );
-        setSelectedVehicle(updatedSelected || null);
-      }
+        return updatedSelected || null;
+      });
     };
 
     tick();
@@ -565,7 +563,6 @@ function App() {
     vehicleHistory,
     latestDataTimestampMs,
     historyFetchedAtMs,
-    selectedVehicle?.vehicle_id,
   ]);
 
   const center = useMemo(() => [51.0447, -114.0719], []);
@@ -642,7 +639,10 @@ function App() {
                 position={[v.lat, v.lon]}
                 icon={createBusIcon(v, selectedVehicle?.vehicle_id === v.vehicle_id)}
                 eventHandlers={{
-                  click: () => setSelectedVehicle(v),
+                  click: () => {
+                    setSelectedContext(null);
+                    setSelectedVehicle(v);
+                  },
                 }}
               >
 
@@ -654,8 +654,12 @@ function App() {
 
         <div className={`drawer-wrap ${selectedVehicle ? "has-selection" : ""}`}>
           <VehicleDrawer
+            key={selectedVehicle?.vehicle_id || "no-selection"}
             vehicle={selectedVehicle}
-            onClose={() => setSelectedVehicle(null)}
+            onClose={() => {
+              setSelectedContext(null);
+              setSelectedVehicle(null);
+            }}
           />
         </div>
       </div>

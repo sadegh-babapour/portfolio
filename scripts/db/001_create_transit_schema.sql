@@ -1,1 +1,5 @@
-create schema if not exists transit;
+BEGIN;
+
+CREATE SCHEMA IF NOT EXISTS transit;
+
+COMMIT;

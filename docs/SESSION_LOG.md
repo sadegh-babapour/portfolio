@@ -1,5 +1,69 @@
 # Session Log
 
+## 2026-08-03 — Railway transit API and database bootstrap
+
+### Goal
+
+Deploy the newer transit API and initialize its production database contract.
+
+### Changed
+
+- Configured a Railway Express service with a public domain.
+- Bootstrapped the Railway `transit` schema and static GTFS data through the
+  poller worker's one-time pre-deploy command.
+- Ran one realtime ingestion pass.
+- Rebuilt the tracked React bundle with the public Express `/api` URL.
+- Removed the 78.6 MB tracked `data/stop_times.txt` artifact and ignored local
+  copies because bootstrap downloads current GTFS directly.
+
+### Verified
+
+- Production `/api/health` returns HTTP 200.
+- Production vehicle history returns HTTP 200 with current vehicle records.
+- Production featured route paths return HTTP 200 with route geometry.
+- Frontend lint and the production Vite build pass.
+- The built JavaScript contains the intended production API base URL.
+- Express syntax checks and database-boundary tests pass.
+- First-party Python sources compile successfully with `python3`.
+
+### Unresolved
+
+- Verify ongoing poller hours, flags, retention, and next in-hours refresh.
+- Push and verify the rebuilt transit page on the portfolio domain.
+
+### Next
+
+- Finish poller configuration verification, then deploy and smoke-test the web
+  bundle.
+
+## 2026-08-03 — Transit portfolio navigation
+
+### Goal
+
+Restore portfolio navigation on the standalone React Calgary Transit page.
+
+### Changed
+
+- Added a React portfolio header matching the NiceGUI route set.
+- Added a desktop link row and an accessible, responsive mobile menu.
+- Regenerated the tracked recovery bundle in `frontend/dist`.
+- Updated project state, the transit mount decision, and next actions.
+
+### Verified
+
+- Frontend ESLint passes.
+- The Vite production build succeeds with `/calgary-transit-live/` assets.
+
+### Unresolved
+
+- The updated bundle has not yet been pushed or verified on Railway.
+- Production still lacks the Express transit API and standalone poller worker.
+
+### Next
+
+- Configure the Express transit API as a second Railway service and wire its
+  public `/api` URL into the web build.
+
 ## 2026-08-02 — Read-only repository recovery audit
 
 ### Goal

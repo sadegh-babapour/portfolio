@@ -17,9 +17,10 @@ feature:
 2. A newer React/Leaflet frontend with an Express API, a separate Python
    poller, and database objects under the PostgreSQL `transit` schema.
 
-The newer stack is the intended direction for the Calgary Transit page. Local
-recovery work has made its database bootstrap and frontend build reproducible,
-but the complete multi-service Railway deployment is not yet verified.
+The newer stack is the intended direction for the Calgary Transit page. Its
+database bootstrap, Express API, poller worker, and frontend build are now
+running on Railway, while final service configuration and web-page verification
+remain in progress.
 
 ## Version-control state
 
@@ -46,6 +47,7 @@ safe placeholders.
 - The theme-park dashboard reads committed sample data from
   `dashboard_cache.json` and does not require a live database.
 - The React transit frontend implements:
+  - a portfolio navigation header with desktop links and a mobile menu;
   - delayed playback from real observation history;
   - bus, BRT/MAX, featured, and all filters;
   - route lines and selected-route/corridor highlighting;
@@ -56,7 +58,9 @@ safe placeholders.
   stop, and alert endpoints.
 - `database_backup.sql` defines the newer `transit` schema, its tables, views,
   and indexes. It is a schema-only dump and contains no table data.
-- The repository includes Calgary static GTFS files and a route-category CSV.
+- The repository includes smaller Calgary static GTFS reference files and a
+  route-category CSV. The 78.6 MB `stop_times.txt` artifact is intentionally
+  excluded because the bootstrap downloads the current GTFS archive directly.
 - The current React source builds and lints successfully with Vite; production
   assets use the `/calgary-transit-live/` base path.
 - All 26 first-party Python files parse successfully.
@@ -91,11 +95,15 @@ rechecked against today's external feeds.
 - NiceGUI mounts `frontend/dist` at `/calgary-transit-live`, and Vite now emits
   production asset URLs for that path. A deployed HTTP smoke test remains.
 - NiceGUI navigation now links to `/calgary-transit-live/`.
-- The React application expects the Express API contract. NiceGUI exposes a
-  different set of `/api` routes, so the default same-origin `/api` fallback is
-  not a compatible production backend.
-- The newer Express API and standalone poller run locally against current feed
-  data but still lack verified Railway service configuration.
+- The React transit bundle now includes matching portfolio navigation; the
+  updated bundle has not yet been verified on Railway.
+- The production React bundle is built against the public Railway Express API
+  at `https://transit-api-production.up.railway.app/api`.
+- The Railway Express API health, vehicle-history, and route-path endpoints
+  returned HTTP 200 after the production database bootstrap and first poll.
+- The standalone poller is deployed as a Railway worker; its ongoing schedule,
+  flags, retention, and freshness still need verification after the one-time
+  bootstrap command is removed.
 - The standalone current-state poller uses `requests` and `psycopg2`; both are
   now declared directly in `requirements.txt`.
 - The legacy NiceGUI transit stack uses `DATABASE_URL`, while `.env.example`
@@ -166,15 +174,20 @@ No external service credentials belong in these documents.
 - Verification of local app + local database, local app + Railway database,
   and deployed app + Railway database modes.
 
-## Contradicted by current code
+## Deployment configuration note
 
-- The chat describes separate Railway services as the completed deployment
-  shape; the repository contains only a single Python `Procfile` command.
+- The repository intentionally contains only the Python web `Procfile`; the
+  Express API and poller commands are configured per Railway service.
 
 ## Confirmed Railway state
 
-- Railway currently has one application service named `portfolio` and one
-  PostgreSQL service named `postgres`.
+- Railway currently has application services named `portfolio`, `transit-api`,
+  and `transit-poller`, plus the PostgreSQL service named `postgres`.
+- The Express service is public at
+  `https://transit-api-production.up.railway.app` and its database-backed
+  history and path endpoints have been verified.
+- The poller worker completed the production schema/static-data bootstrap and
+  one realtime poll.
 - The application deploys branch `main` with Railpack and is detected as a
   Python application.
 - The observed failed build selected Python 3.13.14, installed
@@ -187,13 +200,11 @@ No external service credentials belong in these documents.
 
 ## Unknown or unverified
 
-- The current Railway public URL and live production behavior.
-- Railway variable names, root-directory overrides, healthcheck, and database
-  contents.
+- Complete live production page behavior after the rebuilt frontend is pushed.
+- Remaining Railway healthcheck details and exact worker freshness behavior.
 - Whether any database credentials in the checkpoint have been exposed or
   rotated.
-- Whether the configured local or remote PostgreSQL databases are reachable or
-  contain the schema/data represented in the snapshot.
+- Exact production row counts beyond the verified API-visible data.
 - Whether Calgary's live feeds still have the same field availability observed
   in April 2026.
 - Which database schema should be retained after recovery of the newer stack.

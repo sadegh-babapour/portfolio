@@ -52,6 +52,9 @@ logs/
 # as static demo data, but exclude any future runtime caches
 *_cache_runtime.json
 
+# Large static GTFS artifact; database bootstrap downloads the current archive
+data/stop_times.txt
+
 # JavaScript dependencies. frontend/dist remains tracked until Railway has a
 # verified frontend build step.
 node_modules/

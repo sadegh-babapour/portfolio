@@ -22,6 +22,7 @@ import "./App.css";
 import RouteLine from "./RouteLine";
 import SelectedRouteAntPath from "./SelectedRouteAntPath";
 import SelectedCorridor from "./SelectedCorridor";
+import PortfolioNav from "./PortfolioNav";
 
 
 
@@ -570,6 +571,7 @@ function App() {
 
   return (
     <div className="app">
+      <PortfolioNav />
       <div className="topbar">
         <div className="topbar-text">
           <h1>Calgary Transit Live</h1>

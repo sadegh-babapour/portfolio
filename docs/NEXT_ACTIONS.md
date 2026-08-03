@@ -31,7 +31,9 @@ Last updated: 2026-08-03
 - [x] Make the Vite production build safe at `/calgary-transit-live`.
 - [x] Change NiceGUI navigation from the nonexistent `/map` route to the
   accepted transit route.
-- [ ] Configure React to use the Express API in local and production modes.
+- [x] Add matching desktop/mobile portfolio navigation inside the standalone
+  React transit bundle.
+- [x] Configure React to use the Express API in local and production modes.
 - [x] Add explicit start scripts to the Express package; document all
   service commands.
 - [x] Declare `requests` and the selected Psycopg 2 package directly because the
@@ -57,16 +59,18 @@ Last updated: 2026-08-03
   test.
 - [x] Recheck current Calgary feed field availability before describing it as
   current behavior.
+- [x] Remove the oversized tracked `data/stop_times.txt`; the reproducible
+  bootstrap downloads current static GTFS instead.
 
 ## Deployment
 
 - [x] Record the current Railway service count, builder, Python version,
   dependency failure, and detected start command.
 - [ ] Obtain the public production URL and remaining app-service settings.
-- [ ] Configure three Railway services only after all three local processes are
+- [x] Configure three Railway services after all three local processes are
   reproducible.
-- [ ] Provide the public Express URL as `VITE_TRANSIT_API_BASE_URL` during the
-  web service build.
+- [x] Provide the public Express URL as `VITE_TRANSIT_API_BASE_URL` in the
+  tracked recovery bundle.
 - [ ] Verify poller hours, timezone, retention, `POLL_ENABLED`, and
   `ADMIN_KILL_SWITCH` in Railway.
 - [ ] Verify the web page, API health, database freshness, route selection,
@@ -94,6 +98,6 @@ Last updated: 2026-08-03
 
 ## Current recommended next task
 
-Publish the reviewed recovery commit to `main` so Railway can rebuild the
-existing NiceGUI service with Psycopg 3.3.4. Verify that service before adding
-the Express API and poller services.
+Remove the one-time transit bootstrap pre-deploy command, verify the poller
+worker's ongoing schedule and flags, then publish and smoke-test the updated web
+bundle.

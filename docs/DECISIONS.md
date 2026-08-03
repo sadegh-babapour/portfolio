@@ -296,17 +296,19 @@ the bundle from source control and update this decision.
 ## ADR-009: Mount the built transit page at `/calgary-transit-live`
 
 Date: 2026-05-07
-Status: Accepted target; current wiring is broken
+Status: Accepted; navigation and subpath wiring implemented locally
 
 ### Context
 
 The React application is intended to appear as a portfolio page with a clear,
-descriptive URL.
+descriptive URL. Because FastAPI serves it as a standalone React bundle, it
+does not inherit NiceGUI-rendered components.
 
 ### Decision
 
 Serve the production React bundle through FastAPI at
-`/calgary-transit-live` and expose that route in the NiceGUI navigation.
+`/calgary-transit-live`, expose that route in the NiceGUI navigation, and
+render matching portfolio navigation within the React application.
 
 ### Reasons
 
@@ -315,8 +317,9 @@ Serve the production React bundle through FastAPI at
 
 ### Consequences
 
-Vite must build subpath-safe assets, and the navbar must link to the mounted
-route. Neither requirement is currently satisfied.
+Vite must build subpath-safe assets. Portfolio navigation links are maintained
+in both the NiceGUI shell and the standalone React bundle, so changes to the
+link set must keep them synchronized.
 
 ### Alternatives considered
 
@@ -326,7 +329,7 @@ route. Neither requirement is currently satisfied.
 ## ADR-010: Target three Railway services from one repository
 
 Date: 2026-05-07
-Status: Accepted target; not verified or fully configured
+Status: Accepted and implemented; final web smoke test pending
 
 ### Context
 
@@ -349,10 +352,33 @@ Deploy one repository as three Railway services sharing PostgreSQL:
 
 ### Consequences
 
-Railway build/start configuration, a production API domain, and service-level
-variables still need to be created and verified.
+Service-specific Railway commands and variables must remain synchronized with
+the repository documentation and verified independently after changes.
 
 ### Alternatives considered
 
 - One process running all three components.
 - Port Express into FastAPI before the first recovered deployment.
+
+## ADR-011: Do not track the large static GTFS stop-times export
+
+Date: 2026-08-03
+Status: Accepted and implemented
+
+### Context
+
+`data/stop_times.txt` is approximately 78.6 MB, exceeds GitHub's recommended
+single-file size, and becomes stale as Calgary publishes schedule updates. The
+database bootstrap already downloads Calgary's current static GTFS archive.
+
+### Decision
+
+Remove `data/stop_times.txt` from Git tracking and ignore future local copies.
+Use `scripts/bootstrap_transit_db.py --load-static` as the production source of
+static stop times.
+
+### Consequences
+
+Database initialization requires access to Calgary's GTFS download endpoint.
+The deleted file remains recoverable from repository history, but new commits
+and deployments no longer carry the oversized artifact.

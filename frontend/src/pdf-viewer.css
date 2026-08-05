@@ -1,0 +1,126 @@
+:root {
+  --viewer-bg: #e5e7eb;
+  --toolbar-bg: #ffffff;
+  --toolbar-text: #111827;
+  --toolbar-border: #cbd5e1;
+  --button-bg: #ffffff;
+  --button-border: #94a3b8;
+  --page-shadow: 0 6px 18px rgba(15, 23, 42, 0.2);
+}
+
+:root[data-theme="dark"] {
+  --viewer-bg: #111827;
+  --toolbar-bg: #1f2937;
+  --toolbar-text: #f3f4f6;
+  --toolbar-border: #475569;
+  --button-bg: #273449;
+  --button-border: #64748b;
+  --page-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+  background: var(--viewer-bg);
+  color: var(--toolbar-text);
+  font-family: Arial, sans-serif;
+}
+
+.pdf-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--toolbar-border);
+  background: var(--toolbar-bg);
+  color: var(--toolbar-text);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.16);
+}
+
+#page-status {
+  margin-left: 8px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+:root[data-theme="dark"] #page-status {
+  color: #cbd5e1;
+}
+
+.pdf-toolbar-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.pdf-toolbar button {
+  min-width: 40px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--button-border);
+  border-radius: 7px;
+  background: var(--button-bg);
+  color: var(--toolbar-text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+#pdf-pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-height: calc(100vh - 52px);
+  padding: 12px;
+  overflow-x: auto;
+}
+
+.pdf-page {
+  flex: 0 0 auto;
+  line-height: 0;
+  background: #ffffff;
+  box-shadow: var(--page-shadow);
+}
+
+.pdf-page canvas {
+  display: block;
+  max-width: none;
+}
+
+#pdf-error {
+  margin: 24px;
+  padding: 16px;
+  border: 1px solid #dc2626;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #991b1b;
+  line-height: 1.5;
+}
+
+@media (max-width: 520px) {
+  .pdf-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .pdf-toolbar-actions,
+  .pdf-toolbar button {
+    width: 100%;
+  }
+
+  #pdf-pages {
+    min-height: calc(100vh - 98px);
+    padding: 8px;
+  }
+}

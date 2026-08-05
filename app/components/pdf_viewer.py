@@ -1,4 +1,5 @@
 from html import escape
+from urllib.parse import quote
 
 from nicegui import ui
 
@@ -7,6 +8,10 @@ def create_pdf_viewer(pdf_url: str):
     """Render a same-origin PDF in a responsive browser frame."""
     safe_url = escape(pdf_url, quote=True)
     download_url = f'{safe_url}?download=true'
+    viewer_url = (
+        '/calgary-transit-live/pdf-viewer.html?file='
+        f'{quote(pdf_url, safe="")}'
+    )
     html = f"""
     <style>
       .resume-actions {{
@@ -75,8 +80,8 @@ def create_pdf_viewer(pdf_url: str):
       <a href="{download_url}">Download PDF</a>
     </div>
     <div class="resume-pdf-frame">
-      <iframe src="{safe_url}#view=FitH&amp;toolbar=1"
-              title="Résumé PDF" loading="eager"></iframe>
+      <iframe src="{viewer_url}" title="Résumé PDF viewer"
+              loading="eager"></iframe>
     </div>
     """
     ui.html(html).classes('w-full')

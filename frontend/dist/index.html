@@ -4,9 +4,19 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/calgary-transit-live/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (() => {
+        const stored = localStorage.getItem("portfolio-theme");
+        const theme = stored === "dark" || stored === "light"
+          ? stored
+          : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
     <title>transit-dashboard</title>
-    <script type="module" crossorigin src="/calgary-transit-live/assets/index-CzuJoZdp.js"></script>
-    <link rel="stylesheet" crossorigin href="/calgary-transit-live/assets/index-CVCLgnmJ.css">
+    <script type="module" crossorigin src="/calgary-transit-live/assets/index-DwSryB-N.js"></script>
+    <link rel="stylesheet" crossorigin href="/calgary-transit-live/assets/index-Dm_bTV2A.css">
   </head>
   <body>
     <div id="root"></div>

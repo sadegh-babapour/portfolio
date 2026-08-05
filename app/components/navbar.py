@@ -19,6 +19,25 @@ NAV_LINKS = [
 
 def navbar():
     """Render the portfolio header shared with the React transit frontend."""
+    ui.add_head_html('''
+      <script>
+        (() => {
+          const stored = localStorage.getItem('portfolio-theme');
+          const theme = stored === 'dark' || stored === 'light'
+            ? stored
+            : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.style.colorScheme = theme;
+        })();
+      </script>
+      <style>
+        html[data-theme="dark"],
+        html[data-theme="dark"] body {
+          background: #111827;
+          color: #e5e7eb;
+        }
+      </style>
+    ''')
     request = ui.context.client.request
     current_path = request.url.path.rstrip('/') or '/' if request else ''
     links = ''.join(
@@ -31,6 +50,7 @@ def navbar():
         f'''
         <style>
           .nicegui-portfolio-nav {{
+            box-sizing: border-box;
             position: sticky;
             top: 0;
             z-index: 1400;
@@ -39,6 +59,7 @@ def navbar():
             justify-content: space-between;
             gap: 24px;
             width: 100%;
+            height: 64px;
             min-height: 64px;
             padding: 10px 24px;
             background: #5898d4;
@@ -57,11 +78,14 @@ def navbar():
             align-items: center;
             justify-content: flex-end;
             gap: 20px;
+            margin-left: auto;
+            min-width: 0;
           }}
           .nicegui-nav-actions {{
             display: flex;
             align-items: center;
             gap: 12px;
+            flex: 0 0 auto;
           }}
           .portfolio-theme-toggle {{
             display: inline-flex;
@@ -82,6 +106,9 @@ def navbar():
           .portfolio-theme-toggle:focus-visible {{
             background: rgba(255, 255, 255, 0.14);
           }}
+          .theme-icon-dark {{ display: none; }}
+          html[data-theme="dark"] .theme-icon-light {{ display: none; }}
+          html[data-theme="dark"] .theme-icon-dark {{ display: inline; }}
           .nicegui-portfolio-links a,
           .nicegui-mobile-links a {{ font-size: 14px; font-weight: 600; }}
           .nicegui-portfolio-links a:hover,
@@ -97,35 +124,69 @@ def navbar():
             text-underline-offset: 5px;
           }}
           .nicegui-mobile-menu {{ display: none; }}
-          body.portfolio-dark {{
+          html[data-theme="dark"] body {{
             color-scheme: dark;
             background: #111827;
             color: #e5e7eb;
           }}
-          body.portfolio-dark .q-page,
-          body.portfolio-dark .q-page-container,
-          body.portfolio-dark .nicegui-content {{
+          html[data-theme="dark"] .q-layout,
+          html[data-theme="dark"] .q-page,
+          html[data-theme="dark"] .q-page-container,
+          html[data-theme="dark"] .nicegui-content {{
             background: #111827;
             color: #e5e7eb;
           }}
-          body.portfolio-dark .q-card,
-          body.portfolio-dark .q-timeline__content {{
+          html[data-theme="dark"] .q-card,
+          html[data-theme="dark"] .q-tab-panels,
+          html[data-theme="dark"] .q-tab-panel,
+          html[data-theme="dark"] .q-table__container,
+          html[data-theme="dark"] .q-timeline__content {{
             background: #1f2937;
             color: #e5e7eb;
           }}
-          body.portfolio-dark .q-separator {{ background: #374151; }}
-          body.portfolio-dark .nicegui-mobile-links {{
+          html[data-theme="dark"] .q-field__control {{
+            background: #1f2937;
+            color: #f3f4f6;
+          }}
+          html[data-theme="dark"] .q-field__native,
+          html[data-theme="dark"] .q-field__input,
+          html[data-theme="dark"] .q-field__label,
+          html[data-theme="dark"] .q-field__marginal,
+          html[data-theme="dark"] .q-tab,
+          html[data-theme="dark"] .q-table th,
+          html[data-theme="dark"] .q-table td {{
+            color: #e5e7eb;
+          }}
+          html[data-theme="dark"] .q-field--outlined .q-field__control::before {{
+            border-color: #64748b;
+          }}
+          html[data-theme="dark"] .q-table thead,
+          html[data-theme="dark"] .q-table tbody,
+          html[data-theme="dark"] .q-table tr {{
+            background: #1f2937;
+          }}
+          html[data-theme="dark"] .q-table th,
+          html[data-theme="dark"] .q-table td,
+          html[data-theme="dark"] .q-separator {{ border-color: #374151; }}
+          html[data-theme="dark"] .q-separator {{ background: #374151; }}
+          html[data-theme="dark"] .text-grey {{ color: #cbd5e1 !important; }}
+          html[data-theme="dark"] .nicegui-echart {{
+            border-radius: 8px;
+            background: #fff;
+            color: #111827;
+          }}
+          html[data-theme="dark"] .nicegui-mobile-links {{
             border-color: #4b5563;
             background: #1f2937;
             color: #f9fafb;
           }}
-          body.portfolio-dark .nicegui-mobile-links a {{ border-color: #374151; }}
-          body.portfolio-dark .nicegui-mobile-links a[aria-current="page"] {{
+          html[data-theme="dark"] .nicegui-mobile-links a {{ border-color: #374151; }}
+          html[data-theme="dark"] .nicegui-mobile-links a[aria-current="page"] {{
             background: #27364a;
             color: #bfdbfe;
           }}
-          @media (max-width: 900px) {{
-            .nicegui-portfolio-nav {{ min-height: 56px; padding: 8px 16px; }}
+          @media (max-width: 1050px) {{
+            .nicegui-portfolio-nav {{ height: 56px; min-height: 56px; padding: 8px 16px; }}
             .nicegui-portfolio-brand {{ font-size: 19px; }}
             .nicegui-portfolio-links {{ display: none; }}
             .nicegui-mobile-menu {{ display: block; }}
@@ -172,7 +233,8 @@ def navbar():
           <div class="nicegui-nav-actions">
             <button class="portfolio-theme-toggle" type="button"
                     aria-label="Switch to dark theme" title="Switch theme">
-              <span aria-hidden="true">🌙</span>
+              <span class="theme-icon-light" aria-hidden="true">🌙</span>
+              <span class="theme-icon-dark" aria-hidden="true">☀️</span>
             </button>
             <details class="nicegui-mobile-menu">
               <summary aria-label="Open portfolio navigation">Menu</summary>
@@ -187,20 +249,16 @@ def navbar():
     ui.run_javascript('''
       (() => {
         const storageKey = 'portfolio-theme';
-        const body = document.body;
         const button = document.querySelector('.portfolio-theme-toggle');
         if (!button || button.dataset.themeReady === 'true') return;
         button.dataset.themeReady = 'true';
 
-        const storedTheme = localStorage.getItem(storageKey);
-        let theme = storedTheme ||
-          (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        let theme = document.documentElement.dataset.theme || 'light';
 
         const applyTheme = (nextTheme) => {
           theme = nextTheme;
           const dark = theme === 'dark';
-          body.classList.toggle('portfolio-dark', dark);
-          button.querySelector('span').textContent = dark ? '☀️' : '🌙';
+          document.documentElement.dataset.theme = theme;
           button.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
           document.documentElement.style.colorScheme = theme;
         };

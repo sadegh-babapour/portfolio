@@ -28,6 +28,8 @@ function NavLinks({ className }) {
 
 export default function PortfolioNav() {
   const [theme, setTheme] = useState(() => {
+    const initializedTheme = document.documentElement.dataset.theme;
+    if (initializedTheme === "dark" || initializedTheme === "light") return initializedTheme;
     const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
     if (storedTheme === "dark" || storedTheme === "light") return storedTheme;
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";

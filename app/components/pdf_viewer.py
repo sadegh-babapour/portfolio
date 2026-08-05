@@ -45,15 +45,15 @@ def create_pdf_viewer(pdf_url: str):
         height: 100%;
         border: 0;
       }}
-      body.portfolio-dark .resume-actions a {{
+      html[data-theme="dark"] .resume-actions a {{
         border-color: #93c5fd;
         color: #bfdbfe;
       }}
-      body.portfolio-dark .resume-actions a.primary {{
+      html[data-theme="dark"] .resume-actions a.primary {{
         background: #3b82f6;
         color: #fff;
       }}
-      body.portfolio-dark .resume-pdf-frame {{
+      html[data-theme="dark"] .resume-pdf-frame {{
         border-color: #4b5563;
         background: #1f2937;
       }}

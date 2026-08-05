@@ -80,7 +80,8 @@ Last updated: 2026-08-03
   no active alert was available during the latest check.
 - [ ] Visually verify the corrected matching NiceGUI/React header geometry,
   always-visible theme action, flash-free shared preference, dark-safe page
-  contents, and iframe-based mobile résumé viewer.
+  contents, theme-aware Projects/Dashboard charts, and PDF.js mobile résumé
+  viewer.
 - [x] Upload `static/resume.pdf` to `/data/resume.pdf` on the `portfolio`
   volume, set `RESUME_PDF_PATH`, deploy, and verify inline/download behavior.
 

@@ -59,6 +59,9 @@ the older public-schema transit implementation.
 - Production build: `npm run build` from `frontend/`.
 - Entry: `frontend/src/main.jsx` rendering `frontend/src/App.jsx`.
 - Production API base: `VITE_TRANSIT_API_BASE_URL`, falling back to `/api`.
+- The same Vite build also emits `pdf-viewer.html`, a non-React PDF.js canvas
+  viewer used by the NiceGUI résumé page. Its bundled worker and display layer
+  are served under `/calgary-transit-live/assets/`.
 
 ### Express transit API
 
@@ -231,5 +234,7 @@ operating-hours check.
 The repository ignores personal/runtime documents such as
 `static/resume.pdf`. Development keeps a local copy at that path; production
 keeps a separate copy on the `portfolio` Railway volume and selects it through
-`RESUME_PDF_PATH`. This policy does not apply to build inputs or database data.
+`RESUME_PDF_PATH`. The browser obtains the document only through the same-origin
+route, and the locally bundled PDF.js viewer renders it into canvases. This
+policy does not apply to build inputs or database data.
 See `docs/FILE_STORAGE.md` for the operational procedure.

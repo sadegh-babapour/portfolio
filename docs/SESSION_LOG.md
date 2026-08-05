@@ -1,5 +1,41 @@
 # Session Log
 
+## 2026-08-04 — PDF.js résumé and theme-aware charts
+
+### Goal
+
+Replace the mobile browser's non-rendering native PDF placeholder and make
+Projects/Dashboard ECharts genuinely responsive to light/dark mode.
+
+### Changed
+
+- Added the user-approved `pdfjs-dist` 6.1.200 frontend dependency and lockfile
+  entries.
+- Added a locally bundled, portfolio-styled PDF.js viewer with fit-width page
+  rendering, zoom controls, resize rerendering, status/error UI, and shared
+  light/dark preference.
+- Changed Vite to emit the transit application and PDF viewer as separate HTML
+  entry points in one production bundle.
+- Pointed the NiceGUI résumé iframe at the same-origin PDF.js viewer while
+  preserving full-screen and download controls.
+- Replaced white EChart canvases with runtime theme updates for chart text,
+  axes, legends, grid lines, tooltips, polar axes, and backgrounds.
+
+### Verified
+
+- React lint and the multi-entry production build pass with the public transit
+  API URL.
+- PDF.js parses the actual ignored résumé as a two-page document.
+- Local production-preview requests returned the viewer HTML, 2.2 MB worker,
+  and viewer module successfully.
+- The production dependency audit reports zero known vulnerabilities.
+- Python compilation, NiceGUI component imports, and `git diff --check` pass.
+
+### Next
+
+- Commit, push, deploy, then verify the production viewer HTML/assets and test
+  actual canvas rendering on the user's mobile browser.
+
 ## 2026-08-04 — Navbar parity and complete dark-mode pass
 
 ### Goal

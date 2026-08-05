@@ -154,11 +154,15 @@ rechecked against today's external feeds.
   sources.
 - OpenStreetMap and CARTO provide map tiles.
 - The résumé page now uses a same-origin `/resume/document.pdf` endpoint with a
-  full-width responsive desktop/mobile iframe and open/download fallbacks. Its
+  full-width responsive desktop/mobile PDF.js canvas viewer and open/download
+  fallbacks. Its
   local route, headers, file contents, and desktop/narrow layouts are verified.
   Production now reads the byte-identical ignored PDF from `/data/resume.pdf`
   through `RESUME_PDF_PATH`; inline and download responses return the expected
   disposition headers.
+- The PDF.js display layer and worker are bundled into the tracked Vite output
+  as a second HTML entry point. Mobile browsers therefore render PDF pages in
+  canvas instead of relying on inconsistent native iframe PDF support.
 - NiceGUI and React use the same `portfolio-theme` browser-storage key, so a
   light/dark selection follows users between the two frontend shells. Both
   initialize that preference in the document head before visible content to
@@ -167,6 +171,8 @@ rechecked against today's external feeds.
 - NiceGUI and React portfolio headers share exact desktop/mobile heights,
   padding, spacing, border sizing, and the 1050px mobile-menu breakpoint. The
   theme action cannot shrink out of the React header at intermediate widths.
+- NiceGUI ECharts on Projects and Dashboard receive runtime light/dark updates
+  for canvas background, titles, legends, axes, grids, and tooltips.
 
 No external service credentials belong in these documents.
 

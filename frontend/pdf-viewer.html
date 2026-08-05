@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (() => {
+        const stored = localStorage.getItem("portfolio-theme");
+        const theme = stored === "dark" || stored === "light"
+          ? stored
+          : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
+    <title>Résumé viewer</title>
+  </head>
+  <body>
+    <header class="pdf-toolbar" aria-label="PDF controls">
+      <div>
+        <strong>Résumé</strong>
+        <span id="page-status" role="status">Loading…</span>
+      </div>
+      <div class="pdf-toolbar-actions">
+        <button id="zoom-out" type="button" aria-label="Zoom out">−</button>
+        <button id="fit-width" type="button">Fit width</button>
+        <button id="zoom-in" type="button" aria-label="Zoom in">+</button>
+      </div>
+    </header>
+    <main id="pdf-pages" aria-busy="true"></main>
+    <div id="pdf-error" role="alert" hidden></div>
+    <script type="module" src="/src/pdf-viewer.js"></script>
+  </body>
+</html>

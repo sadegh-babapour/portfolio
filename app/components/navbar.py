@@ -172,8 +172,8 @@ def navbar():
           html[data-theme="dark"] .text-grey {{ color: #cbd5e1 !important; }}
           html[data-theme="dark"] .nicegui-echart {{
             border-radius: 8px;
-            background: #fff;
-            color: #111827;
+            background: #1f2937;
+            color: #e5e7eb;
           }}
           html[data-theme="dark"] .nicegui-mobile-links {{
             border-color: #4b5563;
@@ -255,12 +255,64 @@ def navbar():
 
         let theme = document.documentElement.dataset.theme || 'light';
 
+        const applyChartTheme = () => {
+          const dark = theme === 'dark';
+          const text = dark ? '#e5e7eb' : '#374151';
+          const muted = dark ? '#94a3b8' : '#9ca3af';
+          const grid = dark ? '#374151' : '#e5e7eb';
+          const tooltipBackground = dark ? '#111827' : '#ffffff';
+          const tooltipBorder = dark ? '#64748b' : '#d1d5db';
+
+          if (!window.echarts) return;
+          document.querySelectorAll('.nicegui-echart, nicegui-echart').forEach((element) => {
+            const chartHost = element.querySelector('div');
+            const chart = window.echarts.getInstanceByDom(element) ||
+              (chartHost ? window.echarts.getInstanceByDom(chartHost) : null);
+            if (!chart) return;
+            const current = chart.getOption();
+            const update = {
+              backgroundColor: 'transparent',
+              textStyle: { color: text },
+            };
+            if (current.title?.length) {
+              update.title = current.title.map(() => ({
+                textStyle: { color: text }, subtextStyle: { color: muted },
+              }));
+            }
+            if (current.legend?.length) {
+              update.legend = current.legend.map(() => ({ textStyle: { color: text } }));
+            }
+            if (current.tooltip?.length) {
+              update.tooltip = current.tooltip.map(() => ({
+                backgroundColor: tooltipBackground,
+                borderColor: tooltipBorder,
+                textStyle: { color: text },
+              }));
+            }
+            const axisTheme = () => ({
+                axisLabel: { color: text },
+                axisLine: { lineStyle: { color: muted } },
+                splitLine: { lineStyle: { color: grid } },
+                nameTextStyle: { color: text },
+            });
+            for (const axisName of ['xAxis', 'yAxis', 'angleAxis', 'radiusAxis']) {
+              if (current[axisName]?.length) {
+                update[axisName] = current[axisName].map(axisTheme);
+              }
+            }
+            chart.setOption(update);
+          });
+        };
+
         const applyTheme = (nextTheme) => {
           theme = nextTheme;
           const dark = theme === 'dark';
           document.documentElement.dataset.theme = theme;
           button.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
           document.documentElement.style.colorScheme = theme;
+          window.setTimeout(applyChartTheme, 0);
+          window.setTimeout(applyChartTheme, 300);
+          window.setTimeout(applyChartTheme, 1000);
         };
 
         applyTheme(theme);
@@ -269,6 +321,7 @@ def navbar():
           localStorage.setItem(storageKey, nextTheme);
           applyTheme(nextTheme);
         });
+
       })();
     ''')
 

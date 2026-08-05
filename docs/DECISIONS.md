@@ -459,3 +459,32 @@ the preference name and values form a small shared browser contract. Future
 theme changes must keep those values and accessible toggle behavior aligned.
 NiceGUI's shared shell also owns dark overrides for Quasar page content and
 form/data components so individual pages do not need one-off theme classes.
+
+## ADR-015: Render the résumé with a locally bundled PDF.js viewer
+
+Date: 2026-08-04
+Status: Accepted and implemented
+
+### Context
+
+Desktop browsers displayed the same-origin résumé through native PDF embedding,
+but mobile Chrome replaced `<object>` and `<iframe>` attempts with a filename
+placeholder and an Open action. Native mobile PDF embedding is not consistent
+enough for the portfolio's inline résumé requirement.
+
+### Decision
+
+Use Mozilla PDF.js's display layer and worker to render each résumé page into a
+responsive canvas. Bundle the approved `pdfjs-dist` dependency as a second Vite
+HTML entry point and serve it from the existing FastAPI-mounted transit bundle.
+Keep the PDF itself behind `/resume/document.pdf` and retain full-screen and
+download fallbacks.
+
+### Consequences
+
+- Mobile display no longer depends on the browser's native PDF plugin.
+- The tracked production bundle gains a versioned PDF.js module and an
+  approximately 2.2 MB worker asset.
+- PDF parsing remains client-side and same-origin; no external viewer service
+  or runtime CDN receives the document URL.
+- Frontend dependency and security audits now include `pdfjs-dist`.

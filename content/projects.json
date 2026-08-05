@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "heading": "Data Engineering & Analytics Projects",
+  "intro": "Case studies emphasize the data problem, pipeline, architecture, operational trade-offs, and honest limitations—not just screenshots.",
+  "projects": [
+    {
+      "id": "calgary-transit-live",
+      "title": "Calgary Transit Live",
+      "status": "Live",
+      "visibility": "public",
+      "featured": true,
+      "summary": "A production GTFS and GTFS-Realtime pipeline with delayed vehicle playback, route context, stops, and alerts.",
+      "problem": "Vehicle positions are sparse and often omit the route and stop context needed for a useful map. The system joins realtime observations to static GTFS and exposes a stable frontend contract.",
+      "architecture": "Calgary feeds → Python poller → PostgreSQL transit schema → Express API → React/Leaflet, with NiceGUI serving the production bundle.",
+      "data_sources": [
+        "Calgary Transit static GTFS",
+        "VehiclePositions GTFS-Realtime",
+        "TripUpdates GTFS-Realtime",
+        "Alerts GTFS-Realtime"
+      ],
+      "pipeline": [
+        "Download and parse three protobuf feeds on a controlled schedule",
+        "Upsert current entities and retain a bounded vehicle observation history",
+        "Enrich trip, route, shape, stop, and alert context in PostgreSQL",
+        "Serve parameterized read queries through Express",
+        "Render playback approximately 75 seconds behind source time"
+      ],
+      "stack": ["Python", "PostgreSQL", "Express", "React", "Leaflet", "Railway"],
+      "outcomes": [
+        "Deployed separate web, API, and worker services sharing PostgreSQL",
+        "Preserves source timestamps and distinguishes stopped and stale vehicles",
+        "Supports responsive route selection, upcoming stops, and alert context"
+      ],
+      "limitations": [
+        "Calgary LRT does not currently provide confirmed VehiclePositions in the observed feed",
+        "The public UI deliberately presents delayed playback rather than implying exact instantaneous location",
+        "Active-alert presentation still needs a production example when the feed supplies one"
+      ],
+      "data_mode": "live_database",
+      "links": [
+        {"label": "Open live project", "url": "/calgary-transit-live/"}
+      ]
+    },
+    {
+      "id": "theme-park-analytics",
+      "title": "Theme Park Analytics Dashboard",
+      "status": "Sample dataset",
+      "visibility": "public",
+      "featured": false,
+      "summary": "An analytical dashboard prototype covering attendance, membership, visits, and revenue from a committed snapshot.",
+      "problem": "Demonstrate how related operational tables can be summarized into decision-oriented attendance, membership, and revenue views.",
+      "architecture": "Validated snapshot JSON → NiceGUI tables and ECharts. A future scheduled pipeline will publish snapshots with freshness and quality metadata.",
+      "data_sources": ["Committed demonstration snapshot in dashboard_cache.json"],
+      "pipeline": [
+        "Read a small source-controlled analytical snapshot",
+        "Present related tables by business subject",
+        "Aggregate attendance, membership, and revenue series for visualization"
+      ],
+      "stack": ["Python", "NiceGUI", "ECharts", "JSON"],
+      "outcomes": [
+        "Separates a low-change public snapshot from the live transit database path",
+        "Demonstrates tabular and visual analytical presentation"
+      ],
+      "limitations": [
+        "Current values are demonstration data and are not refreshed automatically",
+        "Pipeline metadata and data-quality checks are planned for the chart-platform phase"
+      ],
+      "data_mode": "static_snapshot",
+      "links": [
+        {"label": "Open dashboard", "url": "/dashboard"}
+      ]
+    }
+  ]
+}

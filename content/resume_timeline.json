@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "heading": "Career Timeline",
+  "intro": "This timeline is maintained separately from the downloadable résumé PDF. Replace the placeholder entries below with confirmed experience and education details.",
+  "entries": [
+    {
+      "id": "replace-company-a",
+      "period": "2020",
+      "title": "Junior Developer",
+      "organization": "Company A",
+      "kind": "work",
+      "summary": "Placeholder employment entry—replace with your confirmed role and impact.",
+      "highlights": [],
+      "skills": ["Python"],
+      "icon": "work",
+      "color": "green"
+    },
+    {
+      "id": "replace-degree",
+      "period": "2022",
+      "title": "B.Sc. in Computer Science",
+      "organization": "University XYZ",
+      "kind": "education",
+      "summary": "Placeholder education entry—replace with your confirmed program and institution.",
+      "highlights": [],
+      "skills": [],
+      "icon": "school",
+      "color": "blue"
+    },
+    {
+      "id": "replace-bootcamp",
+      "period": "2023",
+      "title": "Data Science Bootcamp",
+      "organization": "Bootcamp Institute",
+      "kind": "education",
+      "summary": "Placeholder training entry—replace or remove it after confirming your timeline.",
+      "highlights": [],
+      "skills": ["Data Analysis"],
+      "icon": "school",
+      "color": "purple"
+    }
+  ]
+}

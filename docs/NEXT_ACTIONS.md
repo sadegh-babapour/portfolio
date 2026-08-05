@@ -78,8 +78,9 @@ Last updated: 2026-08-03
   console, and the desktop/mobile layouts in production. API health, database
   freshness, selected-vehicle context, history, paths, and stops are verified;
   no active alert was available during the latest check.
-- [ ] Deploy and visually verify the sticky NiceGUI/React headers, shared
-  light/dark preference, and iframe-based mobile résumé viewer.
+- [ ] Visually verify the corrected matching NiceGUI/React header geometry,
+  always-visible theme action, flash-free shared preference, dark-safe page
+  contents, and iframe-based mobile résumé viewer.
 - [x] Upload `static/resume.pdf` to `/data/resume.pdf` on the `portfolio`
   volume, set `RESUME_PDF_PATH`, deploy, and verify inline/download behavior.
 

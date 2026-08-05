@@ -449,10 +449,13 @@ users expect one site-wide light/dark preference when navigating between them.
 Both shells expose a theme button in the sticky portfolio header and persist
 the selected `light` or `dark` value under the `portfolio-theme` local-storage
 key. With no saved preference, each shell follows the browser's preferred color
-scheme.
+scheme. A synchronous document-head initializer applies the preference before
+the page renders so navigation between shells does not flash the light theme.
 
 ### Consequences
 
 Theme styles remain implemented separately in the NiceGUI and React CSS, while
 the preference name and values form a small shared browser contract. Future
 theme changes must keep those values and accessible toggle behavior aligned.
+NiceGUI's shared shell also owns dark overrides for Quasar page content and
+form/data components so individual pages do not need one-off theme classes.

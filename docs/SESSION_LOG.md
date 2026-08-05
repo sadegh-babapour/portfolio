@@ -1,5 +1,38 @@
 # Session Log
 
+## 2026-08-04 — Navbar parity and complete dark-mode pass
+
+### Goal
+
+Correct the deployed navbar mismatch, restore the missing transit theme action
+at intermediate widths, eliminate light-theme flashes between pages, and make
+all NiceGUI page content readable in dark mode.
+
+### Changed
+
+- Standardized both headers on border-box sizing, 64px desktop and 56px mobile
+  heights, matching padding/gaps, and a 1050px responsive breakpoint.
+- Reserved non-shrinking header space for the theme action so it cannot be
+  pushed outside the React viewport.
+- Added synchronous document-head theme initialization to NiceGUI and React,
+  applying the saved preference before visible content renders.
+- Added shared NiceGUI dark styles for pages, cards, contact fields, tabs,
+  tables, timelines, separators, muted text, PDF controls, and chart surfaces.
+- Added dark-state React controls and Leaflet zoom styling and regenerated the
+  tracked production bundle with the public transit API URL.
+
+### Verified
+
+- Python compilation and changed NiceGUI component imports pass from the
+  project virtual environment.
+- React lint and production build pass.
+- `git diff --check` passes.
+
+### Next
+
+- Commit and push the correction, verify all Railway services reach success, then
+  visually confirm the corrected headers and themes in desktop/mobile browsers.
+
 ## 2026-08-04 — Sticky navigation, shared themes, and mobile résumé
 
 ### Goal

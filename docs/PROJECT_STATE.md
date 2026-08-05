@@ -160,7 +160,13 @@ rechecked against today's external feeds.
   through `RESUME_PDF_PATH`; inline and download responses return the expected
   disposition headers.
 - NiceGUI and React use the same `portfolio-theme` browser-storage key, so a
-  light/dark selection follows users between the two frontend shells.
+  light/dark selection follows users between the two frontend shells. Both
+  initialize that preference in the document head before visible content to
+  avoid a light-page flash, and NiceGUI supplies dark-safe form, table, tab,
+  timeline, card, chart, and page surfaces.
+- NiceGUI and React portfolio headers share exact desktop/mobile heights,
+  padding, spacing, border sizing, and the 1050px mobile-menu breakpoint. The
+  theme action cannot shrink out of the React header at intermediate widths.
 
 No external service credentials belong in these documents.
 

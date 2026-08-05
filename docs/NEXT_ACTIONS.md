@@ -47,8 +47,10 @@ Last updated: 2026-08-05
   the first database-backed portfolio feature.
 - [ ] Replace the marked timeline placeholders with factual owner-provided
   career and education data.
-- [ ] Redesign Contact and implement delivery, email verification, rate limits,
-  honeypot, CSRF protection, and Cloudflare Turnstile immediately before send.
+- [ ] Finish Contact production activation: configure PostgreSQL, generated
+  secrets, the hostname-restricted Cloudflare Turnstile widget, and domain SMTP;
+  run the Alembic migration, deploy, and exercise verification/delivery and
+  abuse cases. The UI and application workflow are implemented locally.
 - [ ] Add Google OIDC, secure sessions, roles, visible locked content, and an
   explicit admin allowlist.
 - [ ] Add an admin console for users, logins, sessions, contact state, content,
@@ -74,8 +76,8 @@ Last updated: 2026-08-05
 
 ## Current recommended next task
 
-Begin phase 4 by specifying the contact threat model, message lifecycle, email
-provider boundary, and Turnstile flow before implementation.
+Complete the environment-variable handoff for phase 4, then run the portfolio
+migration and full production contact verification/delivery matrix.
 
 See `docs/ROADMAP.md` for phase scope, decision gates, and exit criteria.
 

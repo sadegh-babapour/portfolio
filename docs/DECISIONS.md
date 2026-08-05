@@ -608,6 +608,42 @@ content, users, messages, service checks, jobs, and audit events.
 - The initial timeline still contains clearly marked placeholders for the
   repository owner to replace with factual career history.
 - ORM selection and admin write workflows remain later decision gates.
+
+## ADR-020: SQLAlchemy-owned verified contact workflow
+
+Date: 2026-08-05
+Status: Accepted; production configuration pending
+
+### Context
+
+The public Contact page claimed success without validation or delivery. A real
+workflow processes personal data, calls external anti-abuse and mail services,
+and creates the first mutable portfolio-domain records.
+
+### Decision
+
+- Use SQLAlchemy 2.x and Alembic for a dedicated `portfolio` PostgreSQL schema;
+  do not migrate or wrap the separately owned `transit` schema.
+- Accept public messages only after same-origin CSRF checks, bounded server-side
+  validation, a honeypot, transactional keyed-IP/keyed-email throttles, and
+  server-side Cloudflare Turnstile hostname/action validation.
+- Store a pending message and only a digest of its 30-minute verification token.
+  Deliver to the owner after one-time verification.
+- Authenticate SMTP as the domain mailbox and place the verified visitor email
+  in `Reply-To`; never spoof the visitor in the sender envelope.
+- Fail closed when configuration or an external dependency is unavailable and
+  record state-only audit events without raw IPs, tokens, credentials, or body
+  content.
+
+### Consequences
+
+- SQLAlchemy and Alembic are approved production dependencies.
+- The portfolio Railway service needs a PostgreSQL reference, migration
+  pre-deploy command, Turnstile widget keys, generated application secrets, and
+  SMTP configuration before submission can be enabled.
+- Failed final deliveries remain durable for the phase-6 admin retry workflow.
+- Retention automation must be added before operational records accumulate at
+  meaningful scale.
 - Historical source remains recoverable from Git rather than duplicated in the
   active tree.
 - The cleanup deployed successfully and all three Railway services passed the

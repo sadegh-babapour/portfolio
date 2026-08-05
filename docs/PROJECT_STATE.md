@@ -106,9 +106,13 @@ rechecked against today's external feeds.
   the standalone current-state poller.
 - The repository does not yet provide one command that orchestrates the web,
   API, poller, and PostgreSQL locally; component start/check scripts do exist.
-- The contact form only displays a notification and sends no message.
-- There is no user authentication, protected-content policy, admin console,
-  first-party analytics model, email verification, or bot defense.
+- Contact has been rebuilt locally around FastAPI, SQLAlchemy/Alembic,
+  PostgreSQL, Cloudflare Turnstile, signed CSRF state, database throttling,
+  one-time email verification, authenticated SMTP delivery, and audit events.
+  It fails closed and remains disabled until production variables and the first
+  migration are configured.
+- There is no user authentication, protected-content policy, admin console, or
+  first-party analytics model yet.
 - Several portfolio pages still contain sample résumé, chart, and image data.
 - Footer links target unimplemented privacy and terms routes.
 - Superseded commented implementations remain inside some accepted React and
@@ -167,6 +171,10 @@ rechecked against today's external feeds.
 - NiceGUI and React portfolio headers share exact desktop/mobile heights,
   padding, spacing, border sizing, and the 1050px mobile-menu breakpoint. The
   theme action cannot shrink out of the React header at intermediate widths.
+- All NiceGUI pages now use a consistent wide responsive shell. Contact and
+  Projects use desktop grids that collapse to one column; Dashboard charts
+  stack on smaller screens and wide tables scroll within their cards; the
+  résumé document remains full-width while its timeline uses a readable width.
 - NiceGUI ECharts on Projects and Dashboard receive runtime light/dark updates
   for canvas background, titles, legends, axes, grids, and tooltips.
 - The user confirmed the production PDF.js résumé works on mobile after the

@@ -32,6 +32,8 @@ NiceGUI transit runtime has been removed from source and production.
 - `poller/`: standalone Python ingestion worker for the transit stack.
 - `scripts/db/`: ordered, idempotent migrations for the `transit`
   schema.
+- `migrations/`: Alembic migrations for ORM-owned tables in the isolated
+  `portfolio` schema.
 - `scripts/bootstrap_transit_db.py`: schema migration and static GTFS loader.
 - `data/`: static Calgary GTFS and route-category files.
 - `database_backup.sql`: schema-only dump of the newer `transit` model.
@@ -99,6 +101,23 @@ When admin editing is introduced, editable content and operational records
 (users, contact state, jobs, service checks, and audit events) will live in an
 ORM-owned portfolio schema in PostgreSQL. Transit continues to own its existing
 schema and explicit SQL independently.
+
+### Contact workflow
+
+FastAPI owns three same-origin contact endpoints for CSRF state, pending-message
+creation, and email verification. SQLAlchemy owns contact messages, keyed abuse
+attempts, and audit events in the `portfolio` schema; Alembic owns only that
+schema's migration history. The accepted message lifecycle is:
+
+```text
+browser -> CSRF/origin/validation/rate limit -> Cloudflare Siteverify
+        -> PostgreSQL pending message -> SMTP verification link
+        -> one-time verification -> SMTP owner delivery with verified Reply-To
+```
+
+The browser receives only the Turnstile sitekey. Database, token, Turnstile
+secret, and SMTP credentials remain server-side environment variables. Missing
+configuration disables submission and makes the API fail closed.
 
 ### Calgary Transit frontend
 

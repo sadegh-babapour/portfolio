@@ -12,8 +12,11 @@ Copy and paste this to start the next session:
 > services plus the production smoke matrix passed. Phase 3 adds validated JSON
 > for the on-page résumé timeline (not the PDF) and recruiter-focused case
 > studies; marked timeline placeholders still need owner-supplied facts. Begin
-> phase 4 with a contact threat model and provider-neutral design before adding
-> Cloudflare Turnstile or email delivery. Preserve the accepted
+> phase 4 by completing the production configuration described in
+> `docs/CONTACT_SETUP.md`. The redesigned UI, SQLAlchemy/Alembic `portfolio`
+> schema, CSRF/throttling, Turnstile verification, one-time email verification,
+> and SMTP delivery are implemented locally but must not be enabled until all
+> variables and the migration are ready. Preserve the accepted
 > React/Express/standalone-poller behavior and update
 > continuity docs after meaningful work. In every progress update, report
 > `Overall: Step X/9` and `Current step: mini-step Y/N`.

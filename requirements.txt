@@ -1,6 +1,8 @@
 fastapi==0.116.1
 nicegui==2.22.1
 python-dotenv==1.1.1
+SQLAlchemy==2.0.51
+alembic==1.18.5
 
 # GTFS-Realtime worker
 gtfs-realtime-bindings==1.0.0

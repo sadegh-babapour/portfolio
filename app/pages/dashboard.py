@@ -29,12 +29,19 @@ def get_cached_table_data(table_name: str) -> list:
 def dashboard_page():
     ui.page_title('Theme Park Analytics Dashboard')
 
-    with ui.column().classes('w-full max-w-7xl mx-auto p-4'):
+    with ui.column().classes('w-full max-w-7xl mx-auto px-4 py-8 sm:px-8 gap-6'):
 
-        with ui.card().classes('w-full mb-6'):
+        with ui.column().classes('gap-3 max-w-4xl'):
+            ui.label('Theme Park Analytics').classes('text-4xl sm:text-5xl font-bold')
+            ui.label(
+                'A responsive analytical presentation built from a committed sample '
+                'snapshot. Values are demonstrative, not live operational data.'
+            ).classes('text-lg text-grey-7 leading-relaxed')
+
+        with ui.card().classes('w-full p-4 sm:p-6'):
             ui.label('📊 Data Tables').classes('text-h5 mb-4')
 
-            with ui.tabs().classes('w-full') as tabs:
+            with ui.tabs().props('mobile-arrows outside-arrows').classes('w-full') as tabs:
                 daily_tab = ui.tab('Daily Stats')
                 membership_tab = ui.tab('Membership')
                 revenue_tab = ui.tab('Revenue')
@@ -53,7 +60,9 @@ def dashboard_page():
                             {'name': 'daily_revenue', 'label': 'Revenue ($)', 'field': 'daily_revenue', 'align': 'right'},
                             {'name': 'weather_condition', 'label': 'Weather', 'field': 'weather_condition', 'align': 'center'},
                         ]
-                        ui.table(columns=columns, rows=daily_data).classes('w-full')
+                        ui.table(columns=columns, rows=daily_data).props(
+                            'flat bordered'
+                        ).classes('w-full').style('overflow-x: auto')
                     else:
                         ui.label('No data available.').classes('text-grey')
 
@@ -68,7 +77,9 @@ def dashboard_page():
                             {'name': 'expirations', 'label': 'Expired', 'field': 'expirations', 'align': 'right'},
                             {'name': 'active_members', 'label': 'Active', 'field': 'active_members', 'align': 'right'},
                         ]
-                        ui.table(columns=columns, rows=membership_data).classes('w-full')
+                        ui.table(columns=columns, rows=membership_data).props(
+                            'flat bordered'
+                        ).classes('w-full').style('overflow-x: auto')
                     else:
                         ui.label('No data available.').classes('text-grey')
 
@@ -82,7 +93,9 @@ def dashboard_page():
                             {'name': 'food_beverage_revenue', 'label': 'F&B', 'field': 'food_beverage_revenue', 'align': 'right'},
                             {'name': 'total_revenue', 'label': 'Total', 'field': 'total_revenue', 'align': 'right'},
                         ]
-                        ui.table(columns=columns, rows=revenue_data).classes('w-full')
+                        ui.table(columns=columns, rows=revenue_data).props(
+                            'flat bordered'
+                        ).classes('w-full').style('overflow-x: auto')
                     else:
                         ui.label('No data available.').classes('text-grey')
 
@@ -96,23 +109,25 @@ def dashboard_page():
                             {'name': 'avg_visit_duration', 'label': 'Avg Duration (hrs)', 'field': 'avg_visit_duration', 'align': 'right'},
                             {'name': 'guest_count', 'label': 'Guests', 'field': 'guest_count', 'align': 'right'},
                         ]
-                        ui.table(columns=columns, rows=visits_data).classes('w-full')
+                        ui.table(columns=columns, rows=visits_data).props(
+                            'flat bordered'
+                        ).classes('w-full').style('overflow-x: auto')
                     else:
                         ui.label('No data available.').classes('text-grey')
 
-        with ui.card().classes('w-full'):
+        with ui.card().classes('w-full p-4 sm:p-6'):
             ui.label('📈 Analytics Charts').classes('text-h5 mb-4')
 
-            with ui.row().classes('w-full gap-4 mb-4'):
-                with ui.column().classes('flex-1'):
+            with ui.element('div').classes(
+                'grid w-full grid-cols-1 gap-5 lg:grid-cols-2'
+            ):
+                with ui.column().classes('w-full min-w-0'):
                     _attendance_chart()
-                with ui.column().classes('flex-1'):
+                with ui.column().classes('w-full min-w-0'):
                     _revenue_chart()
-
-            with ui.row().classes('w-full gap-4'):
-                with ui.column().classes('flex-1'):
+                with ui.column().classes('w-full min-w-0'):
                     _membership_chart()
-                with ui.column().classes('flex-1'):
+                with ui.column().classes('w-full min-w-0'):
                     _revenue_breakdown_chart()
 
 

@@ -11,22 +11,22 @@ log = logging.getLogger(__name__)
 @ui.page('/resume')
 @with_layout
 def resume():
-    with ui.column().classes('w-full px-4 py-6 sm:px-6 lg:px-8'):
-        ui.label('My Resume').classes('text-4xl mb-4')
+    with ui.column().classes('w-full max-w-7xl mx-auto px-4 py-8 sm:px-8'):
+        ui.label('My Resume').classes('text-4xl sm:text-5xl font-bold mb-6')
         try:
             timeline = load_resume_timeline()
         except ContentValidationError as exc:
             log.error('Unable to load résumé timeline: %s', exc)
             ui.label('The career timeline is temporarily unavailable.').classes(
-                'w-full max-w-2xl mx-auto text-negative'
+                'w-full max-w-4xl mx-auto text-negative'
             )
         else:
-            ui.label(timeline.heading).classes('text-2xl w-full max-w-2xl mx-auto')
+            ui.label(timeline.heading).classes('text-2xl w-full max-w-4xl mx-auto')
             ui.label(timeline.intro).classes(
-                'w-full max-w-2xl mx-auto text-base text-grey-7 mb-4'
+                'w-full max-w-4xl mx-auto text-base text-grey-7 mb-4'
             )
             with ui.timeline(side='right', layout='comfortable').classes(
-                'w-full max-w-2xl mx-auto mb-8'
+                'w-full max-w-4xl mx-auto mb-8'
             ):
                 for entry in timeline.entries:
                     details = [entry.summary]

@@ -736,3 +736,48 @@ the persistence boundary needed by later admin and monitoring work.
 ### Next
 
 - Start the contact security and delivery design.
+
+## 2026-08-05 — Secure contact implementation
+
+### Goal
+
+Replace the presentation-only form with a durable, verified sender workflow and
+layered abuse controls.
+
+### Changed
+
+- Added SQLAlchemy/Alembic ownership of contact records, keyed abuse attempts,
+  and audit events in a dedicated `portfolio` schema.
+- Added origin/CSRF validation, bounded inputs, honeypot handling, transactional
+  rate limits, Turnstile Siteverify checks, one-time verification links, and
+  authenticated SMTP delivery with a verified `Reply-To`.
+- Rebuilt Contact with clearer expectations, topic selection, privacy copy,
+  mobile spacing, accessible status feedback, and fail-closed configuration.
+- Standardized all NiceGUI pages on a wide responsive container, converted the
+  Dashboard chart layout to a mobile-first grid, constrained table overflow,
+  widened the timeline, and replaced sparse Home/About shells with responsive
+  portfolio-oriented sections.
+- Added setup and threat-model documentation without recording secrets.
+
+### Verified
+
+- Twenty Python tests and Python compilation passed.
+- Contact returned HTTP 200 locally and its unconfigured API returned the
+  expected HTTP 503 instead of claiming delivery.
+- Home, About, Résumé, Projects, Contact, Dashboard, and the React mount all
+  returned HTTP 200 after the responsive page audit.
+- Alembic offline SQL generation passed. Upgrade/downgrade/upgrade created the
+  expected four `portfolio` tables in a disposable PostgreSQL container.
+
+### Unresolved
+
+- PostgreSQL 18 image download was blocked by the container registry network,
+  so the disposable migration lifecycle used the locally available PostgreSQL
+  13 image. Railway's PostgreSQL 18 remains the production verification target.
+- Production Turnstile, generated application secrets, SMTP values, migration,
+  deployment, and email round-trip remain pending owner configuration.
+
+### Next
+
+- Follow `docs/CONTACT_SETUP.md`, apply the migration, deploy, and verify one-
+  time delivery plus abuse/error paths.

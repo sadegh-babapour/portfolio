@@ -74,8 +74,8 @@ Last updated: 2026-08-05
 
 ## Current recommended next task
 
-Deploy and smoke-test phase 3, then begin phase 4 by specifying the contact
-threat model, message lifecycle, email provider boundary, and Turnstile flow.
+Begin phase 4 by specifying the contact threat model, message lifecycle, email
+provider boundary, and Turnstile flow before implementation.
 
 See `docs/ROADMAP.md` for phase scope, decision gates, and exit criteria.
 

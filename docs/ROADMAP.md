@@ -100,7 +100,7 @@ the verified React/Express/poller behavior.
 
 ## Phase 3 — Content model and portfolio case studies
 
-Status: implemented locally; deployment verification pending.
+Status: implemented and deployed at `3e23075`.
 
 ### Goal
 

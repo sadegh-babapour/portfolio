@@ -240,6 +240,10 @@ deployment, and production smoke checks passed.
   The API returned 30 vehicle histories fresh through 20:33:05 UTC, five
   featured route paths, and HTTP 200 for selected vehicle context, stops, and
   alerts.
+- At deployed commit `3e23075`, all three application services again reported
+  success. Home, résumé, Projects, volume-backed PDF, React transit, and API
+  health returned HTTP 200; production HTML contained the validated timeline
+  and both project case studies.
 - The application deploys branch `main` with Railpack and is detected as a
   Python application.
 - The observed failed build selected Python 3.13.14, installed

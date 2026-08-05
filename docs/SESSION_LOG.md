@@ -722,6 +722,10 @@ the persistence boundary needed by later admin and monitoring work.
 
 - Eight Python boundary/content tests, Python compilation, and local HTTP smoke
   checks for `/resume` and `/projects` passed.
+- Express syntax/tests, React lint/build, and diff validation passed.
+- All three Railway application services reached `SUCCESS` at `3e23075`.
+  Production home, résumé, Projects, PDF, React transit, and API health returned
+  HTTP 200, and the new content appeared in the rendered page payloads.
 
 ### Unresolved
 
@@ -731,5 +735,4 @@ the persistence boundary needed by later admin and monitoring work.
 
 ### Next
 
-- Complete the full checks and production deployment, then start the contact
-  security and delivery design.
+- Start the contact security and delivery design.

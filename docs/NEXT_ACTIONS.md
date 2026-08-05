@@ -67,16 +67,20 @@ Last updated: 2026-08-03
 
 - [x] Record the current Railway service count, builder, Python version,
   dependency failure, and detected start command.
-- [ ] Obtain the public production URL and remaining app-service settings.
+- [x] Obtain the public production URL and remaining app-service settings.
 - [x] Configure three Railway services after all three local processes are
   reproducible.
 - [x] Provide the public Express URL as `VITE_TRANSIT_API_BASE_URL` in the
   tracked recovery bundle.
-- [ ] Verify poller hours, timezone, retention, `POLL_ENABLED`, and
+- [x] Verify poller hours, timezone, retention, `POLL_ENABLED`, and
   `ADMIN_KILL_SWITCH` in Railway.
-- [ ] Verify the web page, API health, database freshness, route selection,
-  stops, alerts, and mobile layout in production.
-- [ ] Upload `static/resume.pdf` to `/data/resume.pdf` on the `portfolio`
+- [ ] Finish visual verification of route/vehicle selection, alerts, browser
+  console, and the desktop/mobile layouts in production. API health, database
+  freshness, selected-vehicle context, history, paths, and stops are verified;
+  no active alert was available during the latest check.
+- [ ] Deploy and visually verify the sticky NiceGUI/React headers, shared
+  light/dark preference, and iframe-based mobile résumé viewer.
+- [x] Upload `static/resume.pdf` to `/data/resume.pdf` on the `portfolio`
   volume, set `RESUME_PDF_PATH`, deploy, and verify inline/download behavior.
 
 ## Later
@@ -94,18 +98,16 @@ Last updated: 2026-08-03
 
 ## Blocked
 
-- [ ] Verify live production vehicle behavior — waiting for the poller to run
-  during Calgary operating hours.
-- [ ] Confirm `Storage 3` is the `portfolio` volume mounted at `/data` before
-  uploading the résumé.
+- [ ] Verify an active production alert and its selected-vehicle UI when the
+  feed next provides one.
 - [ ] Confirm which older transit implementation can be deleted — blocked
   until the newer production path's live polling/selection is verified.
 
 ## Current recommended next task
 
-Publish the NiceGUI navigation and résumé layout changes, upload the ignored
-résumé PDF to the `portfolio` Railway volume, and smoke-test `/resume` on
-desktop and mobile. Then verify poller freshness and live transit selection
-during Calgary operating hours.
+Publish the sticky navigation, shared theme, and mobile résumé viewer changes,
+then visually smoke-test `/resume` and `/calgary-transit-live/` on desktop and
+mobile, including theme persistence and the browser console. Verify an active
+alert when the feed next provides one.
 
 Use `docs/NEXT_SESSION_PROMPT.md` as the ready-to-paste handoff prompt.

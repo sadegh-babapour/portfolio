@@ -433,3 +433,26 @@ menu, and current-page treatment.
 The link list and styles still have two implementations. Any future navigation
 change must update both `app/components/navbar.py` and
 `frontend/src/PortfolioNav.jsx`/`frontend/src/App.css` in the same change.
+
+## ADR-014: Share theme preference across the two frontend shells
+
+Date: 2026-08-04
+Status: Accepted and implemented
+
+### Context
+
+NiceGUI pages and the standalone React transit page render independently, but
+users expect one site-wide light/dark preference when navigating between them.
+
+### Decision
+
+Both shells expose a theme button in the sticky portfolio header and persist
+the selected `light` or `dark` value under the `portfolio-theme` local-storage
+key. With no saved preference, each shell follows the browser's preferred color
+scheme.
+
+### Consequences
+
+Theme styles remain implemented separately in the NiceGUI and React CSS, while
+the preference name and values form a small shared browser contract. Future
+theme changes must keep those values and accessible toggle behavior aligned.

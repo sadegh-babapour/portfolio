@@ -1,5 +1,89 @@
 # Session Log
 
+## 2026-08-04 — Sticky navigation, shared themes, and mobile résumé
+
+### Goal
+
+Keep both portfolio headers visible while scrolling, improve embedded résumé
+behavior on mobile browsers, and add matching light/dark controls to NiceGUI
+and React.
+
+### Changed
+
+- Made the NiceGUI and React portfolio headers sticky at the viewport top.
+- Added accessible light/dark buttons to both headers, using one persistent
+  `portfolio-theme` browser-storage preference and system preference fallback.
+- Added dark surface/text/border styling to both shells without adding a
+  dependency.
+- Replaced the résumé `<object>` embed and its visible unsupported-browser
+  fallback with a responsive same-origin `<iframe>` while retaining explicit
+  full-screen and download controls.
+- Regenerated the tracked React production bundle with the production Express
+  API URL.
+
+### Verified
+
+- All first-party Python files compile and the changed NiceGUI components
+  import in the project virtual environment.
+- React lint and production build pass.
+- The generated bundle contains the production Railway transit API base URL.
+- `git diff --check` passes.
+
+### Unresolved
+
+- The new controls and mobile iframe still need real-device production testing
+  after commit, push, and deployment.
+
+### Next
+
+- Commit, push, deploy, and test sticky scrolling, cross-shell theme
+  persistence, and the résumé on the user's mobile browser.
+
+## 2026-08-04 — Production résumé and live transit verification
+
+### Goal
+
+Deploy the committed navigation/résumé work, place the private résumé on the
+portfolio volume, and verify production transit behavior during Calgary
+operating hours.
+
+### Changed
+
+- Uploaded the ignored local `static/resume.pdf` to the `portfolio` Railway
+  volume at `/data/resume.pdf`.
+- Set `RESUME_PDF_PATH=/data/resume.pdf`, triggering a successful `portfolio`
+  redeployment of `7cbf6a1`.
+- Updated continuity documents with the observed production state.
+
+### Verified
+
+- Local `HEAD`, `origin/main`, and the successful Railway deployments for
+  `portfolio`, `transit-api`, and `transit-poller` all use `7cbf6a1`; the local
+  tree was clean before this documentation update.
+- Railway identifies `portfolio-volume` as ready and mounted at `/data` on the
+  `portfolio` service.
+- `/resume`, the inline PDF route, and the download route return HTTP 200. The
+  two production PDF responses match the local file's SHA-256 hash and use the
+  expected content dispositions.
+- Poller variables specify 08:00-21:00 America/Edmonton, a 30-second interval,
+  15-minute raw retention, `POLL_ENABLED=true`, and
+  `ADMIN_KILL_SWITCH=false`.
+- At 20:59 MDT, the API returned 23 current vehicles, 22 histories, five route
+  path groups, and fresh observations. Vehicle `8303` returned route context,
+  511 shape points, previous/next stops, and eight stops.
+- The selected vehicle's alerts endpoint returned HTTP 200 with an empty list.
+
+### Unresolved
+
+- Desktop/mobile visual interaction and browser-console checks still require a
+  real browser session.
+- No active vehicle alert was available to verify alert rendering.
+
+### Next
+
+- Complete the visual browser checklist on desktop and mobile, and verify an
+  active alert when Calgary's feed provides one.
+
 ## 2026-08-03 — NiceGUI shell and résumé closeout
 
 ### Goal

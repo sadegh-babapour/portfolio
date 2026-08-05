@@ -1,6 +1,6 @@
 # Current Project State
 
-Last verified: 2026-08-03
+Last verified: 2026-08-04
 
 ## Project purpose
 
@@ -25,11 +25,10 @@ remain in progress.
 ## Version-control state
 
 - Branch: `main`.
-- Local and public baseline: `f58763f` (`Connect production transit frontend`).
-- The recovered frontend/navigation changes have been pushed to `origin/main`.
-- Current résumé and NiceGUI navigation work has passed local verification and
-  is being recorded as the session's local commit; it is not yet pushed or
-  deployed.
+- Local, public, and deployed baseline: `7cbf6a1` (`Align portfolio navigation
+  and resume delivery`).
+- The working tree was clean after confirming `origin/main` and all three
+  Railway application services at that revision.
 - Secret-bearing environment profiles, dependencies, runtime caches, the large
   GTFS stop-times export, and the résumé PDF are ignored.
 
@@ -43,7 +42,8 @@ remain in progress.
 - The theme-park dashboard reads committed sample data from
   `dashboard_cache.json` and does not require a live database.
 - The React transit frontend implements:
-  - a portfolio navigation header with desktop links and a mobile menu;
+  - a sticky portfolio navigation header with desktop links, a mobile menu,
+    and a persistent light/dark theme toggle;
   - delayed playback from real observation history;
   - bus, BRT/MAX, featured, and all filters;
   - route lines and selected-route/corridor highlighting;
@@ -154,10 +154,13 @@ rechecked against today's external feeds.
   sources.
 - OpenStreetMap and CARTO provide map tiles.
 - The résumé page now uses a same-origin `/resume/document.pdf` endpoint with a
-  full-width responsive desktop/mobile embed and open/download fallbacks. Its
+  full-width responsive desktop/mobile iframe and open/download fallbacks. Its
   local route, headers, file contents, and desktop/narrow layouts are verified.
-  Production must still set `RESUME_PDF_PATH` to the actual PDF on the attached
-  Railway volume.
+  Production now reads the byte-identical ignored PDF from `/data/resume.pdf`
+  through `RESUME_PDF_PATH`; inline and download responses return the expected
+  disposition headers.
+- NiceGUI and React use the same `portfolio-theme` browser-storage key, so a
+  light/dark selection follows users between the two frontend shells.
 
 No external service credentials belong in these documents.
 
@@ -187,6 +190,11 @@ No external service credentials belong in these documents.
   history and path endpoints have been verified.
 - The poller worker completed the production schema/static-data bootstrap and
   one realtime poll.
+- The poller is configured for 08:00-21:00 America/Edmonton, a 30-second
+  interval, 15-minute raw retention, polling enabled, and kill switch disabled.
+- During the 2026-08-04 operating window, the API returned 23 current vehicles,
+  22 histories, fresh 20:59 MDT observations, route context, shape points, and
+  stops for a selected live vehicle. Its alerts response was healthy but empty.
 - The application deploys branch `main` with Railpack and is detected as a
   Python application.
 - The observed failed build selected Python 3.13.14, installed

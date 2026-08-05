@@ -4,7 +4,7 @@ from nicegui import ui
 
 
 def create_pdf_viewer(pdf_url: str):
-    """Render a same-origin PDF with desktop embed and mobile fallbacks."""
+    """Render a same-origin PDF in a responsive browser frame."""
     safe_url = escape(pdf_url, quote=True)
     download_url = f'{safe_url}?download=true'
     html = f"""
@@ -40,29 +40,30 @@ def create_pdf_viewer(pdf_url: str):
         background: #f3f4f6;
         box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
       }}
-      .resume-pdf-frame object {{
+      .resume-pdf-frame iframe {{
         width: 100%;
         height: 100%;
         border: 0;
       }}
-      .resume-mobile-note {{ display: none; }}
+      body.portfolio-dark .resume-actions a {{
+        border-color: #93c5fd;
+        color: #bfdbfe;
+      }}
+      body.portfolio-dark .resume-actions a.primary {{
+        background: #3b82f6;
+        color: #fff;
+      }}
+      body.portfolio-dark .resume-pdf-frame {{
+        border-color: #4b5563;
+        background: #1f2937;
+      }}
       @media (max-width: 700px) {{
         .resume-actions {{ flex-direction: column; }}
         .resume-actions a {{ width: 100%; }}
-        .resume-mobile-note {{
-          display: block;
-          padding: 1rem;
-          border: 1px solid #d7dde5;
-          border-radius: 0.75rem;
-          background: #f8fafc;
-          color: #475569;
-          line-height: 1.5;
-          margin-bottom: 1rem;
-        }}
         .resume-pdf-frame {{
           width: 100%;
-          height: 78vh;
-          min-height: 520px;
+          height: calc(100dvh - 250px);
+          min-height: 560px;
           border-radius: 0.5rem;
         }}
       }}
@@ -73,17 +74,9 @@ def create_pdf_viewer(pdf_url: str):
       </a>
       <a href="{download_url}">Download PDF</a>
     </div>
-    <div class="resume-mobile-note">
-      For the clearest mobile view, open the résumé full-screen or download it
-      using the buttons above.
-    </div>
     <div class="resume-pdf-frame">
-      <object data="{safe_url}#view=FitH" type="application/pdf">
-        <p>
-          Your browser cannot embed this PDF.
-          <a href="{safe_url}" target="_blank" rel="noopener">Open it directly</a>.
-        </p>
-      </object>
+      <iframe src="{safe_url}#view=FitH&amp;toolbar=1"
+              title="Résumé PDF" loading="eager"></iframe>
     </div>
     """
     ui.html(html).classes('w-full')

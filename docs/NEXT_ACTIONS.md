@@ -38,11 +38,15 @@ Last updated: 2026-08-05
 
 ## Product and platform phases
 
-- [ ] Move the on-page résumé timeline—not the PDF—and stable project content
+- [x] Move the on-page résumé timeline—not the PDF—and stable project content
   into validated JSON/YAML.
-- [ ] Redesign Projects as data-engineering/data-analysis case studies.
-- [ ] Decide the portfolio ORM/migration boundary; do not replace tuned transit
-  SQL without evidence.
+- [x] Redesign Projects as data-engineering/data-analysis case studies.
+- [x] Define the portfolio persistence boundary: Git JSON is initially
+  read-only, future admin/dynamic records use an ORM-owned PostgreSQL schema,
+  and tuned transit SQL remains independent. ORM selection is deferred until
+  the first database-backed portfolio feature.
+- [ ] Replace the marked timeline placeholders with factual owner-provided
+  career and education data.
 - [ ] Redesign Contact and implement delivery, email verification, rate limits,
   honeypot, CSRF protection, and Cloudflare Turnstile immediately before send.
 - [ ] Add Google OIDC, secure sessions, roles, visible locked content, and an
@@ -70,8 +74,8 @@ Last updated: 2026-08-05
 
 ## Current recommended next task
 
-Begin phase 3 by defining and validating the source-controlled content schema
-for the on-page résumé timeline and recruiter-focused project case studies.
+Deploy and smoke-test phase 3, then begin phase 4 by specifying the contact
+threat model, message lifecycle, email provider boundary, and Turnstile flow.
 
 See `docs/ROADMAP.md` for phase scope, decision gates, and exit criteria.
 

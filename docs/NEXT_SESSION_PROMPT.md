@@ -5,12 +5,14 @@ Copy and paste this to start the next session:
 > Resume work in `/home/god/Documents/bizqlab/portfolio`. Read `AGENTS.md`,
 > `docs/PROJECT_STATE.md`, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`,
 > `docs/ROADMAP.md`, `docs/NEXT_ACTIONS.md`, and the latest entries in
-> `docs/SESSION_LOG.md` before changing code. Confirm commit `ffdbfb0` or its
-> documentation-only successor and a clean working tree. Phase 2 is complete:
+> `docs/SESSION_LOG.md` before changing code. Confirm the latest deployed
+> phase-3 commit and a clean working tree. Phases 1 and 2 are complete:
 > the legacy NiceGUI/public-schema runtime was removed and all three Railway
-> services plus the production smoke matrix passed. Begin phase 3 by designing a
-> validated source-controlled JSON/YAML model for the on-page résumé timeline
-> (not the PDF) and recruiter-focused case studies. Preserve the accepted
+> services plus the production smoke matrix passed. Phase 3 adds validated JSON
+> for the on-page résumé timeline (not the PDF) and recruiter-focused case
+> studies; marked timeline placeholders still need owner-supplied facts. Begin
+> phase 4 with a contact threat model and provider-neutral design before adding
+> Cloudflare Turnstile or email delivery. Preserve the accepted
 > React/Express/standalone-poller behavior and update
 > continuity docs after meaningful work. In every progress update, report
 > `Overall: Step X/9` and `Current step: mini-step Y/N`.

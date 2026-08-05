@@ -573,6 +573,41 @@ public-schema SQL, snapshot artifacts, and their direct dependencies. Preserve
   transit ingestion or exposes poller mutations.
 - Psycopg 3, Psycopg Pool, HTTPX, and APScheduler are no longer direct project
   dependencies; Psycopg2 and Requests remain for the accepted worker/bootstrap.
+
+## ADR-019: Validate stable portfolio content from source-controlled JSON
+
+Date: 2026-08-05
+Status: Accepted
+
+### Context
+
+The on-page résumé timeline and Projects page were embedded in Python and
+included placeholder presentation. They need to be editable without touching
+rendering code, while a future admin console also needs durable runtime data for
+content, users, messages, service checks, jobs, and audit events.
+
+### Decision
+
+- Store the initial résumé timeline and project case studies as versioned JSON
+  under `content/`, validated by a dependency-free application boundary before
+  rendering.
+- Keep the résumé PDF separate from this model and continue serving it from the
+  configured runtime volume.
+- Treat Git JSON as read-only at runtime. A deployed admin console must persist
+  edits and operational records through an ORM-owned portfolio schema in the
+  existing PostgreSQL database, optionally importing or exporting the same
+  logical content shape.
+- Keep realtime transit tables and tuned Express queries outside that ORM
+  boundary.
+
+### Consequences
+
+- Normal source edits are reviewable, portable, and fail safely when malformed.
+- Adding YAML would require another production dependency without providing a
+  current benefit.
+- The initial timeline still contains clearly marked placeholders for the
+  repository owner to replace with factual career history.
+- ORM selection and admin write workflows remain later decision gates.
 - Historical source remains recoverable from Git rather than duplicated in the
   active tree.
 - The cleanup deployed successfully and all three Railway services passed the

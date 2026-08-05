@@ -108,6 +108,10 @@ Production reads it from the Railway volume using
 `RESUME_PDF_PATH=/data/resume.pdf`. See `docs/FILE_STORAGE.md` for the upload
 and replacement workflow.
 
+The on-page résumé timeline and project case studies are separate from the PDF
+and are edited in `content/resume_timeline.json` and `content/projects.json`.
+See `docs/CONTENT_EDITING.md` for the field contract and validation workflow.
+
 ## Checks
 
 ```bash

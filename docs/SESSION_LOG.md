@@ -701,3 +701,35 @@ set and deployment assumptions.
 
 - Review and publish the recovery commit, then inspect the resulting Railway
   build before adding API and worker services.
+
+## 2026-08-05 — Structured portfolio content
+
+### Goal
+
+Make the on-page timeline and project portfolio data-driven while establishing
+the persistence boundary needed by later admin and monitoring work.
+
+### Changed
+
+- Added validated JSON contracts for timeline entries and project case studies.
+- Rebuilt Résumé and Projects rendering around the validated content loader.
+- Replaced placeholder project charts with honest, expandable case-study
+  sections and documented the editing workflow.
+- Established source JSON as runtime read-only and reserved a future ORM-owned
+  PostgreSQL schema for admin-managed content and operational records.
+
+### Verified
+
+- Eight Python boundary/content tests, Python compilation, and local HTTP smoke
+  checks for `/resume` and `/projects` passed.
+
+### Unresolved
+
+- The repository owner still needs to replace the marked timeline placeholders
+  with factual career history.
+- ORM selection and the admin monitoring implementation remain later phases.
+
+### Next
+
+- Complete the full checks and production deployment, then start the contact
+  security and delivery design.

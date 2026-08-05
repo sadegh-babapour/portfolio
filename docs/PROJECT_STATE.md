@@ -192,6 +192,23 @@ No external service credentials belong in these documents.
 See `docs/ROADMAP.md`. Specific vendors, ORM, schemas, and upstream Toronto
 semantics remain decision gates rather than implemented architecture.
 
+## Structured portfolio content
+
+- `content/resume_timeline.json` owns the on-page timeline; it does not affect
+  the separately deployed résumé PDF.
+- `content/projects.json` owns recruiter-oriented project case studies and
+  labels live database work separately from static/sample analysis.
+- `app/content.py` validates schema versions, required fields, enumerations,
+  unique IDs, and safe project links before either page renders.
+- Projects now presents business problems, architecture, sources, pipelines,
+  outcomes, limitations, and links instead of placeholder chart canvases.
+- Invalid content fails to a controlled unavailable state and is logged rather
+  than partially rendering.
+- The timeline entries are intentionally marked placeholders until the owner
+  supplies factual dates, organizations, roles, and education.
+- Source-controlled JSON is runtime read-only. Future admin-managed content and
+  service/job monitoring belong in a dedicated ORM-owned PostgreSQL schema.
+
 ## Senior review status
 
 The phase-1 technical review in `docs/CODE_REVIEW.md` was approved. Phase 2 is

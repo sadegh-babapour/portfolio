@@ -100,6 +100,8 @@ the verified React/Express/poller behavior.
 
 ## Phase 3 — Content model and portfolio case studies
 
+Status: implemented locally; deployment verification pending.
+
 ### Goal
 
 Replace code-embedded sample content with structured data and turn Projects
@@ -127,6 +129,17 @@ into recruiter-friendly case studies.
 - Keep Express transit queries and complex PostgreSQL views as explicit SQL
   unless the review demonstrates a concrete ORM benefit.
 - Define repository/service boundaries before selecting the ORM.
+
+### Implemented
+
+- Versioned JSON contracts and dependency-free validation for the on-page
+  timeline and project case studies.
+- Recruiter-focused project cards with explicit business, architecture,
+  pipeline, outcome, limitation, provenance, and visibility fields.
+- A read-only Git-content boundary now; ORM-owned PostgreSQL persistence when
+  admin editing and operational monitoring are implemented.
+- Owner personalization of the clearly marked timeline placeholders remains a
+  content task rather than a code dependency.
 
 ## Phase 4 — Contact experience, bot defense, and verified senders
 

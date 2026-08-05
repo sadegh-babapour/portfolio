@@ -23,6 +23,8 @@ NiceGUI transit runtime has been removed from source and production.
 
 - `app/`: NiceGUI portfolio pages, shared layout components, résumé delivery,
   and the React static mount.
+- `content/`: versioned, source-controlled JSON for the on-page résumé timeline
+  and public project case studies.
 - `frontend/`: React/Vite/Leaflet Calgary Transit application and checked-in
   production build.
 - `backend/transit_api/`: Express API, PostgreSQL pool, configuration, and SQL
@@ -84,6 +86,19 @@ NiceGUI transit runtime has been removed from source and production.
 NiceGUI provides navigation, page layouts, static portfolio content, the
 theme-park sample dashboard, and résumé delivery. FastAPI is exposed through
 NiceGUI and owns the document route and static mounts.
+
+Stable portfolio copy follows a small content pipeline:
+
+```text
+content/*.json -> app/content.py validation -> NiceGUI résumé/projects pages
+```
+
+The JSON is intentionally read-only at runtime and remains reviewable in Git.
+The deployed application must not attempt to rewrite files inside its image.
+When admin editing is introduced, editable content and operational records
+(users, contact state, jobs, service checks, and audit events) will live in an
+ORM-owned portfolio schema in PostgreSQL. Transit continues to own its existing
+schema and explicit SQL independently.
 
 ### Calgary Transit frontend
 
@@ -218,9 +233,9 @@ See `docs/FILE_STORAGE.md` for the operational procedure.
 
 ## Planned evolution (not yet architecture)
 
-The review and source-level legacy cleanup are complete. Proposed future areas
-include structured portfolio content, an ORM-owned portfolio
-domain, verified contact delivery, Google identity, protected content, admin
+The review, source-level legacy cleanup, and initial structured content layer
+are complete. Proposed future areas include an ORM-owned portfolio domain,
+verified contact delivery, Google identity, protected content, admin
 operations, privacy-aware analytics, scheduled data snapshots, live analytical
 queries, a Toronto subway schematic, and Calgary nearby-stop arrivals.
 

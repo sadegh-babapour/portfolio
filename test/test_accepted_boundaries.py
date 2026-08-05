@@ -1,10 +1,14 @@
+import json
 import os
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 from nicegui import app as nicegui_app
 
 import app.main as web_main
+from app.content import ContentValidationError, load_projects, load_resume_timeline
 from poller import poll_calgary_gtfs_rt_current as current_poller
 
 
@@ -78,6 +82,66 @@ class CurrentPollerBoundaryTests(unittest.TestCase):
             self.assertFalse(current_poller.env_bool("TEST_FLAG", True))
         with patch.dict(os.environ, {}, clear=True):
             self.assertTrue(current_poller.env_bool("TEST_FLAG", True))
+
+
+class PortfolioContentTests(unittest.TestCase):
+    def test_committed_timeline_and_projects_pass_validation(self):
+        timeline = load_resume_timeline()
+        projects = load_projects()
+
+        self.assertGreaterEqual(len(timeline.entries), 1)
+        self.assertEqual(len({entry.id for entry in timeline.entries}), len(timeline.entries))
+        self.assertGreaterEqual(len(projects.projects), 2)
+        self.assertTrue(any(project.data_mode == "live_database" for project in projects.projects))
+        self.assertTrue(any(project.data_mode == "static_snapshot" for project in projects.projects))
+
+    def test_duplicate_timeline_ids_are_rejected(self):
+        document = {
+            "schema_version": 1,
+            "heading": "Timeline",
+            "intro": "Test timeline",
+            "entries": [self._timeline_entry("duplicate"), self._timeline_entry("duplicate")],
+        }
+        path = self._temporary_json(document)
+        self.addCleanup(path.unlink)
+
+        with self.assertRaisesRegex(ContentValidationError, "duplicate ids"):
+            load_resume_timeline(path)
+
+    def test_unsafe_project_links_are_rejected(self):
+        document = json.loads(
+            (Path(__file__).resolve().parents[1] / "content" / "projects.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        document["projects"][0]["links"][0]["url"] = "javascript:alert(1)"
+        path = self._temporary_json(document)
+        self.addCleanup(path.unlink)
+
+        with self.assertRaisesRegex(ContentValidationError, "root-relative or HTTPS"):
+            load_projects(path)
+
+    @staticmethod
+    def _timeline_entry(entry_id):
+        return {
+            "id": entry_id,
+            "period": "2026",
+            "title": "Role",
+            "organization": "Organization",
+            "kind": "work",
+            "summary": "Summary",
+            "highlights": [],
+            "skills": [],
+            "icon": "work",
+            "color": "blue",
+        }
+
+    @staticmethod
+    def _temporary_json(document):
+        handle = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False)
+        with handle:
+            json.dump(document, handle)
+        return Path(handle.name)
 
 
 if __name__ == "__main__":

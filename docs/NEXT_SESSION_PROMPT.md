@@ -4,24 +4,29 @@ Copy and paste this to start the next session:
 
 > Resume work in `/home/god/Documents/bizqlab/portfolio`. Read `AGENTS.md`,
 > `docs/PROJECT_STATE.md`, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`,
-> `docs/NEXT_ACTIONS.md`, and the latest entries in `docs/SESSION_LOG.md` before
-> changing code. Also use `docs/FILE_STORAGE.md` for the résumé upload workflow.
-> First inspect the committed NiceGUI navbar, responsive PDF viewer, résumé
-> volume delivery, and documentation changes; do not overwrite them. Confirm
-> the local commit and working-tree state, then help me push/deploy it. After
-> deployment, walk me step by step through uploading `static/resume.pdf` to the
-> `portfolio` Railway volume at `/data/resume.pdf`, setting
-> `RESUME_PDF_PATH=/data/resume.pdf`, and testing `/resume` on desktop and
-> mobile. Then verify the transit poller freshness, live vehicle markers,
-> route/vehicle selection, history, stops, alerts, and browser console during
-> Calgary operating hours. Update the continuity docs after meaningful work.
+> `docs/ROADMAP.md`, `docs/NEXT_ACTIONS.md`, and the latest entries in
+> `docs/SESSION_LOG.md` before changing code. Confirm the working-tree state and
+> review the phase-2 cleanup: characterization tests were added; the legacy
+> NiceGUI/public-schema runtime, SQL, snapshot artifacts, and direct dependencies
+> were removed; the tracked frontend bundle was regenerated. Run the documented
+> checks, commit and push the focused change, deploy all affected Railway
+> services, and perform the production smoke matrix before starting phase 3.
+> Preserve the accepted React/Express/standalone-poller behavior and update
+> continuity docs after meaningful work. In every progress update, report
+> `Overall: Step X/9` and `Current step: mini-step Y/N`.
 
-Expected baseline before that session:
+Expected baseline:
 
-- Public transit frontend/API deploy is healthy at commit `f58763f`.
-- NiceGUI navbar and résumé changes are committed locally but not yet pushed or
-  deployed.
-- The résumé PDF remains at local ignored path `static/resume.pdf` and is staged
-  for removal from Git tracking; it must never be re-added to GitHub.
-- `Storage 3` must be confirmed as the Volume attached to `portfolio` at
-  `/data` before uploading.
+- `portfolio`, `transit-api`, and `transit-poller` are deployed successfully at
+  `f6f661e`.
+- The production résumé is volume-backed and renders on mobile through the
+  locally bundled PDF.js viewer.
+- Sticky navigation, shared flash-free themes, and theme-aware ECharts are live.
+- The Calgary React/Express/standalone-poller path is the only active source
+  implementation; production still runs the previous baseline until deployment.
+- `docs/ROADMAP.md` records the agreed phase order and future product goals.
+- The candidate TTC endpoint
+  `https://bustime.ttc.ca/gtfsrt/vehicles?debug` is recorded for phase 8 but must
+  not be investigated until the earlier phases are complete. At that point,
+  compare Toronto with established realtime rail feeds internationally rather
+  than assuming the final demonstration city.

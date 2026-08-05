@@ -1,115 +1,79 @@
 # Next Actions
 
-Last updated: 2026-08-03
+Last updated: 2026-08-05
 
-## Immediate
+## Phase 1: senior review
 
-- [ ] Prevent the local checkpoint from being pushed unchanged.
-  - Remove `.env.remote` and any other secret-bearing environment files from
-    tracked history before publishing.
-  - Rotate configured remote database credentials if they may be real or
-    exposed.
-  - Do not print secret values while auditing them.
-- [x] Preserve a recoverable reference to the current local checkpoint before
-  restructuring its contents (`recovery-checkpoint-eeb44cf`).
-- [x] Remove dependency directories, virtual environments, bytecode, caches,
-  and secret-bearing environment files from the publishable working tree.
-- [x] Rebuild the newer `transit` database bootstrap from the authoritative
-  schema-only dump and current query requirements.
-  - Populate table, view, and index migration files.
-  - Establish a reproducible static GTFS and route-catalog loader.
-  - Exclude old realtime rows from migration; let the poller refill them.
-- [x] Establish the exact clean local startup procedure without redesigning
-  the application.
-  - Create a fresh environment from declared dependencies.
-  - Start PostgreSQL from a reproducible bootstrap.
-  - Start poller, Express API, React/Vite, and NiceGUI separately.
-  - Record every failure before fixing it.
+- [x] Create `docs/CODE_REVIEW.md` with prioritized, evidence-linked findings.
+- [x] Review NiceGUI/FastAPI lifecycle, routes, components, configuration,
+  security, error handling, and background tasks.
+- [x] Review Express API contracts, validation, SQL, pooling, errors, CORS,
+  logging, and shutdown behavior.
+- [x] Review the realtime poller for parsing, transactions, idempotency,
+  scheduling, retention, retry behavior, observability, and testability.
+- [x] Review React component/effect boundaries, API access, accessibility,
+  responsive behavior, state ownership, and build/deployment policy.
+- [x] Explain the React application in plain language for the repository owner.
+- [x] Review PostgreSQL schemas, migrations, views, indexes, retention,
+  backup/recovery, and likely ORM boundaries.
+- [x] Audit dependencies, secrets/configuration, privacy, authentication surface,
+  accessibility, performance, tests, and deployment configuration.
+- [x] Inventory every legacy module, route, import, environment variable,
+  database object, startup hook, and Railway dependency.
+- [x] Produce a characterization-test matrix and proposed target architecture
+  for approval before changing the system.
+- [x] Repository owner approves the six proposed decisions in
+  `docs/CODE_REVIEW.md`.
 
-## Integration recovery
+## Phase 2: legacy removal
 
-- [x] Make the Vite production build safe at `/calgary-transit-live`.
-- [x] Change NiceGUI navigation from the nonexistent `/map` route to the
-  accepted transit route.
-- [x] Add matching desktop/mobile portfolio navigation inside the standalone
-  React transit bundle.
-- [x] Match the NiceGUI desktop/mobile navigation to the deployed React header.
-- [x] Configure React to use the Express API in local and production modes.
-- [x] Add explicit start scripts to the Express package; document all
-  service commands.
-- [x] Declare `requests` and the selected Psycopg 2 package directly because the
-  standalone poller remains the worker entry point.
-- [x] Update Psycopg 3 to 3.3.4 and verify that the complete requirements set
-  resolves to Linux CPython 3.13 wheels.
-- [ ] Decide when the older public-schema poller, GTFS updater, Python transit
-  API, and NiceGUI transit map can be retired. Do not remove them until the
-  newer path is verified.
+- [x] Add the initial characterization tests approved in phase 1.
+- [x] Remove only proven-unused public-schema/NiceGUI transit paths.
+- [x] Remove legacy-only dependencies, snapshot artifacts, SQL, and active-code
+  documentation.
+- [x] Verify local web boot, Express checks/tests, accepted poller boundaries,
+  Python compilation, React lint/build, and dependency consistency.
+- [ ] Commit and deploy the cleanup, then verify the web, Express API, poller,
+  résumé assets, and transit interactions in production.
 
-## Verification and quality
+## Product and platform phases
 
-- [x] Fix current React lint errors without changing map behavior.
-- [x] Add initial database-boundary contract tests for vehicles, history,
-  route paths, context, and alerts.
-- [ ] Expand API tests to cover HTTP routing, health, stops, and database
-  failure behavior.
-- [ ] Add poller parsing/upsert tests using saved protobuf fixtures and a test
-  database boundary.
-- [ ] Add frontend tests for delayed playback, stopped/stale classification,
-  selection persistence, filters, and empty/error responses.
-- [ ] Automate the manually verified NiceGUI mount and production asset smoke
-  test.
-- [x] Recheck current Calgary feed field availability before describing it as
-  current behavior.
-- [x] Remove the oversized tracked `data/stop_times.txt`; the reproducible
-  bootstrap downloads current static GTFS instead.
+- [ ] Move the on-page résumé timeline—not the PDF—and stable project content
+  into validated JSON/YAML.
+- [ ] Redesign Projects as data-engineering/data-analysis case studies.
+- [ ] Decide the portfolio ORM/migration boundary; do not replace tuned transit
+  SQL without evidence.
+- [ ] Redesign Contact and implement delivery, email verification, rate limits,
+  honeypot, CSRF protection, and Cloudflare Turnstile immediately before send.
+- [ ] Add Google OIDC, secure sessions, roles, visible locked content, and an
+  explicit admin allowlist.
+- [ ] Add an admin console for users, logins, sessions, contact state, content,
+  job health, and audit events.
+- [ ] Implement bounded first-party operational/audit events; keep GA4 deferred
+  unless a later privacy/consent review establishes a concrete need.
+- [ ] Replace placeholder/empty charts with cached weekly and live
+  PostgreSQL-backed analytical examples.
+- [ ] Run a TTC data-capability/licensing spike before implementing the Toronto
+  subway SVG schematic; defer the supplied candidate endpoint and comparison
+  with established international rail feeds until phase 8.
+- [ ] Add Calgary geolocation/manual pin, nearby stops, and 10–15 minute arrivals
+  without retaining precise location by default.
 
-## Deployment
+## Existing verification debt
 
-- [x] Record the current Railway service count, builder, Python version,
-  dependency failure, and detected start command.
-- [x] Obtain the public production URL and remaining app-service settings.
-- [x] Configure three Railway services after all three local processes are
-  reproducible.
-- [x] Provide the public Express URL as `VITE_TRANSIT_API_BASE_URL` in the
-  tracked recovery bundle.
-- [x] Verify poller hours, timezone, retention, `POLL_ENABLED`, and
-  `ADMIN_KILL_SWITCH` in Railway.
-- [ ] Finish visual verification of route/vehicle selection, alerts, browser
-  console, and the desktop/mobile layouts in production. API health, database
-  freshness, selected-vehicle context, history, paths, and stops are verified;
-  no active alert was available during the latest check.
-- [ ] Visually verify the corrected matching NiceGUI/React header geometry,
-  always-visible theme action, flash-free shared preference, dark-safe page
-  contents, theme-aware Projects/Dashboard charts, and PDF.js mobile résumé
-  viewer.
-- [x] Upload `static/resume.pdf` to `/data/resume.pdf` on the `portfolio`
-  volume, set `RESUME_PDF_PATH`, deploy, and verify inline/download behavior.
-
-## Later
-
-- [ ] Replace the sample résumé timeline with confirmed employment and
-  education entries.
-- [ ] Replace sample project, contact, privacy, and terms content with intended
-  portfolio behavior.
-- [ ] Decide whether route density/quadrant curation remains a product goal.
-- [ ] Revisit Calgary LRT only if live vehicle positions become available.
-- [ ] Treat future Toronto TTC subway/train work as a separate feature and
-  architecture decision.
-- [x] Rewrite the root README after clean startup and deployment commands are
-  verified.
-
-## Blocked
-
-- [ ] Verify an active production alert and its selected-vehicle UI when the
-  feed next provides one.
-- [ ] Confirm which older transit implementation can be deleted — blocked
-  until the newer production path's live polling/selection is verified.
+- [ ] Expand Express tests for HTTP routing, health, stops, and database errors.
+- [ ] Add poller fixture/upsert tests and frontend interaction tests.
+- [ ] Automate NiceGUI mount and production asset smoke tests.
+- [ ] Verify a production active-alert UI when the feed supplies one.
+- [ ] Confirm credential rotation status from the recovered checkpoint without
+  printing secret values.
 
 ## Current recommended next task
 
-Publish the sticky navigation, shared theme, and mobile résumé viewer changes,
-then visually smoke-test `/resume` and `/calgary-transit-live/` on desktop and
-mobile, including theme persistence and the browser console. Verify an active
-alert when the feed next provides one.
+Commit and deploy the reviewed phase-2 cleanup, then perform the production
+smoke matrix. Phase 3 begins only after all three Railway services are healthy.
 
-Use `docs/NEXT_SESSION_PROMPT.md` as the ready-to-paste handoff prompt.
+See `docs/ROADMAP.md` for phase scope, decision gates, and exit criteria.
+
+Progress updates must include `Overall: Step X/9` and
+`Current step: mini-step Y/N`.

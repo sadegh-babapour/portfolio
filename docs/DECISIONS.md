@@ -488,3 +488,92 @@ download fallbacks.
 - PDF parsing remains client-side and same-origin; no external viewer service
   or runtime CDN receives the document URL.
 - Frontend dependency and security audits now include `pdfjs-dist`.
+
+## ADR-016: Review and characterize before platform refactoring
+
+Date: 2026-08-05
+Status: Accepted
+
+### Context
+
+The portfolio now has a deployed multi-language transit system, a retained
+legacy implementation, limited tests, sample content, and proposed additions
+covering identity, email, analytics, data management, and another transit city.
+Removing or extending components without first mapping their dependencies would
+combine too many risks and make regressions difficult to diagnose.
+
+### Decision
+
+Perform a senior code and architecture review as the next engineering phase.
+Produce prioritized findings, a dependency/deletion inventory, characterization
+test requirements, a React walkthrough, and proposed ADRs before removing the
+legacy stack or choosing the ORM/auth/contact/analytics/Toronto architecture.
+
+### Consequences
+
+- Phase 1 is primarily diagnostic and documentary; broad refactors wait for an
+  approved target architecture.
+- Legacy deletion becomes a separate phase protected by characterization tests.
+- Proposed vendors and libraries remain decision gates, not implied approvals.
+- New features follow the order and exit criteria in `docs/ROADMAP.md` unless a
+  later evidence-backed decision changes the sequence.
+
+## ADR-017: Initial portfolio platform boundaries
+
+Date: 2026-08-05
+Status: Accepted for roadmap implementation
+
+### Decision
+
+- “Data-driven résumé” refers to the on-page résumé timeline, not the
+  volume-backed PDF.
+- New ORM-owned portfolio tables will use a dedicated schema in the existing
+  PostgreSQL database; the precise ORM and schema name remain phase-3 decisions.
+- The contact form remains public and uses Cloudflare Turnstile immediately
+  before submission, with mandatory server-side verification plus validation,
+  honeypot, throttling, CSRF protection, replay protection, and email
+  verification.
+- GA4 is deferred; first-party operational and audit events come first.
+- Toronto does not require GPS-grade subway positions. Useful station or
+  between-station estimates are acceptable when provenance, update time, and
+  uncertainty are represented honestly.
+
+### Consequences
+
+- The existing résumé PDF storage and viewer workflow is not part of the
+  timeline content-model refactor.
+- One PostgreSQL service can retain bounded ownership through separate schemas.
+- CAPTCHA is one layer of contact protection rather than the trust boundary.
+- The Toronto capability spike evaluates the owner-supplied feed first.
+
+## ADR-018: Retire the public-schema NiceGUI transit runtime
+
+Date: 2026-08-05
+Status: Accepted; implemented in source, deployment pending
+
+### Context
+
+The phase-1 review confirmed that production navigation and the accepted data
+path use React, Express, the standalone Python worker, and the `transit` schema.
+The NiceGUI process nevertheless started a second poller/updater and exposed a
+hidden map plus Python transit, control, and debug endpoints backed by unrelated
+public-schema tables.
+
+### Decision
+
+After adding boundary characterization tests, remove the hidden NiceGUI transit
+page, legacy Python API and background startup hooks, legacy services/loaders,
+public-schema SQL, snapshot artifacts, and their direct dependencies. Preserve
+`DATABASE_URL` because the accepted standalone worker and bootstrap support it.
+
+### Consequences
+
+- Calgary has one active source implementation and one schema owner.
+- NiceGUI becomes a portfolio/static-delivery service and no longer performs
+  transit ingestion or exposes poller mutations.
+- Psycopg 3, Psycopg Pool, HTTPX, and APScheduler are no longer direct project
+  dependencies; Psycopg2 and Requests remain for the accepted worker/bootstrap.
+- Historical source remains recoverable from Git rather than duplicated in the
+  active tree.
+- Phase 2 is complete only after the cleanup is deployed and all three Railway
+  services pass production smoke checks.

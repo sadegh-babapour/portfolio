@@ -1,6 +1,6 @@
 # Architecture
 
-Last reconciled with code and history: 2026-08-03
+Last reconciled with code and history: 2026-08-05
 
 ## Overview
 
@@ -16,21 +16,20 @@ Browser React app <- JSON <- Express API ----+
        +-- built bundle served by NiceGUI/FastAPI
 ```
 
-This is the intended design, not the fully functioning current deployment. The
-repository still starts only the older NiceGUI process by default and retains
-the older public-schema transit implementation.
+This three-service design is deployed and functioning. The legacy public-schema
+NiceGUI transit runtime has been removed from source; production deployment of
+that cleanup remains the phase-2 exit gate.
 
 ## Repository layout
 
-- `app/`: NiceGUI pages, shared layout components, Python API handlers, and
-  legacy transit-related Python services.
+- `app/`: NiceGUI portfolio pages, shared layout components, résumé delivery,
+  and the React static mount.
 - `frontend/`: React/Vite/Leaflet Calgary Transit application and checked-in
   production build.
 - `backend/transit_api/`: Express API, PostgreSQL pool, configuration, and SQL
-  service functions for the newer transit schema.
-- `sql/`: older public-schema PostgreSQL DDL used by the NiceGUI transit stack.
-- `poller/`: standalone Python ingestion worker for the newer transit stack.
-- `scripts/db/`: ordered, idempotent migrations for the newer `transit`
+  service functions for the `transit` schema.
+- `poller/`: standalone Python ingestion worker for the transit stack.
+- `scripts/db/`: ordered, idempotent migrations for the `transit`
   schema.
 - `scripts/bootstrap_transit_db.py`: schema migration and static GTFS loader.
 - `data/`: static Calgary GTFS and route-category files.
@@ -47,10 +46,9 @@ the older public-schema transit implementation.
 - Command: `python -m app.main`.
 - Module: `app/main.py`.
 - Responsibilities:
-  - register Python JSON endpoints;
   - register NiceGUI portfolio pages;
-  - mount `static/` and the React build;
-  - start the older async VehiclePositions poller and static GTFS updater.
+  - serve the volume-backed résumé route;
+  - mount `static/` and the React build.
 - Port: `$PORT` or 8086.
 
 ### React application
@@ -85,8 +83,8 @@ the older public-schema transit implementation.
 ### Portfolio shell
 
 NiceGUI provides navigation, page layouts, static portfolio content, the
-theme-park sample dashboard, and the legacy transit map. FastAPI is exposed
-through NiceGUI and owns the Python JSON routes and static mounts.
+theme-park sample dashboard, and résumé delivery. FastAPI is exposed through
+NiceGUI and owns the document route and static mounts.
 
 ### Calgary Transit frontend
 
@@ -126,12 +124,9 @@ The intended poller uses three Calgary feeds:
 It retains current-state tables for fast API queries and a short raw position
 history for delayed playback and debugging.
 
-The older `app/services/poller.py` and `gtfs_updater.py` serve a different
-public-schema data model and should not be confused with the newer poller.
-
 ## Data flow
 
-### Newer intended transit flow
+### Transit flow
 
 1. The Python poller downloads the three Calgary GTFS-Realtime protobuf feeds.
 2. Vehicle positions are upserted by `vehicle_id`; trip updates by `trip_id`;
@@ -143,19 +138,9 @@ public-schema data model and should not be confused with the newer poller.
 6. React fetches history and paths every 30 seconds, renders delayed playback,
    and fetches details for the selected vehicle.
 
-### Legacy flow still present
-
-1. NiceGUI startup initializes a Psycopg 3 pool from `DATABASE_URL`.
-2. Its async poller downloads VehiclePositions and writes public-schema latest
-   and raw tables.
-3. Its GTFS updater downloads static GTFS and writes public-schema tables.
-4. NiceGUI pages and Python `/api` handlers query those public-schema tables.
-
-These flows are not interchangeable: their schemas and API contracts differ.
-
 ## Database structure
 
-### Newer `transit` schema
+### `transit` schema
 
 The schema-only dump represents these groups:
 
@@ -171,12 +156,6 @@ The schema-only dump represents these groups:
 The dump does not provide static or realtime rows. The split migrations and
 static loader have been verified against an isolated PostgreSQL 16 database
 using Calgary's current downloadable GTFS archive.
-
-### Older public schema
-
-The older DDL defines vehicle position raw/latest tables, daily samples, GTFS
-trip/stop/stop-time tables, and LRT-specific tables. Python NiceGUI services
-query these unqualified public-schema names.
 
 ## External integrations
 
@@ -195,7 +174,7 @@ External integrations must be configured without committing credentials.
 
 ## Local development flow
 
-The historical intended workflow uses three terminals after loading local
+The local workflow uses three terminals after loading local
 environment variables:
 
 1. Run the standalone current-state poller against local PostgreSQL.
@@ -225,9 +204,8 @@ The web build must receive the public Express API URL through
 Calgary operating hours and administrative disable flags.
 
 Service-specific Railway commands remain configured in the Railway dashboard
-rather than `railway.json`. The public portfolio and Express API domains are
-deployed and verified; poller scheduling/freshness still requires an
-operating-hours check.
+rather than `railway.json`. The public portfolio and Express API domains and
+poller scheduling/freshness have been verified at the deployed baseline.
 
 ## Runtime file storage
 
@@ -238,3 +216,15 @@ keeps a separate copy on the `portfolio` Railway volume and selects it through
 route, and the locally bundled PDF.js viewer renders it into canvases. This
 policy does not apply to build inputs or database data.
 See `docs/FILE_STORAGE.md` for the operational procedure.
+
+## Planned evolution (not yet architecture)
+
+The review and source-level legacy cleanup are complete. Proposed future areas
+include structured portfolio content, an ORM-owned portfolio
+domain, verified contact delivery, Google identity, protected content, admin
+operations, privacy-aware analytics, scheduled data snapshots, live analytical
+queries, a Toronto subway schematic, and Calgary nearby-stop arrivals.
+
+These are product goals, not current components. Technology and schema choices
+must be recorded as ADRs at their decision gates. See `docs/ROADMAP.md` for
+sequencing.

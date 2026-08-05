@@ -1,5 +1,154 @@
 # Session Log
 
+## 2026-08-05 — Phase 2 local legacy removal
+
+### Changed
+
+- Added five standard-library `unittest` boundary checks for public portfolio
+  routes, the React mount, résumé defaults, absence of legacy endpoints, poller
+  feed orchestration, and boolean flags.
+- Removed the hidden NiceGUI transit pages, Python transit/control/debug API,
+  web-process poller/updater startup, legacy services/loaders, public-schema SQL,
+  and public-schema snapshot script/artifacts.
+- Removed direct Psycopg 3/pool, HTTPX, and APScheduler requirements. The
+  accepted standalone worker/bootstrap continue using Psycopg2 and Requests.
+- Regenerated the tracked Vite output, replacing the stale main bundle hash.
+- Added ADR-018 and reconciled architecture, project state, roadmap, actions,
+  README, code-review gate, and next-session handoff.
+
+### Verified
+
+- The new boundary suite passed before deletion and all five checks passed after
+  deletion.
+- Express syntax checks and database-boundary tests passed.
+- React lint and production build passed.
+- Python compilation and `pip check` passed in `.venv`.
+- The NiceGUI application reached its ready state at `localhost:8086`; the smoke
+  process was then intentionally terminated by timeout.
+- No active-code reference to the deleted legacy modules/endpoints remains.
+
+### Pending
+
+- Review the final diff, commit/push, deploy affected Railway services, and run
+  the production smoke matrix before starting phase 3.
+
+## 2026-08-05 — Phase 1 senior code and architecture review
+
+### Completed
+
+- Added `docs/CODE_REVIEW.md` with prioritized findings, strengths, a
+  plain-language React walkthrough, legacy dependency/deletion inventory, test
+  matrix, target architecture, proposed decisions, and sequenced refactors.
+- Reviewed the NiceGUI/FastAPI lifecycle, legacy services, Express API,
+  standalone poller, React/Leaflet frontend, PostgreSQL migrations/views,
+  bootstrap, dependencies, security/privacy, accessibility, tests, and
+  deployment boundaries.
+- Confirmed `main`, `origin/main`, and the reviewed baseline are `f6f661e`.
+
+### Principal findings
+
+- No critical issue or committed secret was found.
+- Unsanitized external alert text rendered as HTML, public legacy mutation/work
+  endpoints, and the lack of durable forward migrations are high priority.
+- The accepted React architecture is suitable for incremental extraction and
+  testing; a framework rewrite is not recommended.
+- A fresh Vite build changed the tracked main-bundle hash, proving generated
+  output had drifted from source.
+
+### Verification
+
+- Express syntax checks and database-boundary tests passed.
+- React lint and production build passed.
+- Python compilation passed with `python3`; the `python` alias is absent.
+- Offline production npm audits reported zero known vulnerabilities for both
+  Node applications, limited to locally cached advisory data.
+- Documentation whitespace validation passed before the final continuity edit.
+
+### Gate
+
+- Phase 1 technical work is complete. Phase 2 waits for owner approval of the
+  six proposed decisions and begins with characterization tests.
+
+## 2026-08-05 — Deferred rail-feed candidate and progress reporting
+
+- Recorded `https://bustime.ttc.ca/gtfsrt/vehicles?debug` as a candidate endpoint
+  for the future rail visualization without evaluating it now.
+- Deferred city/feed research until phase 8 and broadened the later comparison
+  to established international realtime rail feeds; Toronto is no longer a
+  required final choice.
+- Added two-level progress reporting for future work: overall roadmap step and
+  mini-step within the active phase.
+
+## 2026-08-05 — Roadmap decisions clarified
+
+- Clarified that structured résumé content means the on-page timeline, not the
+  volume-backed PDF.
+- Accepted a separate ORM-owned schema inside the existing PostgreSQL database.
+- Selected Cloudflare Turnstile free plan for the public contact form while
+  retaining server validation, throttling, honeypot, CSRF, replay protection,
+  and sender-email verification.
+- Deferred GA4 in favor of first-party operational/audit events first.
+- Relaxed the Toronto requirement from GPS-grade positions to useful,
+  transparently labeled station or between-station estimates; the
+  owner-supplied feed will be evaluated first.
+
+## 2026-08-05 — Product roadmap and review-first architecture plan
+
+### Goal
+
+Capture the next product direction and sequence it safely before starting a
+large refactor or adding identity, messaging, analytics, data, and transit
+features.
+
+### Changed
+
+- Added `docs/ROADMAP.md` with nine gated phases: senior review, legacy removal,
+  structured case-study content, verified contact delivery, authentication,
+  admin/analytics, data/chart platform, Toronto subway, and Calgary nearby-stop
+  arrivals.
+- Replaced stale next actions and session handoff instructions with the phase-1
+  review scope.
+- Reconciled project state and architecture with deployed commit `f6f661e`, the
+  working PDF.js mobile viewer, verified Railway services, and current product
+  gaps.
+- Added ADR-016 requiring an evidence-backed review and characterization tests
+  before legacy deletion or major platform choices.
+
+### Planning conclusions
+
+- Ordinary contact should not require Google login. Unauthenticated visitors
+  can verify the submitted email through an expiring link; authenticated users
+  can reuse their verified identity.
+- Bot defense must be layered. Cloudflare Turnstile is a managed free-plan
+  option; ALTCHA matches the requested self-hosted proof-of-work idea. The
+  review will decide after operational/security analysis.
+- A future ORM should own new portfolio-domain entities, not automatically
+  replace the explicit Express transit SQL and PostgreSQL views.
+- Public pages should remain valuable while selected deeper case-study content
+  is visibly locked behind Google OIDC.
+- First-party admin/audit data and GA4 serve different purposes; privacy and
+  consent requirements must be reviewed before enabling GA4.
+- Toronto subway visualization requires an official-feed capability spike. If
+  only trip/stop predictions exist, the UI must label station/between-station
+  progress as estimated rather than imply GPS positions.
+- Calgary location must be opt-in with a manual-pin fallback and no default
+  retention of precise coordinates.
+
+### Verified
+
+- Local `main`, `origin/main`, and the successful production baseline point to
+  `f6f661e`; the working tree was clean before this documentation update.
+- Current source has no implemented ORM, authentication, CAPTCHA, outbound
+  contact delivery, protected-page policy, admin console, or GA4 integration.
+- Official current documentation confirms Cloudflare Turnstile has a free plan
+  and requires server-side token verification; ALTCHA provides a self-hosted
+  proof-of-work option.
+
+### Next
+
+- Perform phase 1 and deliver `docs/CODE_REVIEW.md`; do not begin phase 2 until
+  the findings and target architecture are approved.
+
 ## 2026-08-04 — PDF.js résumé and theme-aware charts
 
 ### Goal

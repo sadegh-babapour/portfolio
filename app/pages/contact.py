@@ -89,14 +89,23 @@ def contact():
       .contact-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
       .contact-native-form label { display:grid; gap:.4rem; font-weight:600; }
       .contact-native-form input,.contact-native-form select,.contact-native-form textarea {
-        width:100%; border:1px solid var(--q-separator-color); border-radius:.6rem;
-        padding:.72rem .85rem; color:inherit; background:var(--q-dark-page, transparent);
+        box-sizing:border-box; width:100%; border:1px solid #94a3b8; border-radius:.6rem;
+        padding:.72rem .85rem; color:#111827; background:#fff;
+        transition:border-color .15s ease,box-shadow .15s ease;
       }
-      body:not(.body--dark) .contact-native-form input,
-      body:not(.body--dark) .contact-native-form select,
-      body:not(.body--dark) .contact-native-form textarea { background:#fff; }
+      .contact-native-form input:hover,.contact-native-form select:hover,
+      .contact-native-form textarea:hover { border-color:#64748b; }
       .contact-native-form input:focus,.contact-native-form select:focus,
-      .contact-native-form textarea:focus { outline:2px solid var(--q-primary); outline-offset:1px; }
+      .contact-native-form textarea:focus { border-color:var(--q-primary); outline:none;
+        box-shadow:0 0 0 3px rgba(37,99,235,.18); }
+      html[data-theme="dark"] .contact-native-form input,
+      html[data-theme="dark"] .contact-native-form select,
+      html[data-theme="dark"] .contact-native-form textarea {
+        border-color:#64748b; background:#1f2937; color:#f3f4f6;
+      }
+      html[data-theme="dark"] .contact-native-form input:hover,
+      html[data-theme="dark"] .contact-native-form select:hover,
+      html[data-theme="dark"] .contact-native-form textarea:hover { border-color:#94a3b8; }
       .contact-native-form button { justify-self:start; border:0; border-radius:.6rem;
         padding:.75rem 1.1rem; background:var(--q-primary); color:#fff; font-weight:700; cursor:pointer; }
       .contact-native-form button:disabled { opacity:.55; cursor:not-allowed; }

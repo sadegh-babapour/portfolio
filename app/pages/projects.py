@@ -19,7 +19,7 @@ def _bullet_list(items: tuple[str, ...]) -> None:
 
 def _project_card(project: ProjectCaseStudy) -> None:
     with ui.card().classes('w-full h-full p-5 gap-4'):
-        with ui.row().classes('w-full items-start justify-between gap-3 no-wrap'):
+        with ui.row().classes('w-full items-start justify-between gap-3 flex-wrap'):
             with ui.column().classes('gap-1'):
                 ui.label(project.title).classes('text-2xl font-semibold')
                 ui.label(project.summary).classes('text-base text-grey-7')
@@ -58,7 +58,7 @@ def _project_card(project: ProjectCaseStudy) -> None:
 @ui.page('/projects')
 @with_layout
 def projects():
-    with ui.column().classes('w-full max-w-7xl mx-auto p-4 sm:p-8 gap-5'):
+    with ui.column().classes('w-full max-w-7xl mx-auto px-4 py-8 sm:px-8 gap-5'):
         try:
             collection = load_projects()
         except ContentValidationError as exc:

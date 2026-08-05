@@ -16,6 +16,9 @@ See `docs/PROJECT_STATE.md` for current limitations,
 `docs/ARCHITECTURE.md` for the detailed design, and `docs/ROADMAP.md` for the
 review-first delivery plan.
 
+Secure contact configuration and Cloudflare/SMTP setup are documented in
+`docs/CONTACT_SETUP.md`; the abuse model is in `docs/CONTACT_SECURITY.md`.
+
 ## Prerequisites
 
 - Python 3.13 for parity with production (3.12 is also locally verified)
@@ -102,6 +105,12 @@ python -m app.main
 
 The portfolio listens on `PORT` or 8086. The built React application is served
 at `/calgary-transit-live/`.
+
+Apply portfolio-domain database migrations before enabling contact submission:
+
+```bash
+alembic upgrade head
+```
 
 The résumé is read locally from the ignored `static/resume.pdf` by default.
 Production reads it from the Railway volume using

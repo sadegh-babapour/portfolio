@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import app.contact.api  # noqa: F401,E402
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s — %(message)s",

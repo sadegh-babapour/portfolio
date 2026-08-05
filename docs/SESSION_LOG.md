@@ -757,6 +757,8 @@ layered abuse controls.
   Dashboard chart layout to a mobile-first grid, constrained table overflow,
   widened the timeline, and replaced sparse Home/About shells with responsive
   portfolio-oriented sections.
+- Added explicit light-theme contact-field borders plus hover and keyboard-focus
+  states while retaining the approved dark-theme field surfaces.
 - Added setup and threat-model documentation without recording secrets.
 
 ### Verified
@@ -766,6 +768,9 @@ layered abuse controls.
   expected HTTP 503 instead of claiming delivery.
 - Home, About, Résumé, Projects, Contact, Dashboard, and the React mount all
   returned HTTP 200 after the responsive page audit.
+- All three Railway application services reached `SUCCESS` at `1410133`; the
+  same seven production routes returned HTTP 200 and the unconfigured contact
+  CSRF endpoint returned the expected fail-closed HTTP 503.
 - Alembic offline SQL generation passed. Upgrade/downgrade/upgrade created the
   expected four `portfolio` tables in a disposable PostgreSQL container.
 

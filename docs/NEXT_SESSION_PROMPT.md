@@ -6,7 +6,7 @@ Copy and paste this to start the next session:
 > `docs/PROJECT_STATE.md`, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`,
 > `docs/ROADMAP.md`, `docs/NEXT_ACTIONS.md`, and the latest entries in
 > `docs/SESSION_LOG.md` before changing code. Confirm the latest deployed
-> phase-3 commit (`3e23075` or its documentation-only successor) and a clean
+> secure-contact commit (`1410133` or its documentation-only successor) and a clean
 > working tree. Phases 1 and 2 are complete:
 > the legacy NiceGUI/public-schema runtime was removed and all three Railway
 > services plus the production smoke matrix passed. Phase 3 adds validated JSON
@@ -24,8 +24,8 @@ Copy and paste this to start the next session:
 Expected baseline:
 
 - `portfolio`, `transit-api`, and `transit-poller` are deployed successfully at
-  `3e23075`; production smoke checks for the new timeline and case studies
-  passed.
+  `1410133`; production smoke checks for every public page passed and Contact
+  intentionally remains disabled until its private configuration is complete.
 - The production résumé is volume-backed and renders on mobile through the
   locally bundled PDF.js viewer.
 - Sticky navigation, shared flash-free themes, and theme-aware ECharts are live.

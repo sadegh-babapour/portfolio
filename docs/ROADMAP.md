@@ -143,8 +143,8 @@ into recruiter-friendly case studies.
 
 ## Phase 4 — Contact experience, bot defense, and verified senders
 
-Status: application and migration implemented locally; external configuration,
-deployment, and production end-to-end verification pending.
+Status: application deployed fail-closed at `1410133`; external configuration,
+migration, and production email round-trip verification pending.
 
 ### Goal
 

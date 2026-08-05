@@ -252,6 +252,11 @@ deployment, and production smoke checks passed.
   success. Home, résumé, Projects, volume-backed PDF, React transit, and API
   health returned HTTP 200; production HTML contained the validated timeline
   and both project case studies.
+- At deployed commit `1410133`, all three application services reported success.
+  Every portfolio route and the React mount returned HTTP 200 with the new wide
+  responsive layouts. Contact displayed its configuration notice and its CSRF
+  endpoint returned the expected fail-closed HTTP 503 until production database,
+  Turnstile, application-secret, and SMTP variables are supplied.
 - The application deploys branch `main` with Railpack and is detected as a
   Python application.
 - The observed failed build selected Python 3.13.14, installed

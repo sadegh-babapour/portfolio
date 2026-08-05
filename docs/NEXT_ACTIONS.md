@@ -33,7 +33,7 @@ Last updated: 2026-08-05
   documentation.
 - [x] Verify local web boot, Express checks/tests, accepted poller boundaries,
   Python compilation, React lint/build, and dependency consistency.
-- [ ] Commit and deploy the cleanup, then verify the web, Express API, poller,
+- [x] Commit and deploy the cleanup, then verify the web, Express API, poller,
   résumé assets, and transit interactions in production.
 
 ## Product and platform phases
@@ -70,8 +70,8 @@ Last updated: 2026-08-05
 
 ## Current recommended next task
 
-Commit and deploy the reviewed phase-2 cleanup, then perform the production
-smoke matrix. Phase 3 begins only after all three Railway services are healthy.
+Begin phase 3 by defining and validating the source-controlled content schema
+for the on-page résumé timeline and recruiter-focused project case studies.
 
 See `docs/ROADMAP.md` for phase scope, decision gates, and exit criteria.
 

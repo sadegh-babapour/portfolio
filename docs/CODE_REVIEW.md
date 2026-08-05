@@ -477,4 +477,5 @@ audits with current registry data.
 
 The repository owner approved all six decisions on 2026-08-05. Phase 2 began
 with passing boundary characterization tests, then removed the mapped legacy
-runtime. See `docs/PROJECT_STATE.md` for current deployment status.
+runtime. Commit `ffdbfb0` deployed successfully and passed the production smoke
+matrix. See `docs/PROJECT_STATE.md` for current status.

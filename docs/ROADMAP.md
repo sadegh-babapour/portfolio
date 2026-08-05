@@ -73,8 +73,7 @@ Establish an evidence-backed baseline before deleting or redesigning code.
 
 ## Phase 2 — Characterize and remove the legacy transit stack
 
-Status: source cleanup and local verification complete; deployment verification
-pending.
+Status: complete and deployed on 2026-08-05.
 
 ### Goal
 

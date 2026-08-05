@@ -135,5 +135,5 @@ put production values in this repository.
 
 The web, API, poller worker, and database-backed transit page are deployed and
 have passed the current production smoke checks. The superseded NiceGUI transit
-runtime has been removed from source; deploy and production verification are
-required to complete that cleanup phase.
+runtime has been removed from source and production; the public legacy page and
+control routes now return 404.

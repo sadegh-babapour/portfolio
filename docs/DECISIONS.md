@@ -549,7 +549,7 @@ Status: Accepted for roadmap implementation
 ## ADR-018: Retire the public-schema NiceGUI transit runtime
 
 Date: 2026-08-05
-Status: Accepted; implemented in source, deployment pending
+Status: Accepted and deployed
 
 ### Context
 
@@ -575,5 +575,5 @@ public-schema SQL, snapshot artifacts, and their direct dependencies. Preserve
   dependencies; Psycopg2 and Requests remain for the accepted worker/bootstrap.
 - Historical source remains recoverable from Git rather than duplicated in the
   active tree.
-- Phase 2 is complete only after the cleanup is deployed and all three Railway
-  services pass production smoke checks.
+- The cleanup deployed successfully and all three Railway services passed the
+  production smoke matrix.

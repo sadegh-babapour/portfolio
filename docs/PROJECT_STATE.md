@@ -12,12 +12,13 @@ feeds.
 The Calgary Transit feature has one source-level implementation: a React/Leaflet
 frontend, Express API, standalone Python poller, and PostgreSQL objects under the
 `transit` schema. The superseded NiceGUI/public-schema implementation has been
-removed locally and awaits deployment verification.
+removed locally and from production.
 
 ## Version-control state
 
 - Branch: `main`.
-- Local, public, and deployed baseline: `f6f661e` (`Render resume with PDF.js`).
+- Local, public, and deployed application baseline: `ffdbfb0` (`Remove legacy
+  transit stack`).
 - The working tree was clean after confirming `origin/main` and successful
   Railway deployments for `portfolio`, `transit-api`, and `transit-poller` at
   that revision.
@@ -193,10 +194,9 @@ semantics remain decision gates rather than implemented architecture.
 
 ## Senior review status
 
-The phase-1 technical review in `docs/CODE_REVIEW.md` was approved. Phase 2 has
-completed local characterization, source removal, dependency cleanup, linting,
-builds, and boot verification; commit, deployment, and production smoke checks
-remain.
+The phase-1 technical review in `docs/CODE_REVIEW.md` was approved. Phase 2 is
+complete: characterization, source removal, dependency cleanup, local checks,
+deployment, and production smoke checks passed.
 
 ## Deployment configuration note
 
@@ -217,13 +217,18 @@ remain.
 - During the 2026-08-04 operating window, the API returned 23 current vehicles,
   22 histories, fresh 20:59 MDT observations, route context, shape points, and
   stops for a selected live vehicle. Its alerts response was healthy but empty.
+- At deployed commit `ffdbfb0`, all three application services reported success.
+  The portfolio home, résumé, volume-backed PDF, React entry, and new hashed
+  bundle returned HTTP 200; `/transit` and `/api/poller/status` returned 404.
+  The API returned 30 vehicle histories fresh through 20:33:05 UTC, five
+  featured route paths, and HTTP 200 for selected vehicle context, stops, and
+  alerts.
 - The application deploys branch `main` with Railpack and is detected as a
   Python application.
 - The observed failed build selected Python 3.13.14, installed
   `requirements.txt`, and selected `python -m app.main` from `Procfile`.
 - An older observed failure was caused by Psycopg 3 binary resolution. The
-  source-level legacy cleanup removes that dependency; production verification
-  remains pending.
+  deployed legacy cleanup removed that dependency.
 
 ## Unknown or unverified
 

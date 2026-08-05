@@ -1,5 +1,20 @@
 # Session Log
 
+## 2026-08-05 — Phase 2 production completion
+
+- Committed the reviewed cleanup as `ffdbfb0` and pushed it to `origin/main`.
+- Railway reported successful running deployments of `ffdbfb0` for `portfolio`,
+  `transit-api`, and `transit-poller`.
+- Production returned HTTP 200 for home, résumé, the volume-backed PDF, React
+  entry, regenerated main asset, API health, history, paths, selected vehicle
+  context, stops, and alerts.
+- The removed `/transit` page and `/api/poller/status` route return HTTP 404.
+- The operating-hours history response contained 30 vehicles fresh through
+  `2026-08-05T20:33:05Z`; five featured route paths were present. The selected
+  vehicle alerts request was healthy and empty.
+- Phase 2 is complete. Phase 3 is the structured on-page timeline and portfolio
+  case-study content model.
+
 ## 2026-08-05 — Phase 2 local legacy removal
 
 ### Changed

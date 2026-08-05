@@ -17,8 +17,7 @@ Browser React app <- JSON <- Express API ----+
 ```
 
 This three-service design is deployed and functioning. The legacy public-schema
-NiceGUI transit runtime has been removed from source; production deployment of
-that cleanup remains the phase-2 exit gate.
+NiceGUI transit runtime has been removed from source and production.
 
 ## Repository layout
 

@@ -4,7 +4,7 @@ This repository contains a NiceGUI personal portfolio and an interactive
 Calgary Transit demonstration. The transit page uses a React/Leaflet frontend,
 an Express API, a Python GTFS-Realtime poller, and PostgreSQL.
 
-The newer transit data flow is:
+The transit data flow is:
 
 ```text
 Calgary GTFS/GTFS-RT -> Python poller -> PostgreSQL -> Express API -> React
@@ -12,8 +12,9 @@ Calgary GTFS/GTFS-RT -> Python poller -> PostgreSQL -> Express API -> React
                                                NiceGUI serves the built app
 ```
 
-See `docs/PROJECT_STATE.md` for current limitations and
-`docs/ARCHITECTURE.md` for the detailed design.
+See `docs/PROJECT_STATE.md` for current limitations,
+`docs/ARCHITECTURE.md` for the detailed design, and `docs/ROADMAP.md` for the
+review-first delivery plan.
 
 ## Prerequisites
 
@@ -107,10 +108,6 @@ Production reads it from the Railway volume using
 `RESUME_PDF_PATH=/data/resume.pdf`. See `docs/FILE_STORAGE.md` for the upload
 and replacement workflow.
 
-The NiceGUI process still starts an older public-schema transit poller and GTFS
-updater. Those legacy services use `DATABASE_URL` and are separate from the
-newer `transit` schema workflow described above.
-
 ## Checks
 
 ```bash
@@ -118,7 +115,8 @@ npm run lint --prefix frontend
 npm run build --prefix frontend
 npm run check --prefix backend/transit_api
 npm test --prefix backend/transit_api
-python -m compileall -q app poller scripts
+python -m unittest discover -s test -v
+python -m compileall -q app poller scripts test
 ```
 
 ## Railway deployment
@@ -135,5 +133,7 @@ Set `VITE_TRANSIT_API_BASE_URL` to the public API domain plus `/api` during the
 web build. Configure the database through Railway reference variables; never
 put production values in this repository.
 
-The web, API, and database-backed transit page are deployed. Poller freshness
-and live vehicle interaction remain the next production verification task.
+The web, API, poller worker, and database-backed transit page are deployed and
+have passed the current production smoke checks. The superseded NiceGUI transit
+runtime has been removed from source; deploy and production verification are
+required to complete that cleanup phase.

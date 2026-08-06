@@ -786,3 +786,26 @@ layered abuse controls.
 
 - Follow `docs/CONTACT_SETUP.md`, apply the migration, deploy, and verify one-
   time delivery plus abuse/error paths.
+
+## 2026-08-05 — Contact delivery adapted for Railway Hobby
+
+### Goal
+
+Replace the production-blocked SMTP transport with an HTTPS transactional-email
+transport while retaining the verified-sender workflow.
+
+### Changed
+
+- Replaced direct SMTP delivery with Resend's HTTPS email API using the existing
+  `requests` dependency.
+- Replaced SMTP configuration requirements with `RESEND_API_KEY`; retained the
+  verified `Reply-To` behavior and Zoho as the receiving/reply mailbox.
+- Updated contact tests, example environment values, setup guidance, current
+  state, architecture, decisions, security notes, and next actions.
+
+### Unresolved
+
+- The owner must verify a sending domain in Resend, add a sending-only API key
+  to the Railway `portfolio` service, deploy, and complete the email round trip.
+- Railway's `alembic upgrade head` pre-deploy command should remain configured
+  for future portfolio-schema migrations.

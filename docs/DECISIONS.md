@@ -629,8 +629,10 @@ and creates the first mutable portfolio-domain records.
   server-side Cloudflare Turnstile hostname/action validation.
 - Store a pending message and only a digest of its 30-minute verification token.
   Deliver to the owner after one-time verification.
-- Authenticate SMTP as the domain mailbox and place the verified visitor email
-  in `Reply-To`; never spoof the visitor in the sender envelope.
+- Send through Resend's HTTPS API because Railway Hobby blocks SMTP. Use a
+  verified sending domain, place the verified visitor email in `Reply-To`, and
+  never spoof the visitor in the sender envelope. Zoho remains the receiving
+  mailbox and reply client.
 - Fail closed when configuration or an external dependency is unavailable and
   record state-only audit events without raw IPs, tokens, credentials, or body
   content.
@@ -640,7 +642,7 @@ and creates the first mutable portfolio-domain records.
 - SQLAlchemy and Alembic are approved production dependencies.
 - The portfolio Railway service needs a PostgreSQL reference, migration
   pre-deploy command, Turnstile widget keys, generated application secrets, and
-  SMTP configuration before submission can be enabled.
+  Resend API configuration before submission can be enabled.
 - Failed final deliveries remain durable for the phase-6 admin retry workflow.
 - Retention automation must be added before operational records accumulate at
   meaningful scale.

@@ -36,7 +36,7 @@ class ContactConfigurationTests(unittest.TestCase):
             settings = ContactSettings.from_env()
         self.assertFalse(settings.configured)
         self.assertIn("TURNSTILE_SECRET_KEY", settings.missing())
-        self.assertIn("SMTP_PASSWORD", settings.missing())
+        self.assertIn("RESEND_API_KEY", settings.missing())
 
     def test_models_are_isolated_in_portfolio_schema(self):
         self.assertEqual(Base.metadata.schema, "portfolio")
@@ -105,6 +105,30 @@ class ContactSecurityTests(unittest.TestCase):
 
 
 class ContactMailTests(unittest.TestCase):
+    @patch("app.contact.mail.requests.post")
+    def test_resend_api_receives_bearer_auth_and_reply_to(self, post):
+        response = Mock()
+        response.raise_for_status.return_value = None
+        post.return_value = response
+        settings = Mock(
+            from_email="portfolio@bizqlab.com",
+            to_email="owner@bizqlab.com",
+            resend_api_key="re_private",
+        )
+        deliver_contact_message(
+            settings,
+            name="Jane Recruiter",
+            verified_email="jane@example.com",
+            category="job-opportunity",
+            subject="Data engineering role",
+            body="A sufficiently detailed message body.",
+        )
+        request = post.call_args
+        self.assertEqual(request.kwargs["headers"]["Authorization"], "Bearer re_private")
+        self.assertEqual(request.kwargs["json"]["from"], "portfolio@bizqlab.com")
+        self.assertEqual(request.kwargs["json"]["reply_to"], "jane@example.com")
+        self.assertEqual(request.kwargs["timeout"], 15)
+
     @patch("app.contact.mail._send")
     def test_verified_sender_is_reply_to_not_from(self, send):
         settings = Mock(

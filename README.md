@@ -16,7 +16,7 @@ See `docs/PROJECT_STATE.md` for current limitations,
 `docs/ARCHITECTURE.md` for the detailed design, and `docs/ROADMAP.md` for the
 review-first delivery plan.
 
-Secure contact configuration and Cloudflare/SMTP setup are documented in
+Secure contact configuration and Cloudflare/Resend setup are documented in
 `docs/CONTACT_SETUP.md`; the abuse model is in `docs/CONTACT_SECURITY.md`.
 
 ## Prerequisites

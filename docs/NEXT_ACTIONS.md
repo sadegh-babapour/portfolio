@@ -47,10 +47,10 @@ Last updated: 2026-08-05
   the first database-backed portfolio feature.
 - [ ] Replace the marked timeline placeholders with factual owner-provided
   career and education data.
-- [ ] Finish Contact production activation: configure PostgreSQL, generated
-  secrets, the hostname-restricted Cloudflare Turnstile widget, and domain SMTP;
-  run the Alembic migration, deploy, and exercise verification/delivery and
-  abuse cases. The UI and application workflow are implemented locally.
+- [ ] Finish Contact production activation: configure the Resend sending domain
+  and API key, deploy the HTTPS mail transport, and exercise verification,
+  delivery, and abuse cases. PostgreSQL, the Alembic migration, generated
+  secrets, and hostname-restricted Cloudflare Turnstile are configured.
 - [ ] Add Google OIDC, secure sessions, roles, visible locked content, and an
   explicit admin allowlist.
 - [ ] Add an admin console for users, logins, sessions, contact state, content,

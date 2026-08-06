@@ -111,12 +111,12 @@ schema's migration history. The accepted message lifecycle is:
 
 ```text
 browser -> CSRF/origin/validation/rate limit -> Cloudflare Siteverify
-        -> PostgreSQL pending message -> SMTP verification link
-        -> one-time verification -> SMTP owner delivery with verified Reply-To
+        -> PostgreSQL pending message -> Resend HTTPS verification email
+        -> one-time verification -> Resend owner delivery with verified Reply-To
 ```
 
 The browser receives only the Turnstile sitekey. Database, token, Turnstile
-secret, and SMTP credentials remain server-side environment variables. Missing
+secret, and Resend credentials remain server-side environment variables. Missing
 configuration disables submission and makes the API fail closed.
 
 ### Calgary Transit frontend

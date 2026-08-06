@@ -2,7 +2,7 @@
 
 ## Protected assets
 
-- Domain-mail reputation and SMTP credentials.
+- Transactional-email reputation and API credentials.
 - Visitor email address and message contents.
 - Owner inbox availability.
 - Integrity of verification, delivery, and future admin state.
@@ -15,7 +15,7 @@ a pending message. Cloudflare attests only to the challenge; it does not prove
 identity. Control of the submitted inbox is established only when its short-
 lived, single-use verification link is consumed.
 
-PostgreSQL is the durable workflow authority. SMTP is called only after a
+PostgreSQL is the durable workflow authority. The email API is called only after a
 pending record exists and again after verification. Secrets are environment
 configuration and never enter browser code, database rows, logs, or Git.
 

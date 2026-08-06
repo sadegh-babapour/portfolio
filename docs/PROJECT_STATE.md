@@ -108,7 +108,7 @@ rechecked against today's external feeds.
   API, poller, and PostgreSQL locally; component start/check scripts do exist.
 - Contact has been rebuilt locally around FastAPI, SQLAlchemy/Alembic,
   PostgreSQL, Cloudflare Turnstile, signed CSRF state, database throttling,
-  one-time email verification, authenticated SMTP delivery, and audit events.
+  one-time email verification, Resend HTTPS delivery, and audit events.
   It fails closed and remains disabled until production variables and the first
   migration are configured.
 - There is no user authentication, protected-content policy, admin console, or
@@ -256,7 +256,7 @@ deployment, and production smoke checks passed.
   Every portfolio route and the React mount returned HTTP 200 with the new wide
   responsive layouts. Contact displayed its configuration notice and its CSRF
   endpoint returned the expected fail-closed HTTP 503 until production database,
-  Turnstile, application-secret, and SMTP variables are supplied.
+  Turnstile, application-secret, and Resend variables are supplied.
 - The application deploys branch `main` with Railpack and is detected as a
   Python application.
 - The observed failed build selected Python 3.13.14, installed

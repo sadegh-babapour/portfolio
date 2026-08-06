@@ -1,7 +1,7 @@
 # Contact Service Setup
 
 The public form is safe to display without configuration, but submission stays
-disabled until every required database, Turnstile, and SMTP setting is present.
+disabled until every required database, Turnstile, and email-API setting is present.
 Never paste real secret values into Git, an issue, or a project document.
 
 ## Local environment
@@ -56,35 +56,31 @@ The server verifies every token through Siteverify and also checks the
 `hostname` and `action=contact` response fields. Tokens expire after five
 minutes and are single-use.
 
-## Domain mailbox / SMTP
+## Transactional email through Resend
 
-Obtain these values from the provider hosting the domain mailbox:
+Railway Hobby blocks outbound SMTP, so the contact workflow sends through
+Resend's HTTPS API while Zoho remains the owner mailbox and reply client.
 
-- SMTP hostname and submission port, normally 587;
-- mailbox username, often the full email address;
-- mailbox password or provider-generated app password;
-- whether STARTTLS is supported (normally true);
-- authenticated sender address;
-- destination address that should receive verified messages.
+1. Create a Resend account and add a sending domain. A dedicated subdomain such
+   as `contact.bizqlab.com` isolates automated-mail reputation.
+2. Copy Resend's exact SPF and DKIM records into Cloudflare DNS and wait until
+   Resend reports the domain as verified.
+3. Create a sending-only API key and store it only in the ignored local `.env`
+   and the Railway `portfolio` service.
+4. Choose a sender on the exact verified domain and the Zoho inbox that should
+   receive verified messages.
 
 Set:
 
 ```dotenv
-CONTACT_FROM_EMAIL=<authenticated domain sender>
+CONTACT_FROM_EMAIL=<sender on the verified Resend domain>
 CONTACT_TO_EMAIL=<your destination inbox>
-SMTP_HOST=<provider SMTP hostname>
-SMTP_PORT=587
-SMTP_USERNAME=<mailbox username>
-SMTP_PASSWORD=<mailbox password or app password>
-SMTP_SECURITY=starttls
+RESEND_API_KEY=<sending-only Resend API key>
 ```
 
-Use `SMTP_PORT=465` and `SMTP_SECURITY=ssl` only when the provider specifies
-implicit TLS instead of STARTTLS.
-
-The application never impersonates the visitor as the sender. It authenticates
-as `CONTACT_FROM_EMAIL` and sets the verified visitor address as `Reply-To`,
-which preserves SPF/DKIM/DMARC alignment and lets the owner reply normally.
+The application never impersonates the visitor as the sender. Resend sends as
+`CONTACT_FROM_EMAIL`; the application sets the verified visitor address as
+`Reply-To`, so the owner can reply normally from Zoho.
 
 ## Railway portfolio service
 
@@ -100,13 +96,9 @@ CONTACT_IP_HASH_KEY=<generated secret 2>
 TURNSTILE_SITE_KEY=<production sitekey>
 TURNSTILE_SECRET_KEY=<production secret>
 TURNSTILE_EXPECTED_HOSTNAMES=bizqlab.com,www.bizqlab.com
-CONTACT_FROM_EMAIL=<domain sender>
+CONTACT_FROM_EMAIL=<sender on verified Resend domain>
 CONTACT_TO_EMAIL=<destination inbox>
-SMTP_HOST=<provider host>
-SMTP_PORT=587
-SMTP_USERNAME=<provider username>
-SMTP_PASSWORD=<provider password or app password>
-SMTP_SECURITY=starttls
+RESEND_API_KEY=<sending-only Resend API key>
 ```
 
 Configure this pre-deploy command on the `portfolio` service:

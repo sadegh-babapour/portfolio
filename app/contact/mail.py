@@ -1,29 +1,35 @@
 from __future__ import annotations
 
-import smtplib
-import ssl
 from email.message import EmailMessage
+
+import requests
 
 from app.contact.config import ContactSettings
 
+RESEND_EMAILS_URL = "https://api.resend.com/emails"
+
 
 def _send(message: EmailMessage, settings: ContactSettings) -> None:
-    if settings.smtp_security == "ssl":
-        smtp_client = smtplib.SMTP_SSL(
-            settings.smtp_host,
-            settings.smtp_port,
-            timeout=15,
-            context=ssl.create_default_context(),
-        )
-    else:
-        smtp_client = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15)
-    with smtp_client as smtp:
-        smtp.ehlo()
-        if settings.smtp_security == "starttls":
-            smtp.starttls(context=ssl.create_default_context())
-            smtp.ehlo()
-        smtp.login(settings.smtp_username, settings.smtp_password)
-        smtp.send_message(message)
+    payload: dict[str, object] = {
+        "from": message["From"],
+        "to": [message["To"]],
+        "subject": message["Subject"],
+        "text": message.get_content(),
+    }
+    if message["Reply-To"]:
+        payload["reply_to"] = message["Reply-To"]
+
+    response = requests.post(
+        RESEND_EMAILS_URL,
+        headers={
+            "Authorization": f"Bearer {settings.resend_api_key}",
+            "Content-Type": "application/json",
+            "User-Agent": "bizqlab-portfolio-contact/1.0",
+        },
+        json=payload,
+        timeout=15,
+    )
+    response.raise_for_status()
 
 
 def send_verification_email(

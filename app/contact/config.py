@@ -4,14 +4,6 @@ import os
 from dataclasses import dataclass
 
 
-def _smtp_port(value: str | None) -> int:
-    try:
-        port = int(value or "587")
-    except ValueError:
-        return 0
-    return port if 1 <= port <= 65535 else 0
-
-
 def normalize_database_url(value: str) -> str:
     if value.startswith("postgres://"):
         return "postgresql+psycopg2://" + value.removeprefix("postgres://")
@@ -32,11 +24,7 @@ class ContactSettings:
     turnstile_expected_hostnames: tuple[str, ...]
     from_email: str
     to_email: str
-    smtp_host: str
-    smtp_port: int
-    smtp_username: str
-    smtp_password: str
-    smtp_security: str
+    resend_api_key: str
 
     @classmethod
     def from_env(cls) -> ContactSettings:
@@ -61,11 +49,7 @@ class ContactSettings:
             ),
             from_email=os.getenv("CONTACT_FROM_EMAIL", ""),
             to_email=os.getenv("CONTACT_TO_EMAIL", ""),
-            smtp_host=os.getenv("SMTP_HOST", ""),
-            smtp_port=_smtp_port(os.getenv("SMTP_PORT")),
-            smtp_username=os.getenv("SMTP_USERNAME", ""),
-            smtp_password=os.getenv("SMTP_PASSWORD", ""),
-            smtp_security=os.getenv("SMTP_SECURITY", "starttls").strip().lower(),
+            resend_api_key=os.getenv("RESEND_API_KEY", ""),
         )
 
     def missing(self) -> tuple[str, ...]:
@@ -80,13 +64,7 @@ class ContactSettings:
             "TURNSTILE_EXPECTED_HOSTNAMES": self.turnstile_expected_hostnames,
             "CONTACT_FROM_EMAIL": self.from_email,
             "CONTACT_TO_EMAIL": self.to_email,
-            "SMTP_HOST": self.smtp_host,
-            "SMTP_PORT": self.smtp_port,
-            "SMTP_USERNAME": self.smtp_username,
-            "SMTP_PASSWORD": self.smtp_password,
-            "SMTP_SECURITY": (
-                self.smtp_security if self.smtp_security in {"starttls", "ssl"} else ""
-            ),
+            "RESEND_API_KEY": self.resend_api_key,
         }
         missing = [name for name, value in values.items() if not value]
         if self.token_pepper and len(self.token_pepper) < 32:

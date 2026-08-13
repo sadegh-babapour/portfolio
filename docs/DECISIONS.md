@@ -682,7 +682,7 @@ already processed from the other feeds in the same cycle.
 ## ADR-022: Use Google identity with opaque server-managed sessions
 
 Date: 2026-08-13
-Status: Accepted and deployed at `7da2bfa`; credential activation pending
+Status: Accepted and active; deployed at `7da2bfa`, UX verified at `0c0c423`
 
 ### Context
 
@@ -713,10 +713,43 @@ and protected-content authorization.
 
 ### Consequences
 
-- Authentication remains fail-closed until Google credentials are configured.
+- Authentication fails closed if Google credentials are removed or invalid.
 - The initial migration created identity, role, session, login-state, and event
   tables without exposing a login route prematurely.
 - Privacy/terms pages, account deletion, logout, opportunistic bounded cleanup,
   and the first registered-only Calgary Project Lab are part of activation.
-- Production login stays unavailable until the owner configures a Google web
-  client; the public portfolio remains available.
+- Production Google login is active; the owner confirmed login/logout, and the
+  non-destructive callback/replay matrix passed in production.
+
+## ADR-023: Align the public brand and member experience with OAuth review
+
+Date: 2026-08-13
+Status: Accepted and deployed at `0c0c423`
+
+### Context
+
+Google brand review requires an owned public homepage that identifies the app,
+explains its purpose, and matches the OAuth consent-screen name. The first
+registered-only Project Lab worked, but guest and member states were too subtle,
+and its disclosure card did not preserve visual intent in dark mode.
+
+### Decision
+
+- Use the exact public name `Bizqlab` in both NiceGUI and React navigation,
+  document title, footer, and homepage.
+- Make `https://www.bizqlab.com/` the declared homepage canonical and state the
+  application's purpose, optional Google-data use, and Privacy link publicly.
+- Put Account last and visually distinct on desktop, first in mobile menus, and
+  give `/account` explicit guest versus signed-in/member states.
+- Keep an honest but concise protected-content note: Codex was used as an
+  AI-assisted development tool and the owner reviewed/validated the work.
+
+### Consequences
+
+- The name and purpose findings are addressed in application code. Search
+  Console DNS ownership remains an explicit owner action and cannot be claimed
+  complete by deployment.
+- Registered access is visible as a product state rather than merely the
+  presence of logout buttons.
+- Disclosure remains clear without exposing an internal development narrative
+  or creating a light-only surface in dark mode.

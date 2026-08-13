@@ -138,10 +138,12 @@ root-relative return paths are checked before a local session is issued.
 Every successful first login creates a local user and `registered` role.
 `admin` comes only from configured subject/email allowlists. Projects remains
 public, while a validated Calgary Project Lab renders deeper technique,
-trade-off, and AI-assisted working-method notes only after server-side role
-enforcement. `/account` provides logout and local-account deletion;
+trade-off, and concise Codex development notes only after server-side role
+enforcement. `/account` renders clearly different guest and signed-in states,
+links members to unlocked material, and provides logout/local-account deletion;
 `/privacy` and `/terms` describe the boundary. Missing Google configuration
-keeps login disabled without affecting public pages. See
+keeps login disabled without affecting public pages. Production configuration
+is active and real Gmail login/logout has been confirmed. See
 `docs/AUTH_SECURITY.md`.
 
 ### Calgary Transit frontend

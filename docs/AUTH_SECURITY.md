@@ -53,7 +53,8 @@ trusting hidden UI.
   complete provider payloads. Login starts opportunistically remove expired
   login states, sessions, and events older than the configured retention.
 - `/privacy`, `/terms`, and `/account` describe identity use and provide logout
-  plus local-account deletion before public registration is activated.
+  plus local-account deletion. Public registration is active, and the owner has
+  confirmed real Gmail login and logout.
 
 ## Dependency and configuration gates
 
@@ -89,17 +90,42 @@ Google's OAuth production policy.
 
 Production links supplied to Google should be:
 
-- Home: `https://bizqlab.com`
-- Privacy: `https://bizqlab.com/privacy`
-- Terms: `https://bizqlab.com/terms`
+- Home: `https://www.bizqlab.com`
+- Privacy: `https://www.bizqlab.com/privacy`
+- Terms: `https://www.bizqlab.com/terms`
 - Authorized redirect: `https://bizqlab.com/api/auth/google/callback`
 
 Put the resulting client ID and client secret directly in the Railway
 `portfolio` service as `GOOGLE_OIDC_CLIENT_ID` and
 `GOOGLE_OIDC_CLIENT_SECRET`; never paste them into source or documentation.
 
+## Google branding verification
+
+The public application now uses the exact name `Bizqlab`, and its canonical
+homepage publicly explains the portfolio purpose, optional Google sign-in, and
+identity-data use with a direct Privacy link. This addresses the application
+content and name-match findings.
+
+Domain ownership cannot be completed in source code. Using the same Google
+account that is a Cloud project Owner or Editor:
+
+1. Open [Google Search Console](https://search.google.com/search-console) and
+   add a **Domain property** for `bizqlab.com` (not a URL-prefix property).
+2. Copy Google's TXT verification value into the DNS for `bizqlab.com`.
+3. Return to Search Console and select **Verify**.
+4. Reply to the OAuth review email or resubmit Brand verification.
+
+Google's supporting guidance is available in its
+[domain-verification instructions](https://support.google.com/cloud/answer/13804266),
+[homepage requirements](https://support.google.com/cloud/answer/13807376), and
+[verification requirements](https://support.google.com/cloud/answer/13464321).
+
+Both `bizqlab.com` and `www.bizqlab.com` are active Railway custom domains.
+The OAuth callback intentionally remains on the configured apex origin, while
+the review homepage stays at the submitted canonical `www` URL.
+
 ## Remaining gates
 
-- Google Cloud OAuth web-client credentials and consent-screen configuration.
-- Production browser tests for first/repeat login, locked content, logout,
-  hostile/replayed callbacks, account deletion, and optional admin allowlist.
+- Search Console Domain-property ownership and Google brand-review approval.
+- Owner-approved local-account deletion/re-registration and optional stable-
+  subject admin allowlist verification.

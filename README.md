@@ -1,8 +1,10 @@
-# Portfolio and Calgary Transit
+# Bizqlab Portfolio and Calgary Transit
 
-This repository contains a NiceGUI personal portfolio and an interactive
-Calgary Transit demonstration. The transit page uses a React/Leaflet frontend,
-an Express API, a Python GTFS-Realtime poller, and PostgreSQL.
+This repository contains Bizqlab, a NiceGUI data-engineering and analytics
+portfolio with public case studies, optional registered-user Project Lab notes,
+and an interactive Calgary Transit demonstration. The transit page uses a
+React/Leaflet frontend, an Express API, a Python GTFS-Realtime poller, and
+PostgreSQL.
 
 The transit data flow is:
 

@@ -4,36 +4,31 @@ Copy and paste this to start the next session:
 
 > Resume work in `/home/god/Documents/bizqlab/portfolio`. Read `AGENTS.md`,
 > `docs/PROJECT_STATE.md`, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`,
-> `docs/ROADMAP.md`, `docs/NEXT_ACTIONS.md`, and the latest entries in
-> `docs/SESSION_LOG.md` before changing code. Confirm the latest deployed
-> secure-contact commit (`1410133` or its documentation-only successor) and a clean
-> working tree. Phases 1 and 2 are complete:
-> the legacy NiceGUI/public-schema runtime was removed and all three Railway
-> services plus the production smoke matrix passed. Phase 3 adds validated JSON
-> for the on-page résumé timeline (not the PDF) and recruiter-focused case
-> studies; marked timeline placeholders still need owner-supplied facts. Begin
-> phase 4 by completing the production configuration described in
-> `docs/CONTACT_SETUP.md`. The redesigned UI, SQLAlchemy/Alembic `portfolio`
-> schema, CSRF/throttling, Turnstile verification, one-time email verification,
-> and SMTP delivery are implemented locally but must not be enabled until all
-> variables and the migration are ready. Preserve the accepted
-> React/Express/standalone-poller behavior and update
-> continuity docs after meaningful work. In every progress update, report
-> `Overall: Step X/9` and `Current step: mini-step Y/N`.
+> `docs/ROADMAP.md`, `docs/NEXT_ACTIONS.md`, `docs/AUTH_SECURITY.md`, and the
+> latest entries in `docs/SESSION_LOG.md` before changing code. Confirm deployed
+> functional commit `0c0c423` (or its documentation-only successor) and a clean
+> working tree. Steps 1-4 are complete. Step 5 Google sign-in is active; the
+> owner confirmed real Gmail login/logout, and the non-destructive production
+> auth matrix passed. Bizqlab branding, homepage purpose/data-use copy, member
+> Account UX, and dark-safe Codex disclosure are deployed. Finish the Google
+> Search Console Domain-property DNS verification and brand resubmission, then
+> get owner approval before testing local-account deletion/re-registration or
+> an admin stable-subject allowlist. Preserve the accepted React/Express/
+> standalone-poller behavior and update continuity docs after meaningful work.
+> In every progress update, report `Overall: Step X/9` and
+> `Current step: mini-step Y/N`.
 
 Expected baseline:
 
 - `portfolio`, `transit-api`, and `transit-poller` are deployed successfully at
-  `1410133`; production smoke checks for every public page passed and Contact
-  intentionally remains disabled until its private configuration is complete.
+  `0c0c423`; production pages, transit health, OAuth initiation/cancel/replay,
+  and anonymous mutation rejection passed.
+- Contact and Google credentials are configured; never print or commit them.
+- Search Console DNS ownership and OAuth review approval remain external owner
+  actions. Step 6 admin/analytics work has not started.
 - The production résumé is volume-backed and renders on mobile through the
   locally bundled PDF.js viewer.
-- Sticky navigation, shared flash-free themes, and theme-aware ECharts are live.
 - The Calgary React/Express/standalone-poller path is the only active source and
   production implementation.
-- `docs/ROADMAP.md` records the agreed phase order and future product goals.
-- The candidate TTC endpoint
-  `https://bustime.ttc.ca/gtfsrt/vehicles?debug` is recorded for phase 8 but must
-  not be investigated until the earlier phases are complete. At that point,
-  compare Toronto with established realtime rail feeds internationally rather
-  than assuming the final demonstration city.
+- Marked résumé timeline placeholders still require owner-supplied facts.
+- The TTC candidate feed remains deferred until Step 8.

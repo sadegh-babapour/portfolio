@@ -4,10 +4,11 @@ Last verified: 2026-08-13
 
 ## Project purpose
 
-This repository is a personal portfolio web application. Its most substantial
-project is an interactive Calgary Transit demonstration built from static GTFS
-data and Calgary's VehiclePositions, TripUpdates, and Alerts GTFS-Realtime
-feeds.
+This repository is the Bizqlab data-engineering and analytics portfolio. It
+presents public case studies and demonstrations, with optional Google sign-in
+for registered-user Project Lab notes. Its most substantial live project is an
+interactive Calgary Transit demonstration built from static GTFS data and
+Calgary's VehiclePositions, TripUpdates, and Alerts GTFS-Realtime feeds.
 
 The Calgary Transit feature has one source-level implementation: a React/Leaflet
 frontend, Express API, standalone Python poller, and PostgreSQL objects under the
@@ -17,8 +18,8 @@ removed locally and from production.
 ## Version-control state
 
 - Branch: `main`.
-- Deployed functional baseline: `7da2bfa` (`Implement Google sign-in and
-  Project Lab`).
+- Deployed functional baseline: `0c0c423` (`Polish member experience and OAuth
+  branding`).
 - `origin/main` and all three Railway application services run that revision.
   A later continuity-only commit may advance `main` without changing that
   runtime baseline.
@@ -32,6 +33,9 @@ removed locally and from production.
 - `python -m app.main` is the declared NiceGUI entry point in `Procfile`.
 - NiceGUI portfolio routes exist for home, about, résumé, projects, contact, and
   dashboard; it mounts the React transit build separately.
+- Public branding now uses the exact name `Bizqlab`. The public homepage states
+  the application's purpose, explains optional Google identity use, links the
+  privacy notice, and declares `https://www.bizqlab.com/` as canonical.
 - The theme-park dashboard reads committed sample data from
   `dashboard_cache.json` and does not require a live database.
 - The React transit frontend implements:
@@ -110,12 +114,14 @@ rechecked against today's external feeds.
   PostgreSQL, Cloudflare Turnstile, signed CSRF state, database throttling,
   one-time email verification, Resend HTTPS delivery, and audit events.
   Production configuration and the first migration are active. The owner
-  confirmed receipt of the labeled manual email checks; the full visible
-  Turnstile/verification-link/replay matrix remains unverified.
+  confirmed receipt and completion of the manual verification email round trip.
+  Replay, throttling, and provider-failure drills remain verification debt.
 - Google OIDC endpoints, server-managed sessions, registered/admin roles,
   logout, local-account deletion, privacy/terms pages, and a registered-only
-  Calgary Project Lab are deployed and fail closed without Google credentials.
-  Credential activation remains pending.
+  Calgary Project Lab are deployed. Production credentials are active, and the
+  owner confirmed real Gmail login and logout. The Account page now clearly
+  distinguishes guest and signed-in states and links registered users to their
+  unlocked material.
 - There is no admin console or first-party analytics model yet.
 - Several portfolio pages still contain sample résumé, chart, and image data.
 - Superseded commented implementations remain inside some accepted React and
@@ -139,7 +145,8 @@ rechecked against today's external feeds.
   approved official `google-auth` verifier, authorization-code callback,
   digest-only state/nonce/browser binding, first-login registration, session
   rotation/revocation, session-bound CSRF, role enforcement, bounded cleanup,
-  legal pages, account controls, and visible locked content.
+  legal pages, account controls, visible locked content, concise dark-safe Codex
+  disclosure, and a member-oriented Account page.
 
 ## Current development environment
 
@@ -295,6 +302,15 @@ deployment, and production smoke checks passed.
   Project Lab and configuration notice, `/api/auth/session` returned the
   expected unauthenticated response, and Google login failed closed with HTTP
   503 because its client credentials are intentionally not configured yet.
+- At deployed commit `0c0c423`, all three application services reached
+  `SUCCESS`. Home, Account, Projects, Privacy, Terms, and the React transit page
+  returned HTTP 200. Production rendered the exact `Bizqlab` name, homepage
+  purpose/data-use copy, canonical URL, guest Account state, and dark-safe
+  development-note class. OAuth initiation returned 303 to Google with only
+  `openid email profile` and a Secure/HttpOnly browser-binding cookie; a
+  cancelled callback returned the expected status, replay failed, and anonymous
+  logout/account deletion returned 403. The owner separately confirmed real
+  Gmail login and logout.
 - The application deploys branch `main` with Railpack and is detected as a
   Python application.
 - The observed failed build selected Python 3.13.14, installed
@@ -309,3 +325,6 @@ deployment, and production smoke checks passed.
 - Exact production row counts beyond the verified API-visible data.
 - Current per-feed field completeness beyond the counts rechecked on 2026-08-12.
 - Whether the broader portfolio content is ready for public presentation.
+- Google Search Console ownership verification and OAuth brand-review approval;
+  these require the owner to publish Google's DNS TXT record and resubmit/reply
+  to the review after verification.

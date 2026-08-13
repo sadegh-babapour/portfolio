@@ -47,13 +47,17 @@ Last updated: 2026-08-13
   the first database-backed portfolio feature.
 - [ ] Replace the marked timeline placeholders with factual owner-provided
   career and education data.
-- [ ] Finish Contact owner verification: labeled manual email receipt is
-  confirmed; exercise one visible Turnstile submission, verification link,
-  one-time final delivery, replay, throttling, and provider-failure cases.
-- [ ] Activate and browser-test Google OIDC. Endpoints, secure sessions, roles,
-  locked Calgary Project Lab, privacy/terms, logout, and account deletion are
-  deployed; create the Google web client and configure its client ID,
-  secret, and optional admin allowlist in Railway.
+- [x] Complete the visible Contact Turnstile, verification-link, and final-email
+  round trip; the owner confirmed manual receipt and verification.
+- [x] Activate Google OIDC and verify real Gmail login/logout, anonymous state,
+  Google redirect/scopes/cookie flags, cancelled callback, replay rejection,
+  and unauthenticated mutation rejection.
+- [ ] Verify `bizqlab.com` ownership with a Search Console **Domain property**
+  and Google's DNS TXT record using the Google account that owns/edits the Cloud
+  project; then resubmit or reply to the OAuth branding review.
+- [ ] Finish the optional destructive/admin identity cases: local-account
+  deletion/re-registration and admin subject allowlist. Do not delete the
+  owner's account solely for an automated smoke test.
 - [ ] Add an admin console for users, logins, sessions, contact state, content,
   job health, and audit events.
 - [ ] Implement bounded first-party operational/audit events; keep GA4 deferred
@@ -68,6 +72,8 @@ Last updated: 2026-08-13
 
 ## Existing verification debt
 
+- [ ] Exercise Contact verification-token replay, throttling, and Resend
+  provider-failure behavior; the successful human round trip is complete.
 - [ ] Expand Express tests for HTTP routing, stops, and database errors; the
   freshness-health service contract now has initial coverage.
 - [ ] Add poller fixture/upsert tests and frontend interaction tests.
@@ -78,11 +84,15 @@ Last updated: 2026-08-13
 
 ## Current recommended next task
 
-Create/configure the Google web client, then complete the production browser
-matrix: first registration, repeat
-login, locked Project Lab, logout, replay/invalid callback, account deletion,
-and optional admin allowlist. The remaining interactive Contact matrix can run
-in parallel.
+Complete Google Search Console domain ownership and resubmit the OAuth branding
+review. Then finish Step 5 with an owner-approved local-account deletion/
+re-registration check and optional admin stable-subject allowlist before moving
+to the Step 6 admin console and privacy-bounded first-party analytics.
+
+Overall: Step 5/9
+
+Current step: mini-step 4/5 (activation and non-destructive production matrix
+complete; domain review plus optional destructive/admin cases remain)
 
 See `docs/ROADMAP.md` for phase scope, decision gates, and exit criteria.
 

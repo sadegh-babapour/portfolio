@@ -1,6 +1,6 @@
 # Product and Engineering Roadmap
 
-Last updated: 2026-08-05
+Last updated: 2026-08-13
 
 ## Product objective
 
@@ -144,9 +144,9 @@ into recruiter-friendly case studies.
 ## Phase 4 — Contact experience, bot defense, and verified senders
 
 Status: safeguards are deployed at `6644beb`. Automated production checks and
-both Resend transport templates passed, and the owner confirmed manual email
-receipt. One interactive Turnstile/verification-link round trip and failure
-matrix remain.
+both Resend transport templates passed, and the owner confirmed the interactive
+Turnstile, verification-link, and email round trip. Replay/throttling/provider-
+failure drills remain verification debt rather than a blocker for Step 5.
 
 ### Goal
 
@@ -189,10 +189,11 @@ link but should not be mandatory for an ordinary recruiter contact.
 
 ## Phase 5 — Authentication and protected portfolio content
 
-Status: security/persistence foundation deployed at `65b33ea`; callback,
-sessions, roles, privacy/terms, account controls, and a locked Calgary Project
-Lab are deployed at `7da2bfa`. Google credential configuration and the real
-browser matrix remain.
+Status: identity flow deployed at `7da2bfa`, production credentials activated,
+and real Gmail login/logout confirmed by the owner. Branding, account-state UX,
+dark-safe disclosure, and the non-destructive production security matrix are
+deployed at `0c0c423`. Google DNS ownership/brand approval and optional
+account-deletion/admin checks remain.
 
 ### Goal
 
@@ -215,6 +216,14 @@ open selected case-study details or datasets.
 - users, external identities, sessions, login events, role assignments,
   protected-content access events, email-verification tokens, contact messages,
   and audit events.
+
+### Current completion gate
+
+- Search Console Domain-property ownership for `bizqlab.com` and OAuth brand
+  resubmission are owner/Google actions, not application-code work.
+- Local-account deletion/re-registration must be performed only with explicit
+  owner approval; anonymous deletion rejection is already production-tested.
+- Phase 6 may start after those Step 5 acceptance choices are recorded.
 
 ## Phase 6 — Admin console and analytics
 

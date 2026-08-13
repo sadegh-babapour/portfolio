@@ -940,3 +940,58 @@ meet the Calgary open-data attribution requirement.
 - Railway's agent-tooling health check reported an apparent skill revision
   update; `railway skills update` then confirmed installed skills were already
   current.
+
+## 2026-08-13 — Step 5 activation, member UX, and OAuth branding
+
+### Changed
+
+- Standardized the public application name as `Bizqlab` across NiceGUI, React,
+  the document title, footer, and homepage.
+- Added a public homepage purpose statement, explanation of optional Google
+  identity use, direct Privacy/Account links, metadata description, and the
+  submitted `https://www.bizqlab.com/` canonical URL.
+- Made Account the visually distinct rightmost desktop destination and the
+  first mobile-menu destination in both frontend shells.
+- Reworked `/account` into explicit guest/signed-out and verified signed-in
+  member states, including registered access, Project Lab, privacy, logout, and
+  deletion sections.
+- Replaced the long AI disclosure with a concise Development note identifying
+  Codex as an AI-assisted tool and owner review/validation. Added a dedicated
+  dark-theme surface so the note no longer appears as an accidental light card.
+- Added regression tests for login-state single use/browser binding, public
+  branding/purpose, navigation order, and the exact disclosure.
+
+### Verified
+
+- The owner confirmed successful real Gmail login and logout.
+- All 34 Python tests, Python compilation, frontend lint/build, Express syntax
+  checks, the Express test, and `git diff --check` passed. Local Home, Account,
+  Projects, and React-mount HTTP smoke checks returned 200.
+- Committed and pushed `0c0c423`; Railway reported `SUCCESS` for portfolio,
+  transit API, and transit poller.
+- Production Home, Account, Projects, Privacy, Terms, and React transit returned
+  200 with the expected branding, purpose, guest Account, and disclosure
+  markers. Anonymous session state was false.
+- OAuth initiation redirected to `accounts.google.com` with `openid email
+  profile` and a Secure/HttpOnly browser-binding cookie. User cancellation
+  redirected to `auth=cancelled`; replay redirected to `auth=failed`;
+  anonymous logout and deletion returned 403.
+- Transit health was reachable and truthfully reported
+  `outside_operating_hours` at 02:46 America/Edmonton with the last observed
+  feed timestamps, rather than presenting stale data as healthy.
+
+### Remaining
+
+- Google finding 1 requires an external owner action: create a Search Console
+  Domain property for `bizqlab.com`, publish Google's DNS TXT value, verify it
+  with the Cloud-project Owner/Editor account, and resubmit/reply to OAuth brand
+  review. The app-name and homepage-purpose findings are addressed in code.
+- Do not automate deletion of the owner's real local account. Test deletion and
+  re-registration only with explicit approval; optional admin stable-subject
+  allowlist verification also remains.
+- Contact replay/throttling/provider-failure drills, résumé placeholder facts,
+  and broader automated frontend/API coverage remain backlog items.
+
+Overall: Step 5/9
+
+Current step: mini-step 4/5

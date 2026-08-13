@@ -58,8 +58,9 @@ Last updated: 2026-08-13
   matching `www` homepage/privacy/terms URLs; when status becomes **Ready to
   publish**, select **Publish branding** within Google's seven-day window.
 - [ ] Finish the optional destructive/admin identity cases: local-account
-  deletion/re-registration and admin subject allowlist. Do not delete the
-  owner's account solely for an automated smoke test.
+  deletion/re-registration and admin subject allowlist. Admin activation is the
+  Step 5 completion gate; do not delete the owner's account solely for an
+  automated smoke test.
 - [ ] Add an admin console for users, logins, sessions, contact state, content,
   job health, and audit events.
 - [ ] Implement bounded first-party operational/audit events; keep GA4 deferred
@@ -86,15 +87,17 @@ Last updated: 2026-08-13
 
 ## Current recommended next task
 
-Complete Google OAuth logo/brand verification and publish the approved draft.
-Then finish Step 5 with an owner-approved local-account deletion/
-re-registration check and optional admin stable-subject allowlist before moving
-to the Step 6 admin console and privacy-bounded first-party analytics.
+After the overnight Google-review/cache pause, note the branding result without
+blocking the working login flow. Finish Step 5 by configuring and verifying the
+owner's stable-subject admin allowlist and recording acceptance. Decide whether
+to skip or explicitly approve the optional account deletion/re-registration
+test, then move to the Step 6 admin console and privacy-bounded first-party
+analytics.
 
 Overall: Step 5/9
 
-Current step: mini-step 4/5 (activation and non-destructive production matrix
-complete; domain review plus optional destructive/admin cases remain)
+Current step: mini-step 4/5 (working identity and branding implementation are
+complete; owner-admin activation and acceptance closeout remain)
 
 See `docs/ROADMAP.md` for phase scope, decision gates, and exit criteria.
 

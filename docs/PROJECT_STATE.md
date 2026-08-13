@@ -20,9 +20,8 @@ removed locally and from production.
 - Branch: `main`.
 - Deployed functional baseline: `e3a38f9` (`Publish Bizqlab logo across site
   branding`).
-- `origin/main` and all three Railway application services run that revision.
-  A later continuity-only commit may advance `main` without changing that
-  runtime baseline.
+- `origin/main` and all three Railway application services run continuity-only
+  successor `0e6102d`; it does not change the `e3a38f9` runtime baseline.
 - Secret-bearing environment profiles, dependencies, runtime caches, the large
   GTFS stop-times export, and the résumé PDF are ignored.
 

@@ -996,6 +996,21 @@ Overall: Step 5/9
 
 Current step: mini-step 4/5
 
+## 2026-08-13 — Overnight handoff
+
+- Paused Google branding work until the next day to allow review/cache state to
+  settle; the owner confirmed the working login is acceptable meanwhile.
+- Defined Step 5 mini-step 5 as stable-subject owner-admin activation and final
+  identity acceptance. Local-account deletion/re-registration remains optional
+  and destructive rather than a completion blocker.
+- Reconciled the next-session handoff with functional commit `e3a38f9`, deployed
+  continuity commit `0e6102d`, completed Search Console ownership, current test
+  results, and the next Step 6 boundary.
+
+Overall: Step 5/9
+
+Current step: mini-step 4/5
+
 ## 2026-08-13 — OAuth logo alignment
 
 ### Changed

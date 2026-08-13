@@ -192,8 +192,9 @@ link but should not be mandatory for an ordinary recruiter contact.
 Status: identity flow deployed at `7da2bfa`, production credentials activated,
 and real Gmail login/logout confirmed by the owner. Branding, account-state UX,
 dark-safe disclosure, and the non-destructive production security matrix are
-deployed at `0c0c423`. Google DNS ownership/brand approval and optional
-account-deletion/admin checks remain.
+deployed through `e3a38f9`. Search Console ownership is verified; Google brand
+publication is awaiting its refreshed result. Owner-admin activation and the
+Step 5 acceptance decision remain.
 
 ### Goal
 
@@ -219,11 +220,14 @@ open selected case-study details or datasets.
 
 ### Current completion gate
 
-- Search Console Domain-property ownership for `bizqlab.com` and OAuth brand
-  resubmission are owner/Google actions, not application-code work.
-- Local-account deletion/re-registration must be performed only with explicit
-  owner approval; anonymous deletion rejection is already production-tested.
-- Phase 6 may start after those Step 5 acceptance choices are recorded.
+- Google brand publication is an owner/Google action and may be rechecked after
+  caches/review state settle; working authentication does not depend on it.
+- Mini-step 5 activates and verifies the owner's stable-subject `admin` role,
+  then records final Step 5 acceptance. Local-account deletion/re-registration
+  is optional and requires explicit approval because it is destructive;
+  anonymous deletion rejection is already production-tested.
+- Phase 6 begins after admin access and the Step 5 acceptance decision are
+  recorded.
 
 ## Phase 6 — Admin console and analytics
 

@@ -143,8 +143,9 @@ into recruiter-friendly case studies.
 
 ## Phase 4 — Contact experience, bot defense, and verified senders
 
-Status: application deployed fail-closed at `1410133`; external configuration,
-migration, and production email round-trip verification pending.
+Status: production configuration and migration are active at `dffb4b7`.
+Deferred-on-submit Turnstile execution is implemented locally; deployment and
+the production verification/final-delivery matrix remain pending.
 
 ### Goal
 

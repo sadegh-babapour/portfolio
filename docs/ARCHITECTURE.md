@@ -1,6 +1,6 @@
 # Architecture
 
-Last reconciled with code and history: 2026-08-05
+Last reconciled with code and history: 2026-08-13
 
 ## Overview
 
@@ -118,6 +118,9 @@ browser -> CSRF/origin/validation/rate limit -> Cloudflare Siteverify
 The browser receives only the Turnstile sitekey. Database, token, Turnstile
 secret, and Resend credentials remain server-side environment variables. Missing
 configuration disables submission and makes the API fail closed.
+The widget is rendered explicitly but does not execute until a valid form is
+submitted. Its success callback sends the resulting single-use token, which the
+server immediately validates through Siteverify.
 
 ### Calgary Transit frontend
 
@@ -128,6 +131,8 @@ React and React Leaflet provide the interactive map. The application:
 - interpolates only between real observations;
 - marks small movement as stopped and old observations as stale;
 - renders route lines, selected vehicle context, stops, and alerts;
+- distinguishes fresh data, a degraded feed, and expected after-hours downtime;
+- displays the City of Calgary open-data licence attribution with the map;
 - adapts the map/detail layout for mobile screens.
 
 The frontend never connects directly to PostgreSQL.
@@ -146,6 +151,11 @@ views and tables in the `transit` schema and exposes:
 - `GET /api/vehicles/:vehicleId/stops`;
 - `GET /api/vehicles/:vehicleId/alerts`.
 
+Health is a data-freshness contract, not only a database-connectivity probe. It
+reports recent vehicle count and latest feed timestamps and classifies the
+service as `healthy`, `degraded`, or `outside_operating_hours` using the poller's
+08:00-21:00 America/Edmonton schedule.
+
 ### Data ingestion
 
 The intended poller uses three Calgary feeds:
@@ -156,6 +166,10 @@ The intended poller uses three Calgary feeds:
 
 It retains current-state tables for fast API queries and a short raw position
 history for delayed playback and debugging.
+Each realtime feed owns its transaction within a polling cycle. A malformed or
+temporarily unavailable feed is rolled back and logged without discarding
+successful updates from the other two feeds; total feed failure still raises a
+cycle-level error.
 
 ## Data flow
 

@@ -1,5 +1,55 @@
 const { FEATURED_ROUTES } = require("../config/transitConfig");
 
+async function getTransitHealth(pool) {
+  const sql = `
+    select
+      now() as checked_at,
+      extract(hour from now() at time zone 'America/Edmonton') >= 8
+        and extract(hour from now() at time zone 'America/Edmonton') < 21
+        as within_operating_hours,
+      max(vehicle_timestamp) as latest_vehicle_timestamp,
+      extract(epoch from (now() - max(vehicle_timestamp))) as vehicle_age_seconds,
+      count(*) filter (
+        where vehicle_timestamp >= now() - interval '3 minutes'
+      ) as recent_vehicle_count,
+      (select max(feed_header_timestamp) from transit.trip_updates_current)
+        as latest_trip_update_timestamp,
+      (select max(feed_header_timestamp) from transit.alerts_current)
+        as latest_alert_timestamp
+    from transit.vehicle_positions_current
+  `;
+
+  const result = await pool.query(sql);
+  const row = result.rows[0] || {};
+  const withinOperatingHours = row.within_operating_hours === true;
+  const ageSeconds = row.vehicle_age_seconds === null
+    || row.vehicle_age_seconds === undefined
+    ? null
+    : Number(row.vehicle_age_seconds);
+  const recentVehicleCount = Number(row.recent_vehicle_count || 0);
+  const status = !withinOperatingHours
+    ? "outside_operating_hours"
+    : ageSeconds !== null && ageSeconds <= 180 && recentVehicleCount > 0
+      ? "healthy"
+      : "degraded";
+
+  return {
+    ok: status !== "degraded",
+    status,
+    checked_at: row.checked_at || null,
+    operating_hours: {
+      timezone: "America/Edmonton",
+      start: "08:00",
+      end: "21:00",
+    },
+    latest_vehicle_timestamp: row.latest_vehicle_timestamp || null,
+    vehicle_age_seconds: ageSeconds,
+    recent_vehicle_count: recentVehicleCount,
+    latest_trip_update_timestamp: row.latest_trip_update_timestamp || null,
+    latest_alert_timestamp: row.latest_alert_timestamp || null,
+  };
+}
+
 function buildVehicleWhere(mode, params) {
   let where = `where vehicle_status = 'in_service'`;
 
@@ -402,6 +452,7 @@ async function getVehicleAlerts(pool, vehicleId) {
 }
 
 module.exports = {
+  getTransitHealth,
   getVehicles,
   getRoutePaths,
   getVehicleHistory,

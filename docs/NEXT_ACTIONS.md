@@ -1,6 +1,6 @@
 # Next Actions
 
-Last updated: 2026-08-05
+Last updated: 2026-08-13
 
 ## Phase 1: senior review
 
@@ -47,10 +47,11 @@ Last updated: 2026-08-05
   the first database-backed portfolio feature.
 - [ ] Replace the marked timeline placeholders with factual owner-provided
   career and education data.
-- [ ] Finish Contact production activation: configure the Resend sending domain
-  and API key, deploy the HTTPS mail transport, and exercise verification,
-  delivery, and abuse cases. PostgreSQL, the Alembic migration, generated
-  secrets, and hostname-restricted Cloudflare Turnstile are configured.
+- [ ] Finish Contact production verification: deploy deferred-on-submit
+  Turnstile execution, then exercise verification email, one-time final
+  delivery, expired/replayed link, throttling, and provider-failure cases.
+  PostgreSQL, Alembic, generated secrets, hostname-restricted Turnstile, and
+  Resend are configured.
 - [ ] Add Google OIDC, secure sessions, roles, visible locked content, and an
   explicit admin allowlist.
 - [ ] Add an admin console for users, logins, sessions, contact state, content,
@@ -67,7 +68,8 @@ Last updated: 2026-08-05
 
 ## Existing verification debt
 
-- [ ] Expand Express tests for HTTP routing, health, stops, and database errors.
+- [ ] Expand Express tests for HTTP routing, stops, and database errors; the
+  freshness-health service contract now has initial coverage.
 - [ ] Add poller fixture/upsert tests and frontend interaction tests.
 - [ ] Automate NiceGUI mount and production asset smoke tests.
 - [ ] Verify a production active-alert UI when the feed supplies one.
@@ -76,8 +78,8 @@ Last updated: 2026-08-05
 
 ## Current recommended next task
 
-Complete the environment-variable handoff for phase 4, then run the portfolio
-migration and full production contact verification/delivery matrix.
+Review, commit, and deploy the focused Step-4 fixes, then run the production
+contact verification/delivery and transit freshness/after-hours smoke matrix.
 
 See `docs/ROADMAP.md` for phase scope, decision gates, and exit criteria.
 

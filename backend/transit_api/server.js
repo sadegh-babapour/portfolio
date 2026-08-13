@@ -6,6 +6,7 @@ const express = require("express");
 const cors = require("cors");
 const { pool } = require("./db/pool");
 const {
+  getTransitHealth,
   getVehicles,
   getRoutePaths,
   getVehicleHistory,
@@ -49,11 +50,11 @@ app.get("/", (req, res) => {
 
 app.get("/api/health", async (req, res) => {
   try {
-    await pool.query("select 1");
-    res.json({ ok: true });
+    const health = await getTransitHealth(pool);
+    res.status(health.ok ? 200 : 503).json(health);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ ok: false });
+    res.status(503).json({ ok: false, status: "unavailable" });
   }
 });
 

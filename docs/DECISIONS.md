@@ -612,7 +612,7 @@ content, users, messages, service checks, jobs, and audit events.
 ## ADR-020: SQLAlchemy-owned verified contact workflow
 
 Date: 2026-08-05
-Status: Accepted; production configuration pending
+Status: Accepted; production configured, end-to-end delivery verification pending
 
 ### Context
 
@@ -640,12 +640,44 @@ and creates the first mutable portfolio-domain records.
 ### Consequences
 
 - SQLAlchemy and Alembic are approved production dependencies.
-- The portfolio Railway service needs a PostgreSQL reference, migration
+- The portfolio Railway service has its PostgreSQL reference, migration
   pre-deploy command, Turnstile widget keys, generated application secrets, and
-  Resend API configuration before submission can be enabled.
+  Resend API configuration. These must remain secret-bearing service variables.
 - Failed final deliveries remain durable for the phase-6 admin retry workflow.
 - Retention automation must be added before operational records accumulate at
   meaningful scale.
+
+## ADR-021: Treat transit freshness and partial feed failure explicitly
+
+Date: 2026-08-13
+Status: Accepted; implemented locally, deployment pending
+
+### Context
+
+The deployed health endpoint only proves PostgreSQL connectivity. The React map
+depends on a four-minute observation window while the poller intentionally
+stops at 21:00 Calgary time and retains raw positions for 15 minutes. This makes
+an expected after-hours empty map indistinguishable from a failed pipeline.
+Additionally, one malformed GTFS-Realtime response currently rolls back updates
+already processed from the other feeds in the same cycle.
+
+### Decision
+
+- Report latest feed timestamps, recent vehicle counts, operating hours, and a
+  `healthy`, `degraded`, or `outside_operating_hours` state from `/api/health`.
+- Keep the 15-minute raw-history policy and show an explicit after-hours state
+  instead of fabricating or silently extending live playback.
+- Commit VehiclePositions, TripUpdates, and Alerts independently so one upstream
+  parse or transport failure does not discard successful sibling-feed updates.
+- Display the City of Calgary open-data attribution in the transit interface.
+
+### Consequences
+
+- Railway and browser health can distinguish infrastructure availability from
+  realtime data freshness.
+- Partial cycles remain visible in logs but preserve useful current data.
+- A later monitoring system can consume the same health contract without
+  inferring freshness from HTTP 200 alone.
 - Historical source remains recoverable from Git rather than duplicated in the
   active tree.
 - The cleanup deployed successfully and all three Railway services passed the

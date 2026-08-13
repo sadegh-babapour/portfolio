@@ -809,3 +809,37 @@ transport while retaining the verified-sender workflow.
   to the Railway `portfolio` service, deploy, and complete the email round trip.
 - Railway's `alembic upgrade head` pre-deploy command should remain configured
   for future portfolio-schema migrations.
+
+## 2026-08-13 — Step 4 contact and transit health closeout
+
+### Goal
+
+Correct the duplicate-looking Turnstile experience, establish truthful transit
+freshness health, preserve successful feeds during partial Calgary failures, and
+meet the Calgary open-data attribution requirement.
+
+### Changed
+
+- Deferred Turnstile execution until a valid Send attempt and submit only from
+  its success callback; mandatory server-side Siteverify validation remains.
+- Added a freshness-aware Express health contract and React healthy, degraded,
+  unavailable, and expected after-hours states.
+- Isolated VehiclePositions, TripUpdates, and Alerts transactions so one failed
+  feed no longer rolls back successful sibling feeds.
+- Added the required City of Calgary open-data licence attribution to every map
+  basemap and regenerated the tracked production bundle.
+- Added initial health-contract and partial-feed-failure tests and ADR-021.
+
+### Verified
+
+- All 22 Python tests passed.
+- Active Express source passed `node --check`; the Node test command passed.
+- Frontend lint and the production Vite build passed.
+- Before these local changes, Railway showed all services running `dffb4b7`;
+  production contact/CSRF returned HTTP 200 and live poller logs confirmed
+  current Calgary ingestion during configured hours.
+
+### Pending
+
+- Review, commit, deploy, and run the real Resend verification/final-delivery
+  matrix plus in-hours and after-hours health smoke checks.

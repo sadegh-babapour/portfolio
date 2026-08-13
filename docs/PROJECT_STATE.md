@@ -1,6 +1,6 @@
 # Current Project State
 
-Last verified: 2026-08-05
+Last verified: 2026-08-13
 
 ## Project purpose
 
@@ -17,11 +17,12 @@ removed locally and from production.
 ## Version-control state
 
 - Branch: `main`.
-- Local, public, and deployed application baseline: `ffdbfb0` (`Remove legacy
-  transit stack`).
-- The working tree was clean after confirming `origin/main` and successful
-  Railway deployments for `portfolio`, `transit-api`, and `transit-poller` at
-  that revision.
+- Local, public, and deployed application baseline: `dffb4b7` (`Use Resend API
+  for contact delivery`).
+- `origin/main` and all three Railway application services run that revision.
+  The working tree contains the focused Step-4 Turnstile, transit-health,
+  feed-isolation, attribution, generated-bundle, test, and documentation work
+  described in the 2026-08-13 session log; it is not deployed yet.
 - Secret-bearing environment profiles, dependencies, runtime caches, the large
   GTFS stop-times export, and the résumé PDF are ignored.
 
@@ -106,11 +107,11 @@ rechecked against today's external feeds.
   the standalone current-state poller.
 - The repository does not yet provide one command that orchestrates the web,
   API, poller, and PostgreSQL locally; component start/check scripts do exist.
-- Contact has been rebuilt locally around FastAPI, SQLAlchemy/Alembic,
+- Contact has been rebuilt around FastAPI, SQLAlchemy/Alembic,
   PostgreSQL, Cloudflare Turnstile, signed CSRF state, database throttling,
   one-time email verification, Resend HTTPS delivery, and audit events.
-  It fails closed and remains disabled until production variables and the first
-  migration are configured.
+  Production configuration and the first migration are active. The real
+  verification-email and final-delivery round trip remains unverified.
 - There is no user authentication, protected-content policy, admin console, or
   first-party analytics model yet.
 - Several portfolio pages still contain sample résumé, chart, and image data.
@@ -129,6 +130,10 @@ rechecked against today's external feeds.
   boundary fix before authenticated features share the origin.
 - The accepted transit SQL files reproduce a clean database but do not provide
   a migration ledger or detect schema drift in an existing database.
+- The deployed transit health endpoint still proves only database connectivity.
+  The working tree adds freshness-aware healthy/degraded/after-hours reporting,
+  an honest frontend empty state, per-feed transaction isolation, and required
+  City of Calgary data attribution; production deployment is pending.
 
 ## Current development environment
 
@@ -257,6 +262,15 @@ deployment, and production smoke checks passed.
   responsive layouts. Contact displayed its configuration notice and its CSRF
   endpoint returned the expected fail-closed HTTP 503 until production database,
   Turnstile, application-secret, and Resend variables are supplied.
+- At deployed commit `dffb4b7`, all three application services report success.
+  Contact and its configured CSRF endpoint return HTTP 200, the portfolio
+  migration runs as a pre-deploy command, and the transit poller continues to
+  ingest live Calgary data during 08:00-21:00 America/Edmonton.
+- On 2026-08-12 Calgary time, poller logs showed roughly 280-298 vehicle
+  positions, 525-571 trip updates, about 10,500-11,000 stop predictions, and 46
+  alerts per successful cycle. The browser-facing current endpoint returned 350
+  last-known vehicles after hours while four-minute history correctly returned
+  none once the 15-minute raw window expired.
 - The application deploys branch `main` with Railpack and is detected as a
   Python application.
 - The observed failed build selected Python 3.13.14, installed
@@ -269,6 +283,5 @@ deployment, and production smoke checks passed.
 - Whether any database credentials in the checkpoint have been exposed or
   rotated.
 - Exact production row counts beyond the verified API-visible data.
-- Whether Calgary's live feeds still have the same field availability observed
-  in April 2026.
+- Current per-feed field completeness beyond the counts rechecked on 2026-08-12.
 - Whether the broader portfolio content is ready for public presentation.

@@ -40,9 +40,19 @@ class WebBoundaryTests(unittest.TestCase):
             self.assertEqual(web_main.DEFAULT_RESUME_PDF.name, "resume.pdf")
             self.assertEqual(web_main.DEFAULT_RESUME_PDF.parent.name, "static")
 
+    def test_contact_turnstile_executes_only_after_submit(self):
+        source = (
+            Path(__file__).resolve().parents[1] / "app" / "pages" / "contact.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("execution: 'execute'", source)
+        self.assertIn("appearance: 'interaction-only'", source)
+        self.assertIn("window.turnstile.execute(widgetId)", source)
+        self.assertNotIn("window.turnstile.getResponse", source)
+
 
 class CurrentPollerBoundaryTests(unittest.TestCase):
-    def test_run_once_updates_all_three_feeds_then_commits(self):
+    def test_run_once_updates_and_commits_each_feed_independently(self):
         calls = []
 
         with (
@@ -73,7 +83,24 @@ class CurrentPollerBoundaryTests(unittest.TestCase):
                 ("alerts", connection),
             ],
         )
-        connection.commit.assert_called_once_with()
+        self.assertEqual(connection.commit.call_count, 3)
+        connection.rollback.assert_not_called()
+
+    def test_run_once_keeps_other_feeds_when_one_feed_fails(self):
+        with (
+            patch.object(
+                current_poller,
+                "upsert_vehicle_positions",
+                side_effect=ValueError("invalid protobuf"),
+            ),
+            patch.object(current_poller, "upsert_trip_updates"),
+            patch.object(current_poller, "upsert_alerts"),
+        ):
+            connection = Mock()
+            current_poller.run_once(connection)
+
+        connection.rollback.assert_called_once_with()
+        self.assertEqual(connection.commit.call_count, 2)
 
     def test_boolean_environment_flags_use_explicit_truthy_values(self):
         with patch.dict(os.environ, {"TEST_FLAG": "yes"}):

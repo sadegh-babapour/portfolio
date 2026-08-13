@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
+  getTransitHealth,
   getVehicles,
   getRoutePaths,
   getVehicleHistory,
@@ -27,6 +28,46 @@ test("featured vehicles use the configured route allowlist", async () => {
   assert.deepEqual(await getVehicles(pool, "featured"), rows);
   assert.deepEqual(pool.calls[0].params, [["300", "MP", "MO", "23", "57"]]);
   assert.match(pool.calls[0].sql, /route_short_name = any\(\$1\)/);
+});
+
+test("transit health distinguishes fresh and after-hours data", async () => {
+  const freshPool = poolReturning([{
+    checked_at: "2026-08-13T18:00:00Z",
+    within_operating_hours: true,
+    latest_vehicle_timestamp: "2026-08-13T17:59:30Z",
+    vehicle_age_seconds: "30",
+    recent_vehicle_count: "287",
+    latest_trip_update_timestamp: "2026-08-13T17:59:31Z",
+    latest_alert_timestamp: "2026-08-13T17:59:32Z",
+  }]);
+  const fresh = await getTransitHealth(freshPool);
+  assert.equal(fresh.ok, true);
+  assert.equal(fresh.status, "healthy");
+  assert.equal(fresh.recent_vehicle_count, 287);
+
+  const afterHoursPool = poolReturning([{
+    checked_at: "2026-08-13T05:00:00Z",
+    within_operating_hours: false,
+    latest_vehicle_timestamp: "2026-08-13T02:58:40Z",
+    vehicle_age_seconds: "7280",
+    recent_vehicle_count: "0",
+  }]);
+  const afterHours = await getTransitHealth(afterHoursPool);
+  assert.equal(afterHours.ok, true);
+  assert.equal(afterHours.status, "outside_operating_hours");
+});
+
+test("transit health is degraded when vehicles are stale during operating hours", async () => {
+  const pool = poolReturning([{
+    within_operating_hours: true,
+    latest_vehicle_timestamp: "2026-08-13T17:50:00Z",
+    vehicle_age_seconds: "600",
+    recent_vehicle_count: "0",
+  }]);
+
+  const health = await getTransitHealth(pool);
+  assert.equal(health.ok, false);
+  assert.equal(health.status, "degraded");
 });
 
 test("route paths group ordered shape points by route", async () => {

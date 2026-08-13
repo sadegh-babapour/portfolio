@@ -18,6 +18,8 @@ review-first delivery plan.
 
 Secure contact configuration and Cloudflare/Resend setup are documented in
 `docs/CONTACT_SETUP.md`; the abuse model is in `docs/CONTACT_SECURITY.md`.
+The Step-5 Google identity and server-session boundary is documented in
+`docs/AUTH_SECURITY.md`.
 
 ## Prerequisites
 

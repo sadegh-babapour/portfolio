@@ -682,7 +682,7 @@ already processed from the other feeds in the same cycle.
 ## ADR-022: Use Google identity with opaque server-managed sessions
 
 Date: 2026-08-13
-Status: Foundation accepted and implemented locally; dependency approval pending
+Status: Foundation deployed at `65b33ea`; dependency approval pending
 
 ### Context
 
@@ -711,7 +711,7 @@ and protected-content authorization.
 ### Consequences
 
 - Authentication remains fail-closed until Google credentials are configured.
-- The initial migration creates identity, role, session, login-state, and event
+- The initial migration created identity, role, session, login-state, and event
   tables without exposing a login route prematurely.
 - Broad registration waits for privacy/terms pages and bounded cleanup of
   expired session/login-state records.

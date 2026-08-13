@@ -17,12 +17,11 @@ removed locally and from production.
 ## Version-control state
 
 - Branch: `main`.
-- Local, public, and deployed application baseline: `6644beb` (`Finish contact
-  and transit health safeguards`).
+- Deployed functional baseline: `65b33ea` (`Start secure Google identity
+  foundation`).
 - `origin/main` and all three Railway application services run that revision.
-  The working tree contains the dependency-free Step-5 authentication
-  persistence, configuration, security-contract, migration, test, and
-  documentation foundation described in the 2026-08-13 session log.
+  Subsequent continuity-only documentation may advance `main` without changing
+  the runtime baseline described here.
 - Secret-bearing environment profiles, dependencies, runtime caches, the large
   GTFS stop-times export, and the résumé PDF are ignored.
 
@@ -133,7 +132,7 @@ rechecked against today's external feeds.
 - Transit health reports freshness-aware healthy/degraded/after-hours state. The
   frontend presents expected after-hours downtime, feed transactions are
   isolated, and City of Calgary attribution is displayed in production.
-- Step 5 has begun locally with ORM models and one pending Alembic migration for
+- Step 5 has begun in production with ORM models and an applied Alembic migration for
   users, Google identities, roles, server sessions, OIDC login state, and auth
   events. No login endpoint is exposed and no new dependency is declared yet.
 
@@ -280,6 +279,11 @@ deployment, and production smoke checks passed.
   Direct production calls through both Resend templates succeeded; inbox
   receipt and the interactive browser verification-link round trip await owner
   confirmation.
+- At deployed commit `65b33ea`, all three application services reached
+  `SUCCESS`. The portfolio pre-deploy log confirmed migration
+  `20260805_01 -> 20260813_02`, then NiceGUI started normally. Home remained
+  HTTP 200 and the intentionally unimplemented Google login endpoint returned
+  HTTP 404.
 - The application deploys branch `main` with Railpack and is detected as a
   Python application.
 - The observed failed build selected Python 3.13.14, installed

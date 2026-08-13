@@ -882,3 +882,16 @@ meet the Calgary open-data attribution requirement.
 - Owner approval is required before adding `google-auth` to production.
 - Google OAuth web-client credentials and the registered-only content choice are
   required before implementing and exposing the login flow.
+
+### Production foundation verification
+
+- Committed and pushed `65b33ea`; all three Railway services reached
+  `SUCCESS`.
+- The portfolio pre-deploy log explicitly recorded the upgrade from
+  `20260805_01` to `20260813_02`; NiceGUI then reached ready state.
+- Production home returned HTTP 200, freshness health retained its expected
+  after-hours contract, and `/api/auth/google/login` returned HTTP 404 because
+  no unfinished login endpoint is exposed.
+- A local `railway run alembic current` could not resolve the private Railway
+  database from outside its service network. The successful in-network
+  pre-deploy migration log is the authoritative verification.

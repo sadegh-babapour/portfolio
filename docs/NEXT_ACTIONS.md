@@ -52,7 +52,7 @@ Last updated: 2026-08-13
   one-time final delivery, replay, throttling, and provider-failure cases.
 - [ ] Complete Google OIDC, secure sessions, roles, visible locked content, and
   an explicit admin allowlist. The dependency-free schema/config/security
-  foundation is implemented locally; approve `google-auth`, configure a Google
+  foundation is deployed; approve `google-auth`, configure a Google
   web client, and select protected case-study content before endpoint work.
 - [ ] Add an admin console for users, logins, sessions, contact state, content,
   job health, and audit events.
@@ -78,9 +78,10 @@ Last updated: 2026-08-13
 
 ## Current recommended next task
 
-Review and deploy the Step-5 authentication foundation after approving the
-`google-auth` dependency decision and choosing which case-study details should
-be registered-only. Contact inbox/browser confirmation can run in parallel.
+Approve the `google-auth` dependency, create/configure the Google web client,
+and choose which case-study details should be registered-only. Then implement
+the callback, sessions, role enforcement, logout/revocation, privacy pages, and
+locked-card behavior. Contact inbox/browser confirmation can run in parallel.
 
 See `docs/ROADMAP.md` for phase scope, decision gates, and exit criteria.
 

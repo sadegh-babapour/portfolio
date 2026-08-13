@@ -188,8 +188,9 @@ link but should not be mandatory for an ordinary recruiter contact.
 
 ## Phase 5 — Authentication and protected portfolio content
 
-Status: dependency-free security and persistence foundation implemented locally
-on 2026-08-13; Google callback, sessions, UI enforcement, and deployment pending.
+Status: dependency-free security and persistence foundation deployed at
+`65b33ea`; Google callback, live sessions, and UI enforcement remain gated on
+dependency approval, Google credentials, privacy pages, and protected content.
 
 ### Goal
 

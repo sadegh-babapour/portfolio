@@ -394,10 +394,24 @@ def upsert_alerts(conn) -> None:
 
 
 def run_once(conn) -> None:
-    upsert_vehicle_positions(conn)
-    upsert_trip_updates(conn)
-    upsert_alerts(conn)
-    conn.commit()
+    failures: list[tuple[str, Exception]] = []
+    feed_updates = (
+        ("vehicle_positions", upsert_vehicle_positions),
+        ("trip_updates", upsert_trip_updates),
+        ("alerts", upsert_alerts),
+    )
+
+    for feed_name, update_feed in feed_updates:
+        try:
+            update_feed(conn)
+            conn.commit()
+        except Exception as exc:
+            conn.rollback()
+            failures.append((feed_name, exc))
+            print(f"{feed_name} poll error: {exc}", file=sys.stderr)
+
+    if len(failures) == len(feed_updates):
+        raise RuntimeError("all Calgary realtime feeds failed")
 
 
 def main() -> int:

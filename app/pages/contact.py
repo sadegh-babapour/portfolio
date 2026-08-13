@@ -121,41 +121,23 @@ def contact():
         const button = document.getElementById('contact-submit');
         const status = document.getElementById('contact-status');
         let widgetId = null;
+        let csrfToken = '';
         if (!form || form.dataset.bound === 'true') return;
         form.dataset.bound = 'true';
         if (!configured) {{ button.disabled = true; return; }}
 
-        const renderWidget = () => {{
-          if (window.turnstile && widgetId === null) {{
-            widgetId = window.turnstile.render('#contact-turnstile', {{
-              sitekey: siteKey, action: 'contact', theme: 'auto',
-              'error-callback': () => {{
-                status.textContent = 'The security check could not load. Refresh and try again.';
-                return true;
-              }},
-              'expired-callback': () => {{
-                status.textContent = 'The security check expired. Please complete it again.';
-              }}
-            }});
-          }} else if (widgetId === null) {{ setTimeout(renderWidget, 100); }}
+        const resetSubmission = () => {{
+          csrfToken = '';
+          if (widgetId !== null) window.turnstile.reset(widgetId);
+          button.disabled = false;
         }};
-        renderWidget();
 
-        form.addEventListener('submit', async (event) => {{
-          event.preventDefault();
-          status.textContent = '';
-          if (!form.reportValidity()) return;
-          const turnstileToken = widgetId === null ? '' : window.turnstile.getResponse(widgetId);
-          if (!turnstileToken) {{ status.textContent = 'Complete the bot check before sending.'; return; }}
-          button.disabled = true;
+        const submitContact = async (turnstileToken) => {{
           status.textContent = 'Submitting securely…';
           try {{
-            const csrfResponse = await fetch('/api/contact/csrf', {{credentials:'same-origin'}});
-            const csrf = await csrfResponse.json();
-            if (!csrfResponse.ok) throw new Error(csrf.detail || 'Contact service is unavailable.');
             const response = await fetch('/api/contact/messages', {{
               method:'POST', credentials:'same-origin',
-              headers:{{'Content-Type':'application/json','X-CSRF-Token':csrf.csrf_token}},
+              headers:{{'Content-Type':'application/json','X-CSRF-Token':csrfToken}},
               body:JSON.stringify({{
                 name:document.getElementById('contact-name').value,
                 email:document.getElementById('contact-email').value,
@@ -171,9 +153,47 @@ def contact():
             status.textContent = result.message;
             form.reset();
           }} catch (error) {{ status.textContent = error.message; }}
-          finally {{
-            if (widgetId !== null) window.turnstile.reset(widgetId);
-            button.disabled = false;
+          finally {{ resetSubmission(); }}
+        }};
+
+        const renderWidget = () => {{
+          if (window.turnstile && widgetId === null) {{
+            widgetId = window.turnstile.render('#contact-turnstile', {{
+              sitekey: siteKey, action: 'contact', theme: 'auto',
+              execution: 'execute', appearance: 'interaction-only',
+              'response-field': false,
+              callback: (token) => {{ void submitContact(token); }},
+              'error-callback': () => {{
+                status.textContent = 'The security check could not load. Refresh and try again.';
+                resetSubmission();
+                return true;
+              }},
+              'expired-callback': () => {{
+                status.textContent = 'The security check expired. Please complete it again.';
+                resetSubmission();
+              }}
+            }});
+          }} else if (widgetId === null) {{ setTimeout(renderWidget, 100); }}
+        }};
+        renderWidget();
+
+        form.addEventListener('submit', async (event) => {{
+          event.preventDefault();
+          status.textContent = '';
+          if (!form.reportValidity()) return;
+          if (widgetId === null) {{ status.textContent = 'The security check is still loading.'; return; }}
+          button.disabled = true;
+          status.textContent = 'Preparing the security check…';
+          try {{
+            const csrfResponse = await fetch('/api/contact/csrf', {{credentials:'same-origin'}});
+            const csrf = await csrfResponse.json();
+            if (!csrfResponse.ok) throw new Error(csrf.detail || 'Contact service is unavailable.');
+            csrfToken = csrf.csrf_token;
+            status.textContent = 'Completing the security check…';
+            window.turnstile.execute(widgetId);
+          }} catch (error) {{
+            status.textContent = error.message;
+            resetSubmission();
           }}
         }});
       }})();

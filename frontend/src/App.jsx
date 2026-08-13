@@ -36,21 +36,23 @@ L.Icon.Default.mergeOptions({
 // const API_BASE = "http://localhost:4000/api";
 const API_BASE = import.meta.env.VITE_TRANSIT_API_BASE_URL || "/api";
 const FEATURED_ROUTES = ["300", "MP", "MO", "23", "57"];
+const CALGARY_ATTRIBUTION =
+  'Contains information licensed under the <a href="https://data.calgary.ca/stories/s/Open-Calgary-Terms-of-Use/u45n-7awa/" target="_blank" rel="noopener noreferrer">Open Government Licence – City of Calgary</a>';
 
 const TILE_CONFIG = {
   light: {
     url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    attribution: "&copy; OpenStreetMap contributors",
+    attribution: `&copy; OpenStreetMap contributors | ${CALGARY_ATTRIBUTION}`,
     label: "Light",
   },
   dark: {
     url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-    attribution: "&copy; OpenStreetMap &copy; CARTO",
+    attribution: `&copy; OpenStreetMap &copy; CARTO | ${CALGARY_ATTRIBUTION}`,
     label: "Dark",
   },
   white: {
     url: "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",
-    attribution: "&copy; OpenStreetMap &copy; CARTO",
+    attribution: `&copy; OpenStreetMap &copy; CARTO | ${CALGARY_ATTRIBUTION}`,
     label: "White",
   },
 };
@@ -298,7 +300,7 @@ function Filters({ mode, setMode }) {
   );
 }
 
-function VehicleDrawer({ vehicle, onClose }) {
+function VehicleDrawer({ vehicle, onClose, serviceStatus }) {
   const [stops, setStops] = useState([]);
   const [alerts, setAlerts] = useState([]);
 
@@ -322,12 +324,17 @@ function VehicleDrawer({ vehicle, onClose }) {
   }, [vehicle]);
 
   if (!vehicle) {
+    const emptyMessage = serviceStatus === "outside_operating_hours"
+      ? "Live playback is offline outside Calgary polling hours (08:00–21:00 America/Edmonton). Please return during service hours."
+      : serviceStatus === "degraded" || serviceStatus === "unavailable"
+        ? "Live vehicle data is temporarily unavailable. The service is being checked."
+        : "Select a bus to highlight its route and see upcoming stops and alerts.";
     return (
       <div className="drawer empty">
         <div className="drawer-header">
           <h2>Calgary Transit Live</h2>
         </div>
-        <p>Select a bus to highlight its route and see upcoming stops and alerts.</p>
+        <p>{emptyMessage}</p>
       </div>
     );
   }
@@ -423,6 +430,7 @@ function App() {
   const [latestDataTimestampMs, setLatestDataTimestampMs] = useState(null);
   const [historyFetchedAtMs, setHistoryFetchedAtMs] = useState(null);
   const [selectedContext, setSelectedContext] = useState(null);
+  const [serviceStatus, setServiceStatus] = useState("loading");
   const [baseMap, setBaseMap] = useState("dark");
   // const [density, setDensity] = useState("all");
 
@@ -444,7 +452,7 @@ function App() {
 
     const load = async () => {
       try {
-        const [historyRes, pathRes] = await Promise.all([
+        const [historyRes, pathRes, healthRes] = await Promise.all([
           // fetch(`${API_BASE}/vehicles/history?mode=${mode}&window_minutes=${HISTORY_WINDOW_MINUTES}`),
           fetch(`${API_BASE}/vehicles/history?mode=${mode}&window_minutes=${HISTORY_WINDOW_MINUTES}`),
           // fetch(`${API_BASE}/vehicles/history?mode=${mode}&density=${density}&window_minutes=${HISTORY_WINDOW_MINUTES}`),
@@ -455,10 +463,16 @@ function App() {
               )}`
               : `${API_BASE}/routes/paths?mode=featured`
           ),
+          fetch(`${API_BASE}/health`),
         ]);
 
         const historyData = await historyRes.json();
         const pathData = await pathRes.json();
+        const healthData = await healthRes.json();
+
+        if (!historyRes.ok || !pathRes.ok) {
+          throw new Error("Transit data request failed");
+        }
 
         let latestMs = null;
 
@@ -479,11 +493,13 @@ function App() {
         setLastHistoryFetchMs(Date.now());
         setLatestDataTimestampMs(latestMs);
         setHistoryFetchedAtMs(Date.now());
+        setServiceStatus(healthData.status || (healthRes.ok ? "healthy" : "degraded"));
         setRefreshAgeSeconds(0);
       } catch {
         if (!cancelled) {
           setVehicleHistory([]);
           setRoutePaths([]);
+          setServiceStatus("unavailable");
         }
       }
     };
@@ -567,7 +583,14 @@ function App() {
   ]);
 
   const center = useMemo(() => [51.0447, -114.0719], []);
-  const countLabel = `${vehicles.length} active buses`;
+  const countLabel = serviceStatus === "outside_operating_hours"
+    ? "Outside live hours"
+    : serviceStatus === "degraded" || serviceStatus === "unavailable"
+      ? "Live data unavailable"
+      : `${vehicles.length} active buses`;
+  const refreshLabel = serviceStatus === "outside_operating_hours"
+    ? "Live polling runs 08:00–21:00 Calgary time"
+    : `Last refresh ${refreshAgeSeconds}s ago`;
 
   return (
     <div className="app">
@@ -581,7 +604,7 @@ function App() {
         </div>
         <div className="status-group">
           <div className="status-pill">{countLabel}</div>
-          <div className="status-subtle">Last refresh {refreshAgeSeconds}s ago</div>
+          <div className="status-subtle">{refreshLabel}</div>
         </div>
       </div>
 
@@ -658,6 +681,7 @@ function App() {
           <VehicleDrawer
             key={selectedVehicle?.vehicle_id || "no-selection"}
             vehicle={selectedVehicle}
+            serviceStatus={serviceStatus}
             onClose={() => {
               setSelectedContext(null);
               setSelectedVehicle(null);

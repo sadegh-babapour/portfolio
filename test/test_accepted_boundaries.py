@@ -143,6 +143,30 @@ class PortfolioContentTests(unittest.TestCase):
         self.assertTrue(any(project.data_mode == "static_snapshot" for project in projects.projects))
         self.assertTrue(any(project.lab is not None for project in projects.projects))
 
+    def test_public_branding_and_project_disclosure_are_deliberate(self):
+        root = Path(__file__).resolve().parents[1]
+        home_source = (root / "app" / "pages" / "home.py").read_text(encoding="utf-8")
+        navbar_source = (root / "app" / "components" / "navbar.py").read_text(
+            encoding="utf-8"
+        )
+        projects_source = (root / "app" / "pages" / "projects.py").read_text(
+            encoding="utf-8"
+        )
+        collection = load_projects()
+        lab = next(project.lab for project in collection.projects if project.lab is not None)
+
+        self.assertIn("What Bizqlab does", home_source)
+        self.assertIn("How account data is used", home_source)
+        self.assertIn("https://www.bizqlab.com/", home_source)
+        self.assertIn("[*NAV_LINKS, ACCOUNT_LINK]", navbar_source)
+        self.assertIn("[ACCOUNT_LINK, *NAV_LINKS]", navbar_source)
+        self.assertIn("portfolio-development-note", projects_source)
+        self.assertEqual(
+            lab.working_method,
+            "Codex was used as an AI-assisted development tool. The portfolio owner "
+            "reviewed and validated the resulting work.",
+        )
+
     def test_duplicate_timeline_ids_are_rejected(self):
         document = {
             "schema_version": 1,

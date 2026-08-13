@@ -13,6 +13,6 @@ FOOTER_PROPS = dict(
 def footer():
     with ui.footer(**FOOTER_PROPS).classes('bg-primary text-white shadow'):
         with ui.row().classes('justify-center items-center gap-4 p-4'):
-            ui.label('© 2026 My Portfolio')
+            ui.label('© 2026 Bizqlab')
             ui.link('Privacy', '/privacy').classes('text-white hover:underline')
             ui.link('Terms', '/terms').classes('text-white hover:underline')

@@ -75,7 +75,7 @@ def _import_pages():
 if __name__ in {"__main__", "__mp_main__"}:
     _import_pages()
     ui.run(
-        title='My Portfolio',
+        title='Bizqlab',
         port=int(os.getenv("PORT", default=8086)),
         host='0.0.0.0',
         dark=False,

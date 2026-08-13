@@ -123,6 +123,12 @@ body,
   text-decoration: none;
 }
 
+.portfolio-nav-desktop .portfolio-account-link {
+  padding: 8px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 999px;
+}
+
 .portfolio-nav-desktop a:hover,
 .portfolio-nav-desktop a:focus-visible,
 .portfolio-nav-mobile-links a:hover,
@@ -409,6 +415,12 @@ body,
   .portfolio-nav-mobile-links a[aria-current="page"] {
     background: #edf6ff;
     color: #245d91;
+  }
+
+  .portfolio-nav-mobile-links .portfolio-account-link {
+    background: #e8f3ff;
+    color: #245d91;
+    font-weight: 700;
   }
 
   .content {

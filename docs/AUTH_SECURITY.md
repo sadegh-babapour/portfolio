@@ -50,19 +50,16 @@ trusting hidden UI.
 - Do not store passwords, Google access/refresh tokens, raw session tokens, raw
   OIDC state/nonce values, or raw IP addresses.
 - Auth events contain state transitions and bounded metadata, not credentials or
-  complete provider payloads.
-- Expired login states and sessions require scheduled deletion before the auth
-  feature leaves limited production testing.
-- The site needs implemented privacy/terms pages describing Google identity
-  data, purposes, retention, logout/revocation, and contact details before broad
-  public registration.
+  complete provider payloads. Login starts opportunistically remove expired
+  login states, sessions, and events older than the configured retention.
+- `/privacy`, `/terms`, and `/account` describe identity use and provide logout
+  plus local-account deletion before public registration is activated.
 
 ## Dependency and configuration gates
 
-The callback requires an ID-token verifier. The recommended production
-dependency is `google-auth`, which validates Google signature, issuer, audience,
-and token time claims while the existing `requests` package performs the code
-exchange. Adding it requires repository-owner approval.
+The owner-approved production dependency is `google-auth`, which validates
+Google signature, issuer, audience, and token time claims while the existing
+`requests` package performs the code exchange.
 
 Required production variables:
 
@@ -74,17 +71,35 @@ AUTH_ADMIN_GOOGLE_SUBJECTS=<preferred comma-separated stable subjects>
 AUTH_ADMIN_EMAILS=<optional comma-separated verified-email fallback>
 AUTH_SESSION_TTL_HOURS=12
 AUTH_LOGIN_STATE_TTL_MINUTES=10
+AUTH_EVENT_RETENTION_DAYS=90
 ```
 
 The Google web client must authorize exactly
 `https://bizqlab.com/api/auth/google/callback` for production. Local development
 may separately authorize `http://localhost:8086/api/auth/google/callback`.
 
+## Google Console setup
+
+In Google Cloud Console, select or create the production project, then open
+**Google Auth Platform**. Configure **Branding**, **Audience**, and **Data
+Access** with only `openid`, `email`, and `profile`. Under **Clients**, create an
+OAuth client of type **Web application** and add the production callback below.
+Use a separate development project/client for localhost, as required by
+Google's OAuth production policy.
+
+Production links supplied to Google should be:
+
+- Home: `https://bizqlab.com`
+- Privacy: `https://bizqlab.com/privacy`
+- Terms: `https://bizqlab.com/terms`
+- Authorized redirect: `https://bizqlab.com/api/auth/google/callback`
+
+Put the resulting client ID and client secret directly in the Railway
+`portfolio` service as `GOOGLE_OIDC_CLIENT_ID` and
+`GOOGLE_OIDC_CLIENT_SECRET`; never paste them into source or documentation.
+
 ## Remaining gates
 
-- Owner approval for `google-auth` as a production dependency.
 - Google Cloud OAuth web-client credentials and consent-screen configuration.
-- Owner selection of which existing or new case-study details become
-  `registered` content; current projects remain public until then.
-- Endpoint, session-service, logout/revocation, locked-card, retention, hostile
-  callback, and production browser tests.
+- Production browser tests for first/repeat login, locked content, logout,
+  hostile/replayed callbacks, account deletion, and optional admin allowlist.

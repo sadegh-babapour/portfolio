@@ -21,11 +21,31 @@ class WebBoundaryTests(unittest.TestCase):
         route_paths = {getattr(route, "path", None) for route in nicegui_app.routes}
 
         self.assertTrue(
-            {"/", "/about", "/resume", "/projects", "/contact", "/dashboard"}
+            {
+                "/",
+                "/about",
+                "/resume",
+                "/projects",
+                "/contact",
+                "/dashboard",
+                "/account",
+                "/privacy",
+                "/terms",
+            }
             <= route_paths
         )
         self.assertIn("/resume/document.pdf", route_paths)
         self.assertIn("/calgary-transit-live", route_paths)
+        self.assertTrue(
+            {
+                "/api/auth/google/login",
+                "/api/auth/google/callback",
+                "/api/auth/session",
+                "/api/auth/logout",
+                "/api/auth/account",
+            }
+            <= route_paths
+        )
 
     def test_legacy_transit_routes_are_not_registered(self):
         route_paths = {getattr(route, "path", None) for route in nicegui_app.routes}
@@ -121,6 +141,7 @@ class PortfolioContentTests(unittest.TestCase):
         self.assertGreaterEqual(len(projects.projects), 2)
         self.assertTrue(any(project.data_mode == "live_database" for project in projects.projects))
         self.assertTrue(any(project.data_mode == "static_snapshot" for project in projects.projects))
+        self.assertTrue(any(project.lab is not None for project in projects.projects))
 
     def test_duplicate_timeline_ids_are_rejected(self):
         document = {

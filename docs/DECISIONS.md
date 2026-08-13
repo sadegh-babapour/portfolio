@@ -682,7 +682,7 @@ already processed from the other feeds in the same cycle.
 ## ADR-022: Use Google identity with opaque server-managed sessions
 
 Date: 2026-08-13
-Status: Foundation deployed at `65b33ea`; dependency approval pending
+Status: Accepted; foundation deployed and endpoint implementation locally verified
 
 ### Context
 
@@ -704,16 +704,19 @@ and protected-content authorization.
 - Grant every successful account `registered`; grant `admin` only through an
   explicit stable-subject or verified-email allowlist plus server-side role
   enforcement.
-- Use the official `google-auth` verifier for ID-token signature, issuer,
-  audience, and time claims if the repository owner approves that production
-  dependency. Continue using Requests for the HTTPS code exchange.
+- Use the owner-approved official `google-auth` verifier for ID-token signature,
+  issuer, audience, and time claims. Continue using Requests for the HTTPS code
+  exchange.
+- Keep every case study understandable publicly. Expose a visible Project Lab
+  invitation and enforce the `registered` role server-side for deeper technique,
+  trade-off, and working-method notes.
 
 ### Consequences
 
 - Authentication remains fail-closed until Google credentials are configured.
 - The initial migration created identity, role, session, login-state, and event
   tables without exposing a login route prematurely.
-- Broad registration waits for privacy/terms pages and bounded cleanup of
-  expired session/login-state records.
-- The owner must select actual registered-only content before UI enforcement is
-  meaningful.
+- Privacy/terms pages, account deletion, logout, opportunistic bounded cleanup,
+  and the first registered-only Calgary Project Lab are part of activation.
+- Production login stays unavailable until the owner configures a Google web
+  client; the public portfolio remains available.

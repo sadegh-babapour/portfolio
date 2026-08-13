@@ -19,9 +19,10 @@ removed locally and from production.
 - Branch: `main`.
 - Deployed functional baseline: `65b33ea` (`Start secure Google identity
   foundation`).
-- `origin/main` and all three Railway application services run that revision.
-  Subsequent continuity-only documentation may advance `main` without changing
-  the runtime baseline described here.
+- All three Railway application services run that revision. Continuity-only
+  documentation has advanced `main` to `9a13dc8` without changing that runtime
+  baseline. The Google-login implementation is locally verified but not yet
+  deployed.
 - Secret-bearing environment profiles, dependencies, runtime caches, the large
   GTFS stop-times export, and the résumé PDF are ignored.
 
@@ -109,12 +110,15 @@ rechecked against today's external feeds.
 - Contact has been rebuilt around FastAPI, SQLAlchemy/Alembic,
   PostgreSQL, Cloudflare Turnstile, signed CSRF state, database throttling,
   one-time email verification, Resend HTTPS delivery, and audit events.
-  Production configuration and the first migration are active. The real
-  verification-email and final-delivery round trip remains unverified.
-- There is no user authentication, protected-content policy, admin console, or
-  first-party analytics model yet.
+  Production configuration and the first migration are active. The owner
+  confirmed receipt of the labeled manual email checks; the full visible
+  Turnstile/verification-link/replay matrix remains unverified.
+- Google OIDC endpoints, server-managed sessions, registered/admin roles,
+  logout, local-account deletion, privacy/terms pages, and a registered-only
+  Calgary Project Lab are implemented locally and fail closed without Google
+  credentials. Production activation remains pending.
+- There is no admin console or first-party analytics model yet.
 - Several portfolio pages still contain sample résumé, chart, and image data.
-- Footer links target unimplemented privacy and terms routes.
 - Superseded commented implementations remain inside some accepted React and
   Express files and are later maintainability cleanup.
 - The React production bundle remains tracked temporarily under ADR-009 because
@@ -132,9 +136,11 @@ rechecked against today's external feeds.
 - Transit health reports freshness-aware healthy/degraded/after-hours state. The
   frontend presents expected after-hours downtime, feed transactions are
   isolated, and City of Calgary attribution is displayed in production.
-- Step 5 has begun in production with ORM models and an applied Alembic migration for
-  users, Google identities, roles, server sessions, OIDC login state, and auth
-  events. No login endpoint is exposed and no new dependency is declared yet.
+- Step 5's database foundation is in production. The working tree adds the
+  approved official `google-auth` verifier, authorization-code callback,
+  digest-only state/nonce/browser binding, first-login registration, session
+  rotation/revocation, session-bound CSRF, role enforcement, bounded cleanup,
+  legal pages, account controls, and visible locked content.
 
 ## Current development environment
 

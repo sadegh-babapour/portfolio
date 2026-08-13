@@ -122,18 +122,27 @@ The widget is rendered explicitly but does not execute until a valid form is
 submitted. Its success callback sends the resulting single-use token, which the
 server immediately validates through Siteverify.
 
-### Authentication foundation
+### Authentication and protected content
 
-The dependency-free Step-5 foundation defines Google-identity, user-role,
-server-session, OIDC-login-state, and auth-event records under the existing
-ORM-owned `portfolio` schema. Opaque session, CSRF, state, nonce, and browser
-binding values are represented only by digests in PostgreSQL. No Google access
-or refresh token is modeled.
+FastAPI owns Google authorization-code OIDC endpoints, while SQLAlchemy owns
+Google identities, user roles, opaque server sessions, login states, and
+bounded events in the existing `portfolio` schema. The official `google-auth`
+library verifies signed ID tokens; Requests performs the one-time HTTPS code
+exchange. Google access and refresh tokens are never modeled or retained.
 
-The authorization callback is not implemented yet. It remains gated on owner
-approval of the `google-auth` production dependency, Google web-client
-credentials, and selection of which case-study details will require the
-`registered` role. See `docs/AUTH_SECURITY.md`.
+The browser receives only opaque session, CSRF, and short-lived login-binding
+values. PostgreSQL stores their SHA-256 digests. State, nonce, browser binding,
+verified email, Google stable subject, expiry, disabled-user state, and
+root-relative return paths are checked before a local session is issued.
+
+Every successful first login creates a local user and `registered` role.
+`admin` comes only from configured subject/email allowlists. Projects remains
+public, while a validated Calgary Project Lab renders deeper technique,
+trade-off, and AI-assisted working-method notes only after server-side role
+enforcement. `/account` provides logout and local-account deletion;
+`/privacy` and `/terms` describe the boundary. Missing Google configuration
+keeps login disabled without affecting public pages. See
+`docs/AUTH_SECURITY.md`.
 
 ### Calgary Transit frontend
 

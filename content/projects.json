@@ -37,6 +37,37 @@
         "Active-alert presentation still needs a production example when the feed supplies one"
       ],
       "data_mode": "live_database",
+      "lab": {
+        "heading": "Project Lab: realtime data techniques",
+        "intro": "A closer look at the techniques and engineering concepts behind the public demonstration.",
+        "techniques": [
+          {
+            "title": "Sparse-feed enrichment",
+            "concept": "Realtime records become useful when stable identifiers connect them to slower-changing reference data.",
+            "implementation": "VehiclePositions supplies trip IDs and coordinates; PostgreSQL joins those trip IDs to static GTFS routes, shapes, stops, and service calendars before the API shapes a frontend response.",
+            "tradeoff": "The join produces richer context without inventing data, but schedule-version drift can leave some realtime trips unmatched and must remain visible as a data-quality condition."
+          },
+          {
+            "title": "Delayed interpolation",
+            "concept": "A small playback buffer can make discrete observations readable without pretending to predict the future.",
+            "implementation": "The browser plays approximately 75 seconds behind the source and interpolates only between two observed positions, while stale and stopped thresholds preserve source honesty.",
+            "tradeoff": "The map looks smoother and remains evidence-based, but it is intentionally delayed and cannot claim exact instantaneous vehicle location."
+          },
+          {
+            "title": "Independent feed transactions",
+            "concept": "Related upstream feeds can have different failure modes, so one bad payload should not discard valid sibling updates.",
+            "implementation": "Vehicle positions, trip updates, and alerts each own a transaction inside one polling cycle; failures roll back and log only the affected feed.",
+            "tradeoff": "Useful partial freshness survives an upstream problem, while health reporting must disclose that the resulting snapshot may span different source times."
+          },
+          {
+            "title": "Freshness as a service contract",
+            "concept": "An HTTP 200 and a database connection do not prove that a realtime product has current data.",
+            "implementation": "The health endpoint reports source timestamps, recent vehicle counts, operating hours, and healthy, degraded, or expected after-hours states.",
+            "tradeoff": "Monitoring and users receive an honest state, but thresholds and operating schedules become explicit operational configuration that must be maintained."
+          }
+        ],
+        "working_method": "This project was developed with substantial ChatGPT/Codex assistance. The portfolio owner directed the requirements, investigated source behavior, reviewed architectural choices, exercised the deployed system, and retained the implementation notes needed to explain its concepts and trade-offs."
+      },
       "links": [
         {"label": "Open live project", "url": "/calgary-transit-live/"}
       ]

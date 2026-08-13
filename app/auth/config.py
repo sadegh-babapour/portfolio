@@ -32,6 +32,7 @@ class AuthSettings:
     admin_emails: tuple[str, ...]
     session_ttl_hours: int
     login_state_ttl_minutes: int
+    event_retention_days: int
 
     @classmethod
     def from_env(cls) -> AuthSettings:
@@ -54,6 +55,9 @@ class AuthSettings:
             login_state_ttl_minutes=_positive_int(
                 os.getenv("AUTH_LOGIN_STATE_TTL_MINUTES"), 10
             ),
+            event_retention_days=_positive_int(
+                os.getenv("AUTH_EVENT_RETENTION_DAYS"), 90
+            ),
         )
 
     def missing(self) -> tuple[str, ...]:
@@ -64,6 +68,7 @@ class AuthSettings:
             "GOOGLE_OIDC_CLIENT_SECRET": self.google_client_secret,
             "AUTH_SESSION_TTL_HOURS": self.session_ttl_hours,
             "AUTH_LOGIN_STATE_TTL_MINUTES": self.login_state_ttl_minutes,
+            "AUTH_EVENT_RETENTION_DAYS": self.event_retention_days,
         }
         return tuple(name for name, value in values.items() if not value)
 

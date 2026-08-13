@@ -895,3 +895,33 @@ meet the Calgary open-data attribution requirement.
 - A local `railway run alembic current` could not resolve the private Railway
   database from outside its service network. The successful in-network
   pre-deploy migration log is the authoritative verification.
+
+## 2026-08-13 — Step 5 Google identity implementation
+
+### Changed
+
+- Added the owner-approved official `google-auth` verifier and implemented the
+  Google authorization-code login start/callback with state, nonce, browser
+  binding, verified-email, issuer/audience/signature/time validation, and
+  root-relative return paths.
+- Added first-login registration, registered/admin role assignment, opaque
+  digest-only server sessions, rotation, revocation, session-bound CSRF,
+  logout, local-account deletion, and bounded expired-record cleanup.
+- Added public Privacy, Terms, and Account pages. Public projects remain useful;
+  Calgary now advertises a registered-only Project Lab containing technique,
+  implementation, trade-off, and candid AI-assisted working-method notes.
+- Kept authentication fail-closed until Google credentials are supplied and
+  synchronized the Account navigation link into the tracked React bundle.
+
+### Verified locally
+
+- All 32 Python tests, Python compilation, dependency consistency, one-head
+  Alembic/offline SQL, frontend lint/build, and `git diff --check` passed.
+- Local HTTP smoke checks returned 200 for home, Projects, Account, Privacy, and
+  Terms. The login endpoint returned the intended 503 without credentials, and
+  Projects displayed the locked Project Lab configuration state.
+
+### Remaining
+
+- Commit/deploy the release, configure the Google production web client and
+  Railway credentials, then exercise the complete real-browser identity matrix.

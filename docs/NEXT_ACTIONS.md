@@ -47,13 +47,13 @@ Last updated: 2026-08-13
   the first database-backed portfolio feature.
 - [ ] Replace the marked timeline placeholders with factual owner-provided
   career and education data.
-- [ ] Finish Contact owner verification: confirm the two labeled Resend test
-  emails, then exercise one visible Turnstile submission, verification link,
+- [ ] Finish Contact owner verification: labeled manual email receipt is
+  confirmed; exercise one visible Turnstile submission, verification link,
   one-time final delivery, replay, throttling, and provider-failure cases.
-- [ ] Complete Google OIDC, secure sessions, roles, visible locked content, and
-  an explicit admin allowlist. The dependency-free schema/config/security
-  foundation is deployed; approve `google-auth`, configure a Google
-  web client, and select protected case-study content before endpoint work.
+- [ ] Activate and browser-test Google OIDC. Endpoints, secure sessions, roles,
+  locked Calgary Project Lab, privacy/terms, logout, and account deletion are
+  locally complete; create the Google web client and configure its client ID,
+  secret, and optional admin allowlist in Railway.
 - [ ] Add an admin console for users, logins, sessions, contact state, content,
   job health, and audit events.
 - [ ] Implement bounded first-party operational/audit events; keep GA4 deferred
@@ -78,10 +78,11 @@ Last updated: 2026-08-13
 
 ## Current recommended next task
 
-Approve the `google-auth` dependency, create/configure the Google web client,
-and choose which case-study details should be registered-only. Then implement
-the callback, sessions, role enforcement, logout/revocation, privacy pages, and
-locked-card behavior. Contact inbox/browser confirmation can run in parallel.
+Deploy the locally verified auth release, then create/configure the Google web
+client and complete the production browser matrix: first registration, repeat
+login, locked Project Lab, logout, replay/invalid callback, account deletion,
+and optional admin allowlist. The remaining interactive Contact matrix can run
+in parallel.
 
 See `docs/ROADMAP.md` for phase scope, decision gates, and exit criteria.
 

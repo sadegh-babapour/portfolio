@@ -76,6 +76,7 @@ if __name__ in {"__main__", "__mp_main__"}:
     _import_pages()
     ui.run(
         title='Bizqlab',
+        favicon=str(STATIC_DIR / 'bizqlab_logo.png'),
         port=int(os.getenv("PORT", default=8086)),
         host='0.0.0.0',
         dark=False,

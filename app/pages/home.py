@@ -9,12 +9,31 @@ def home():
     ui.add_head_html('''
       <meta name="description" content="Bizqlab is a data engineering and analytics portfolio with public case studies, live demonstrations, and optional registered-user Project Lab notes.">
       <link rel="canonical" href="https://www.bizqlab.com/">
+      <meta property="og:site_name" content="Bizqlab">
+      <meta property="og:title" content="Bizqlab — Data engineering and analytics portfolio">
+      <meta property="og:description" content="Public case studies and working demonstrations of data pipelines, database design, operational monitoring, analytics, and visualization.">
+      <meta property="og:type" content="website">
+      <meta property="og:url" content="https://www.bizqlab.com/">
+      <meta property="og:image" content="https://www.bizqlab.com/static/bizqlab_logo.png">
+      <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          "name": "Bizqlab",
+          "url": "https://www.bizqlab.com/",
+          "logo": "https://www.bizqlab.com/static/bizqlab_logo.png",
+          "description": "A data engineering and analytics portfolio with public case studies, live demonstrations, and optional registered-user Project Lab notes."
+        }
+      </script>
     ''')
     with ui.column().classes('w-full max-w-7xl mx-auto px-4 py-8 sm:px-8 gap-10'):
         with ui.element('section').classes(
             'grid w-full grid-cols-1 items-center gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,.65fr)]'
         ):
             with ui.column().classes('gap-5 max-w-4xl'):
+                ui.image('/static/bizqlab_logo.png').props(
+                    'alt="Bizqlab logo" fit=contain'
+                ).classes('w-40 h-40 sm:w-48 sm:h-48 rounded-2xl bg-white shadow-sm')
                 ui.label('Bizqlab').classes('text-sm uppercase tracking-widest text-primary font-bold')
                 ui.label('Data systems, made understandable').classes(
                     'text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight'

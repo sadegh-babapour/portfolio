@@ -21,6 +21,8 @@ ACCOUNT_LINK = ('Account', '/account')
 def navbar():
     """Render the portfolio header shared with the React transit frontend."""
     ui.add_head_html('''
+      <link rel="icon" type="image/png" href="/static/bizqlab_logo.png">
+      <link rel="apple-touch-icon" href="/static/bizqlab_logo.png">
       <script>
         (() => {
           const stored = localStorage.getItem('portfolio-theme');
@@ -76,9 +78,20 @@ def navbar():
           }}
           .nicegui-portfolio-nav a {{ color: inherit; text-decoration: none; }}
           .nicegui-portfolio-brand {{
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
             font-size: 22px;
             font-weight: 700;
             white-space: nowrap;
+          }}
+          .nicegui-portfolio-brand-logo {{
+            width: 42px;
+            height: 42px;
+            object-fit: cover;
+            border: 2px solid rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            background: #fff;
           }}
           .nicegui-portfolio-links {{
             display: flex;
@@ -205,6 +218,7 @@ def navbar():
           @media (max-width: 1050px) {{
             .nicegui-portfolio-nav {{ height: 56px; min-height: 56px; padding: 8px 16px; }}
             .nicegui-portfolio-brand {{ font-size: 19px; }}
+            .nicegui-portfolio-brand-logo {{ width: 36px; height: 36px; }}
             .nicegui-portfolio-links {{ display: none; }}
             .nicegui-mobile-menu {{ display: block; }}
             .nicegui-mobile-menu summary {{
@@ -248,7 +262,11 @@ def navbar():
           }}
         </style>
         <header class="nicegui-portfolio-nav">
-          <a class="nicegui-portfolio-brand" href="/">Bizqlab</a>
+          <a class="nicegui-portfolio-brand" href="/" aria-label="Bizqlab home">
+            <img class="nicegui-portfolio-brand-logo"
+                 src="/static/bizqlab_logo.png" alt="Bizqlab logo">
+            <span>Bizqlab</span>
+          </a>
           <nav class="nicegui-portfolio-links" aria-label="Portfolio navigation">
             {desktop_links}
           </nav>

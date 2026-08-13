@@ -53,8 +53,9 @@ export default function PortfolioNav() {
 
   return (
     <header className="portfolio-nav">
-      <a className="portfolio-brand" href="/">
-        Bizqlab
+      <a className="portfolio-brand" href="/" aria-label="Bizqlab home">
+        <img src="/static/bizqlab_logo.png" alt="Bizqlab logo" />
+        <span>Bizqlab</span>
       </a>
 
       <NavLinks className="portfolio-nav-desktop" />

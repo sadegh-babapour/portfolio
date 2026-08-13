@@ -12,6 +12,7 @@ NAV_LINKS = [
     ('Resume', '/resume'),
     ('Projects', '/projects'),
     ('Contact', '/contact'),
+    ('Account', '/account'),
     ('Dashboard', '/dashboard'),
     ('Calgary Transit Live', '/calgary-transit-live/'),
 ]

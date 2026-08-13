@@ -45,6 +45,22 @@ class ProjectLink:
 
 
 @dataclass(frozen=True)
+class LabTechnique:
+    title: str
+    concept: str
+    implementation: str
+    tradeoff: str
+
+
+@dataclass(frozen=True)
+class ProjectLab:
+    heading: str
+    intro: str
+    techniques: tuple[LabTechnique, ...]
+    working_method: str
+
+
+@dataclass(frozen=True)
 class ProjectCaseStudy:
     id: str
     title: str
@@ -61,6 +77,7 @@ class ProjectCaseStudy:
     limitations: tuple[str, ...]
     data_mode: str
     links: tuple[ProjectLink, ...]
+    lab: ProjectLab | None
 
 
 @dataclass(frozen=True)
@@ -173,6 +190,46 @@ def load_projects(path: Path | None = None) -> ProjectCollection:
                 raise ContentValidationError("Project links must be root-relative or HTTPS")
             links.append(ProjectLink(_text(link.get("label"), "projects[].links[].label"), url))
 
+        raw_lab = raw.get("lab")
+        lab = None
+        if raw_lab is not None:
+            if not isinstance(raw_lab, dict):
+                raise ContentValidationError("projects[].lab must be an object")
+            raw_techniques = raw_lab.get("techniques")
+            if not isinstance(raw_techniques, list) or not raw_techniques:
+                raise ContentValidationError("projects[].lab.techniques must be a non-empty list")
+            techniques = []
+            for technique in raw_techniques:
+                if not isinstance(technique, dict):
+                    raise ContentValidationError(
+                        "projects[].lab.techniques must contain objects"
+                    )
+                techniques.append(
+                    LabTechnique(
+                        title=_text(technique.get("title"), "projects[].lab.techniques[].title"),
+                        concept=_text(
+                            technique.get("concept"),
+                            "projects[].lab.techniques[].concept",
+                        ),
+                        implementation=_text(
+                            technique.get("implementation"),
+                            "projects[].lab.techniques[].implementation",
+                        ),
+                        tradeoff=_text(
+                            technique.get("tradeoff"),
+                            "projects[].lab.techniques[].tradeoff",
+                        ),
+                    )
+                )
+            lab = ProjectLab(
+                heading=_text(raw_lab.get("heading"), "projects[].lab.heading"),
+                intro=_text(raw_lab.get("intro"), "projects[].lab.intro"),
+                techniques=tuple(techniques),
+                working_method=_text(
+                    raw_lab.get("working_method"), "projects[].lab.working_method"
+                ),
+            )
+
         projects.append(
             ProjectCaseStudy(
                 id=_text(raw.get("id"), "projects[].id"),
@@ -198,6 +255,7 @@ def load_projects(path: Path | None = None) -> ProjectCollection:
                 limitations=_text_list(raw.get("limitations"), "projects[].limitations"),
                 data_mode=data_mode,
                 links=tuple(links),
+                lab=lab,
             )
         )
     return ProjectCollection(

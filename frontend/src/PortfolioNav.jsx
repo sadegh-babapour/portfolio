@@ -8,6 +8,7 @@ const NAV_LINKS = [
   ["Resume", "/resume"],
   ["Projects", "/projects"],
   ["Contact", "/contact"],
+  ["Account", "/account"],
   ["Dashboard", "/dashboard"],
 ];
 

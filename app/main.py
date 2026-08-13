@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import app.contact.api  # noqa: F401,E402
+import app.auth.api  # noqa: F401,E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -66,6 +67,8 @@ def _import_pages():
     import app.pages.home  # noqa: F401
     import app.pages.projects  # noqa: F401
     import app.pages.resume  # noqa: F401
+    import app.pages.legal  # noqa: F401
+    import app.pages.account  # noqa: F401
 
 
 # ── run ───────────────────────────────────────────────────────────

@@ -6,8 +6,9 @@ Copy and paste this to start the next session:
 > `docs/PROJECT_STATE.md`, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`,
 > `docs/ROADMAP.md`, `docs/NEXT_ACTIONS.md`, `docs/AUTH_SECURITY.md`, and the
 > latest entries in `docs/SESSION_LOG.md` before changing code. Confirm deployed
-> functional commit `e3a38f9`, continuity successor `0e6102d`, and a clean
-> working tree. Steps 1-4 are complete. Step 5 Google sign-in is active; the
+> functional commit `e3a38f9`, the latest continuity-only successor shown by
+> `git log -1`, and a clean working tree. Steps 1-4 are complete. Step 5 Google
+> sign-in is active; the
 > owner confirmed real Gmail login/logout and the non-destructive production
 > security matrix passed. Search Console ownership is verified. The exact
 > consent-screen Bizqlab logo, homepage purpose/data-use copy, member Account
@@ -24,8 +25,9 @@ Copy and paste this to start the next session:
 
 Expected baseline:
 
-- Railway `portfolio`, `transit-api`, and `transit-poller` are successful at
-  `0e6102d`; `e3a38f9` is the latest functional release.
+- Railway `portfolio`, `transit-api`, and `transit-poller` are successful on the
+  logo release line; `e3a38f9` is the latest functional release and later
+  commits are documentation-only.
 - All 34 Python tests, Python compilation, frontend lint/build, Express check/
   test, local smoke checks, and production branding/crawl checks passed.
 - Contact and Google credentials are configured; never print or commit them.

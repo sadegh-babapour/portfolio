@@ -843,3 +843,42 @@ meet the Calgary open-data attribution requirement.
 
 - Review, commit, deploy, and run the real Resend verification/final-delivery
   matrix plus in-hours and after-hours health smoke checks.
+
+## 2026-08-13 — Step 4 production release and Step 5 foundation
+
+### Step 4 production verification
+
+- Committed and pushed `6644beb`; `portfolio`, `transit-api`, and
+  `transit-poller` each reached Railway `SUCCESS` on that commit.
+- Production freshness health correctly reported `outside_operating_hours`,
+  recent count zero, the configured schedule, and last feed timestamps.
+- Verified the deployed bundle contains Calgary attribution, after-hours copy,
+  and health integration. Contact CSRF returned its configured sitekey/token.
+- Sent clearly labeled verification-template and owner-delivery-template tests
+  through the production Resend configuration. Both API calls succeeded; owner
+  inbox receipt and a real interactive form/link round trip remain manual.
+
+### Step 5 started
+
+- Added `docs/AUTH_SECURITY.md` covering Google authorization-code OIDC,
+  state/nonce/browser binding, server sessions, CSRF, roles, privacy, retention,
+  exact callback configuration, and remaining gates.
+- Added fail-closed auth configuration and high-entropy token digest plus safe
+  return-path helpers without adding a dependency.
+- Added ORM models and a linear Alembic migration for users, external
+  identities, roles, sessions, login states, and bounded auth events. No Google
+  tokens or raw IP addresses are modeled.
+- Added tests for configuration, allowlists, tokens, redirects, schema
+  isolation, and digest-only persistence.
+
+### Verified
+
+- All 29 Python tests passed after the auth foundation.
+- Python compilation passed, Alembic reports one linear head at `20260813_02`,
+  and `git diff --check` passed.
+
+### Gates
+
+- Owner approval is required before adding `google-auth` to production.
+- Google OAuth web-client credentials and the registered-only content choice are
+  required before implementing and exposing the login flow.

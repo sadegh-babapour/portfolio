@@ -8,6 +8,7 @@ from sqlalchemy import engine_from_config, pool, text
 
 from app.contact.config import ContactSettings
 from app.contact.models import Base, PORTFOLIO_SCHEMA
+import app.auth.models  # noqa: F401,E402
 
 
 load_dotenv()

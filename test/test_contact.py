@@ -40,13 +40,13 @@ class ContactConfigurationTests(unittest.TestCase):
 
     def test_models_are_isolated_in_portfolio_schema(self):
         self.assertEqual(Base.metadata.schema, "portfolio")
-        self.assertEqual(
-            set(Base.metadata.tables),
+        self.assertTrue(
             {
                 "portfolio.contact_messages",
                 "portfolio.contact_attempts",
                 "portfolio.contact_audit_events",
-            },
+            }
+            <= set(Base.metadata.tables),
         )
 
 

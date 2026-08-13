@@ -22,7 +22,7 @@ NiceGUI transit runtime has been removed from source and production.
 ## Repository layout
 
 - `app/`: NiceGUI portfolio pages, shared layout components, résumé delivery,
-  and the React static mount.
+  authentication/contact domain foundations, and the React static mount.
 - `content/`: versioned, source-controlled JSON for the on-page résumé timeline
   and public project case studies.
 - `frontend/`: React/Vite/Leaflet Calgary Transit application and checked-in
@@ -32,8 +32,8 @@ NiceGUI transit runtime has been removed from source and production.
 - `poller/`: standalone Python ingestion worker for the transit stack.
 - `scripts/db/`: ordered, idempotent migrations for the `transit`
   schema.
-- `migrations/`: Alembic migrations for ORM-owned tables in the isolated
-  `portfolio` schema.
+- `migrations/`: Alembic migrations for ORM-owned contact and authentication
+  tables in the isolated `portfolio` schema.
 - `scripts/bootstrap_transit_db.py`: schema migration and static GTFS loader.
 - `data/`: static Calgary GTFS and route-category files.
 - `database_backup.sql`: schema-only dump of the newer `transit` model.
@@ -121,6 +121,19 @@ configuration disables submission and makes the API fail closed.
 The widget is rendered explicitly but does not execute until a valid form is
 submitted. Its success callback sends the resulting single-use token, which the
 server immediately validates through Siteverify.
+
+### Authentication foundation
+
+The dependency-free Step-5 foundation defines Google-identity, user-role,
+server-session, OIDC-login-state, and auth-event records under the existing
+ORM-owned `portfolio` schema. Opaque session, CSRF, state, nonce, and browser
+binding values are represented only by digests in PostgreSQL. No Google access
+or refresh token is modeled.
+
+The authorization callback is not implemented yet. It remains gated on owner
+approval of the `google-auth` production dependency, Google web-client
+credentials, and selection of which case-study details will require the
+`registered` role. See `docs/AUTH_SECURITY.md`.
 
 ### Calgary Transit frontend
 

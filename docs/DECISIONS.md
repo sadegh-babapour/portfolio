@@ -650,7 +650,7 @@ and creates the first mutable portfolio-domain records.
 ## ADR-021: Treat transit freshness and partial feed failure explicitly
 
 Date: 2026-08-13
-Status: Accepted; implemented locally, deployment pending
+Status: Accepted and deployed at `6644beb`
 
 ### Context
 
@@ -678,7 +678,42 @@ already processed from the other feeds in the same cycle.
 - Partial cycles remain visible in logs but preserve useful current data.
 - A later monitoring system can consume the same health contract without
   inferring freshness from HTTP 200 alone.
-- Historical source remains recoverable from Git rather than duplicated in the
-  active tree.
-- The cleanup deployed successfully and all three Railway services passed the
-  production smoke matrix.
+
+## ADR-022: Use Google identity with opaque server-managed sessions
+
+Date: 2026-08-13
+Status: Foundation accepted and implemented locally; dependency approval pending
+
+### Context
+
+Phase 5 needs registered and admin roles without introducing passwords or
+placing provider credentials and application sessions in browser-managed state.
+Google's authorization-code OIDC flow supplies a stable subject identifier, but
+the portfolio must independently own sessions, revocation, roles, CSRF state,
+and protected-content authorization.
+
+### Decision
+
+- Request only `openid email profile`; do not request offline access or persist
+  Google access/refresh tokens.
+- Identify the external account by Google `sub`. Never merge accounts by email
+  alone, even when Google reports it verified.
+- Store opaque application session and login-state values only as SHA-256
+  digests in the `portfolio` schema, with expiry, rotation, revocation, nonce,
+  browser binding, and root-relative return-path validation.
+- Grant every successful account `registered`; grant `admin` only through an
+  explicit stable-subject or verified-email allowlist plus server-side role
+  enforcement.
+- Use the official `google-auth` verifier for ID-token signature, issuer,
+  audience, and time claims if the repository owner approves that production
+  dependency. Continue using Requests for the HTTPS code exchange.
+
+### Consequences
+
+- Authentication remains fail-closed until Google credentials are configured.
+- The initial migration creates identity, role, session, login-state, and event
+  tables without exposing a login route prematurely.
+- Broad registration waits for privacy/terms pages and bounded cleanup of
+  expired session/login-state records.
+- The owner must select actual registered-only content before UI enforcement is
+  meaningful.

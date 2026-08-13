@@ -143,9 +143,9 @@ into recruiter-friendly case studies.
 
 ## Phase 4 — Contact experience, bot defense, and verified senders
 
-Status: production configuration and migration are active at `dffb4b7`.
-Deferred-on-submit Turnstile execution is implemented locally; deployment and
-the production verification/final-delivery matrix remain pending.
+Status: safeguards are deployed at `6644beb`. Automated production checks and
+both Resend transport templates passed; owner confirmation of inbox receipt and
+one interactive Turnstile/verification-link round trip remain.
 
 ### Goal
 
@@ -187,6 +187,9 @@ link but should not be mandatory for an ordinary recruiter contact.
   states, and mobile-friendly spacing.
 
 ## Phase 5 — Authentication and protected portfolio content
+
+Status: dependency-free security and persistence foundation implemented locally
+on 2026-08-13; Google callback, sessions, UI enforcement, and deployment pending.
 
 ### Goal
 

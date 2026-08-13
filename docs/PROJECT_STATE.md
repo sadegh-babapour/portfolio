@@ -17,12 +17,12 @@ removed locally and from production.
 ## Version-control state
 
 - Branch: `main`.
-- Local, public, and deployed application baseline: `dffb4b7` (`Use Resend API
-  for contact delivery`).
+- Local, public, and deployed application baseline: `6644beb` (`Finish contact
+  and transit health safeguards`).
 - `origin/main` and all three Railway application services run that revision.
-  The working tree contains the focused Step-4 Turnstile, transit-health,
-  feed-isolation, attribution, generated-bundle, test, and documentation work
-  described in the 2026-08-13 session log; it is not deployed yet.
+  The working tree contains the dependency-free Step-5 authentication
+  persistence, configuration, security-contract, migration, test, and
+  documentation foundation described in the 2026-08-13 session log.
 - Secret-bearing environment profiles, dependencies, runtime caches, the large
   GTFS stop-times export, and the résumé PDF are ignored.
 
@@ -130,10 +130,12 @@ rechecked against today's external feeds.
   boundary fix before authenticated features share the origin.
 - The accepted transit SQL files reproduce a clean database but do not provide
   a migration ledger or detect schema drift in an existing database.
-- The deployed transit health endpoint still proves only database connectivity.
-  The working tree adds freshness-aware healthy/degraded/after-hours reporting,
-  an honest frontend empty state, per-feed transaction isolation, and required
-  City of Calgary data attribution; production deployment is pending.
+- Transit health reports freshness-aware healthy/degraded/after-hours state. The
+  frontend presents expected after-hours downtime, feed transactions are
+  isolated, and City of Calgary attribution is displayed in production.
+- Step 5 has begun locally with ORM models and one pending Alembic migration for
+  users, Google identities, roles, server sessions, OIDC login state, and auth
+  events. No login endpoint is exposed and no new dependency is declared yet.
 
 ## Current development environment
 
@@ -271,6 +273,13 @@ deployment, and production smoke checks passed.
   alerts per successful cycle. The browser-facing current endpoint returned 350
   last-known vehicles after hours while four-minute history correctly returned
   none once the 15-minute raw window expired.
+- At deployed commit `6644beb`, all three application services reached
+  `SUCCESS`. Production health returned `outside_operating_hours` with the
+  expected feed timestamps and schedule, the current bundle contained the
+  Calgary licence and after-hours copy, and contact CSRF remained configured.
+  Direct production calls through both Resend templates succeeded; inbox
+  receipt and the interactive browser verification-link round trip await owner
+  confirmation.
 - The application deploys branch `main` with Railpack and is detected as a
   Python application.
 - The observed failed build selected Python 3.13.14, installed

@@ -47,13 +47,13 @@ Last updated: 2026-08-13
   the first database-backed portfolio feature.
 - [ ] Replace the marked timeline placeholders with factual owner-provided
   career and education data.
-- [ ] Finish Contact production verification: deploy deferred-on-submit
-  Turnstile execution, then exercise verification email, one-time final
-  delivery, expired/replayed link, throttling, and provider-failure cases.
-  PostgreSQL, Alembic, generated secrets, hostname-restricted Turnstile, and
-  Resend are configured.
-- [ ] Add Google OIDC, secure sessions, roles, visible locked content, and an
-  explicit admin allowlist.
+- [ ] Finish Contact owner verification: confirm the two labeled Resend test
+  emails, then exercise one visible Turnstile submission, verification link,
+  one-time final delivery, replay, throttling, and provider-failure cases.
+- [ ] Complete Google OIDC, secure sessions, roles, visible locked content, and
+  an explicit admin allowlist. The dependency-free schema/config/security
+  foundation is implemented locally; approve `google-auth`, configure a Google
+  web client, and select protected case-study content before endpoint work.
 - [ ] Add an admin console for users, logins, sessions, contact state, content,
   job health, and audit events.
 - [ ] Implement bounded first-party operational/audit events; keep GA4 deferred
@@ -78,8 +78,9 @@ Last updated: 2026-08-13
 
 ## Current recommended next task
 
-Review, commit, and deploy the focused Step-4 fixes, then run the production
-contact verification/delivery and transit freshness/after-hours smoke matrix.
+Review and deploy the Step-5 authentication foundation after approving the
+`google-auth` dependency decision and choosing which case-study details should
+be registered-only. Contact inbox/browser confirmation can run in parallel.
 
 See `docs/ROADMAP.md` for phase scope, decision gates, and exit criteria.
 

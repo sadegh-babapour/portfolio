@@ -12,10 +12,10 @@ NAV_LINKS = [
     ('Resume', '/resume'),
     ('Projects', '/projects'),
     ('Contact', '/contact'),
-    ('Account', '/account'),
     ('Dashboard', '/dashboard'),
     ('Calgary Transit Live', '/calgary-transit-live/'),
 ]
+ACCOUNT_LINK = ('Account', '/account')
 
 
 def navbar():
@@ -41,12 +41,18 @@ def navbar():
     ''')
     request = ui.context.client.request
     current_path = request.url.path.rstrip('/') or '/' if request else ''
-    links = ''.join(
-        f'<a href="{escape(path, quote=True)}"'
-        f'{" aria-current=\"page\"" if (path.rstrip("/") or "/") == current_path else ""}'
-        f'>{escape(label)}</a>'
-        for label, path in NAV_LINKS
-    )
+
+    def render_links(items):
+        return ''.join(
+            f'<a href="{escape(path, quote=True)}"'
+            f'{" class=\"portfolio-account-link\"" if path == "/account" else ""}'
+            f'{" aria-current=\"page\"" if (path.rstrip("/") or "/") == current_path else ""}'
+            f'>{escape(label)}</a>'
+            for label, path in items
+        )
+
+    desktop_links = render_links([*NAV_LINKS, ACCOUNT_LINK])
+    mobile_links = render_links([ACCOUNT_LINK, *NAV_LINKS])
     ui.html(
         f'''
         <style>
@@ -112,6 +118,11 @@ def navbar():
           html[data-theme="dark"] .theme-icon-dark {{ display: inline; }}
           .nicegui-portfolio-links a,
           .nicegui-mobile-links a {{ font-size: 14px; font-weight: 600; }}
+          .nicegui-portfolio-links .portfolio-account-link {{
+            padding: 8px 11px;
+            border: 1px solid rgba(255, 255, 255, 0.75);
+            border-radius: 999px;
+          }}
           .nicegui-portfolio-links a:hover,
           .nicegui-portfolio-links a:focus-visible,
           .nicegui-mobile-links a:hover,
@@ -186,6 +197,11 @@ def navbar():
             background: #27364a;
             color: #bfdbfe;
           }}
+          html[data-theme="dark"] .portfolio-development-note {{
+            border-color: #3b82f6 !important;
+            background: #172554 !important;
+            color: #dbeafe !important;
+          }}
           @media (max-width: 1050px) {{
             .nicegui-portfolio-nav {{ height: 56px; min-height: 56px; padding: 8px 16px; }}
             .nicegui-portfolio-brand {{ font-size: 19px; }}
@@ -224,12 +240,17 @@ def navbar():
               background: #edf6ff;
               color: #245d91;
             }}
+            .nicegui-mobile-links .portfolio-account-link {{
+              background: #e8f3ff;
+              color: #245d91;
+              font-weight: 700;
+            }}
           }}
         </style>
         <header class="nicegui-portfolio-nav">
-          <a class="nicegui-portfolio-brand" href="/">My Portfolio</a>
+          <a class="nicegui-portfolio-brand" href="/">Bizqlab</a>
           <nav class="nicegui-portfolio-links" aria-label="Portfolio navigation">
-            {links}
+            {desktop_links}
           </nav>
           <div class="nicegui-nav-actions">
             <button class="portfolio-theme-toggle" type="button"
@@ -240,7 +261,7 @@ def navbar():
             <details class="nicegui-mobile-menu">
               <summary aria-label="Open portfolio navigation">Menu</summary>
               <nav class="nicegui-mobile-links" aria-label="Mobile portfolio navigation">
-                {links}
+                {mobile_links}
               </nav>
             </details>
           </div>

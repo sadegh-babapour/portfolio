@@ -1,6 +1,7 @@
 import os
 import unittest
 import uuid
+from datetime import timedelta
 from urllib.parse import parse_qs, urlsplit
 from unittest.mock import MagicMock, patch
 
@@ -18,8 +19,10 @@ from app.auth.service import (
     AuthenticationError,
     SessionUser,
     begin_google_login,
+    consume_login_state,
     require_mutation_session,
     verify_google_identity,
+    utc_now,
 )
 
 
@@ -100,6 +103,49 @@ class AuthSecurityTests(unittest.TestCase):
         self.assertEqual(persisted.browser_digest, token_digest(login.browser_token))
         self.assertNotIn("secret-value", login.authorization_url)
         self.assertEqual(persisted.return_path, "/projects#project-calgary")
+
+    def test_login_state_is_browser_bound_and_single_use(self):
+        now = utc_now()
+        login_state = MagicMock(
+            state_digest=token_digest("state"),
+            nonce_digest=token_digest("nonce"),
+            browser_digest=token_digest("browser"),
+            return_path="/account",
+            expires_at=now + timedelta(minutes=5),
+            consumed_at=None,
+        )
+        database = MagicMock()
+        database.scalar.return_value = login_state
+        context = MagicMock()
+        context.__enter__.return_value = database
+        context.__exit__.return_value = False
+
+        with (
+            patch("app.auth.service.session_scope", return_value=context),
+            patch("app.auth.service.utc_now", return_value=now),
+        ):
+            consumed = consume_login_state("state", "browser")
+
+        self.assertEqual(consumed.return_path, "/account")
+        self.assertEqual(consumed.nonce_digest, token_digest("nonce"))
+        self.assertEqual(login_state.consumed_at, now)
+        database.commit.assert_called_once_with()
+
+        login_state.consumed_at = now
+        with (
+            patch("app.auth.service.session_scope", return_value=context),
+            patch("app.auth.service.utc_now", return_value=now),
+        ):
+            with self.assertRaisesRegex(AuthenticationError, "invalid or expired"):
+                consume_login_state("state", "browser")
+
+        login_state.consumed_at = None
+        with (
+            patch("app.auth.service.session_scope", return_value=context),
+            patch("app.auth.service.utc_now", return_value=now),
+        ):
+            with self.assertRaisesRegex(AuthenticationError, "invalid or expired"):
+                consume_login_state("state", "different-browser")
 
     @patch("app.auth.service.google_id_token.verify_oauth2_token")
     def test_google_identity_requires_matching_nonce_and_verified_email(self, verify):

@@ -8,21 +8,28 @@ const NAV_LINKS = [
   ["Resume", "/resume"],
   ["Projects", "/projects"],
   ["Contact", "/contact"],
-  ["Account", "/account"],
   ["Dashboard", "/dashboard"],
 ];
+const ACCOUNT_LINK = ["Account", "/account"];
+const TRANSIT_LINK = ["Calgary Transit Live", "/calgary-transit-live/"];
 
-function NavLinks({ className }) {
+function NavLinks({ className, mobile = false }) {
+  const links = mobile
+    ? [ACCOUNT_LINK, ...NAV_LINKS, TRANSIT_LINK]
+    : [...NAV_LINKS, TRANSIT_LINK, ACCOUNT_LINK];
+
   return (
     <nav className={className} aria-label="Portfolio navigation">
-      {NAV_LINKS.map(([label, path]) => (
-        <a key={path} href={path}>
+      {links.map(([label, path]) => (
+        <a
+          key={path}
+          href={path}
+          className={path === "/account" ? "portfolio-account-link" : undefined}
+          aria-current={path === "/calgary-transit-live/" ? "page" : undefined}
+        >
           {label}
         </a>
       ))}
-      <a href="/calgary-transit-live/" aria-current="page">
-        Calgary Transit Live
-      </a>
     </nav>
   );
 }
@@ -47,7 +54,7 @@ export default function PortfolioNav() {
   return (
     <header className="portfolio-nav">
       <a className="portfolio-brand" href="/">
-        My Portfolio
+        Bizqlab
       </a>
 
       <NavLinks className="portfolio-nav-desktop" />
@@ -65,7 +72,7 @@ export default function PortfolioNav() {
 
         <details className="portfolio-nav-mobile">
           <summary aria-label="Open portfolio navigation">Menu</summary>
-          <NavLinks className="portfolio-nav-mobile-links" />
+          <NavLinks className="portfolio-nav-mobile-links" mobile />
         </details>
       </div>
     </header>

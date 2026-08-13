@@ -66,7 +66,7 @@
             "tradeoff": "Monitoring and users receive an honest state, but thresholds and operating schedules become explicit operational configuration that must be maintained."
           }
         ],
-        "working_method": "This project was developed with substantial ChatGPT/Codex assistance. The portfolio owner directed the requirements, investigated source behavior, reviewed architectural choices, exercised the deployed system, and retained the implementation notes needed to explain its concepts and trade-offs."
+        "working_method": "Codex was used as an AI-assisted development tool. The portfolio owner reviewed and validated the resulting work."
       },
       "links": [
         {"label": "Open live project", "url": "/calgary-transit-live/"}

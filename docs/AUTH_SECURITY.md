@@ -106,6 +106,10 @@ homepage publicly explains the portfolio purpose, optional Google sign-in, and
 identity-data use with a direct Privacy link. This addresses the application
 content and name-match findings.
 
+The exact consent-screen logo is also public and visibly used on the homepage,
+in both navigation shells, as the favicon, and in Open Graph/structured website
+metadata at `https://www.bizqlab.com/static/bizqlab_logo.png`.
+
 Domain ownership cannot be completed in source code. Using the same Google
 account that is a Cloud project Owner or Editor:
 
@@ -114,6 +118,12 @@ account that is a Cloud project Owner or Editor:
 2. Copy Google's TXT verification value into the DNS for `bizqlab.com`.
 3. Return to Search Console and select **Verify**.
 4. Reply to the OAuth review email or resubmit Brand verification.
+
+The owner confirmed completion of this DNS verification through Cloudflare on
+2026-08-13. Google findings do not disappear merely because DNS or source code
+changed: cancel an in-progress stale verification if necessary, save the
+corrected draft, select **Verify branding**, and after approval select
+**Publish branding** within seven days.
 
 Google's supporting guidance is available in its
 [domain-verification instructions](https://support.google.com/cloud/answer/13804266),
@@ -126,6 +136,6 @@ the review homepage stays at the submitted canonical `www` URL.
 
 ## Remaining gates
 
-- Search Console Domain-property ownership and Google brand-review approval.
+- Google logo/brand-review approval and publication of the approved draft.
 - Owner-approved local-account deletion/re-registration and optional stable-
   subject admin allowlist verification.

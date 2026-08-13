@@ -18,7 +18,7 @@ removed locally and from production.
 ## Version-control state
 
 - Branch: `main`.
-- Deployed functional baseline: `0c0c423` (`Polish member experience and OAuth
+- Deployed functional baseline: `e3a38f9` (`Publish Bizqlab logo across site
   branding`).
 - `origin/main` and all three Railway application services run that revision.
   A later continuity-only commit may advance `main` without changing that
@@ -36,6 +36,10 @@ removed locally and from production.
 - Public branding now uses the exact name `Bizqlab`. The public homepage states
   the application's purpose, explains optional Google identity use, links the
   privacy notice, and declares `https://www.bizqlab.com/` as canonical.
+- The owner-supplied square Bizqlab PNG is the visible NiceGUI/React navigation
+  brand, homepage logo, browser favicon, Open Graph image, and structured
+  website logo. The exact same file is public at
+  `/static/bizqlab_logo.png` for OAuth brand-review comparison.
 - The theme-park dashboard reads committed sample data from
   `dashboard_cache.json` and does not require a live database.
 - The React transit frontend implements:
@@ -311,6 +315,11 @@ deployment, and production smoke checks passed.
   cancelled callback returned the expected status, replay failed, and anonymous
   logout/account deletion returned 403. The owner separately confirmed real
   Gmail login and logout.
+- At deployed commit `e3a38f9`, all three application services reached
+  `SUCCESS`. A Googlebot user agent received HTTP 200 from the `www` homepage,
+  Privacy, Terms, and the public logo. The deployed PNG was byte-for-byte
+  identical to the owner-supplied file and the homepage exposed its visible,
+  Open Graph, and structured-data references.
 - The application deploys branch `main` with Railpack and is detected as a
   Python application.
 - The observed failed build selected Python 3.13.14, installed
@@ -325,6 +334,6 @@ deployment, and production smoke checks passed.
 - Exact production row counts beyond the verified API-visible data.
 - Current per-feed field completeness beyond the counts rechecked on 2026-08-12.
 - Whether the broader portfolio content is ready for public presentation.
-- Google Search Console ownership verification and OAuth brand-review approval;
-  these require the owner to publish Google's DNS TXT record and resubmit/reply
-  to the review after verification.
+- Google Search Console ownership was confirmed by the owner through Cloudflare
+  DNS. OAuth brand-review approval still requires Google to evaluate the new
+  draft logo/homepage and the owner to publish the approved branding.

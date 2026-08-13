@@ -52,9 +52,11 @@ Last updated: 2026-08-13
 - [x] Activate Google OIDC and verify real Gmail login/logout, anonymous state,
   Google redirect/scopes/cookie flags, cancelled callback, replay rejection,
   and unauthenticated mutation rejection.
-- [ ] Verify `bizqlab.com` ownership with a Search Console **Domain property**
-  and Google's DNS TXT record using the Google account that owns/edits the Cloud
-  project; then resubmit or reply to the OAuth branding review.
+- [x] Verify `bizqlab.com` ownership with Search Console/Cloudflare DNS using
+  the Google account that owns/edits the Cloud project.
+- [ ] Re-run OAuth brand verification with the exact public Bizqlab logo and
+  matching `www` homepage/privacy/terms URLs; when status becomes **Ready to
+  publish**, select **Publish branding** within Google's seven-day window.
 - [ ] Finish the optional destructive/admin identity cases: local-account
   deletion/re-registration and admin subject allowlist. Do not delete the
   owner's account solely for an automated smoke test.
@@ -84,8 +86,8 @@ Last updated: 2026-08-13
 
 ## Current recommended next task
 
-Complete Google Search Console domain ownership and resubmit the OAuth branding
-review. Then finish Step 5 with an owner-approved local-account deletion/
+Complete Google OAuth logo/brand verification and publish the approved draft.
+Then finish Step 5 with an owner-approved local-account deletion/
 re-registration check and optional admin stable-subject allowlist before moving
 to the Step 6 admin console and privacy-bounded first-party analytics.
 

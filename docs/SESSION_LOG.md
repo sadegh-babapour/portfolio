@@ -995,3 +995,50 @@ meet the Calgary open-data attribution requirement.
 Overall: Step 5/9
 
 Current step: mini-step 4/5
+
+## 2026-08-13 — OAuth logo alignment
+
+### Changed
+
+- Added the owner-supplied `static/bizqlab_logo.png` as the visible homepage and
+  shared NiceGUI/React navigation brand.
+- Replaced the generic NiceGUI and React favicons with the exact logo and added
+  Open Graph plus Schema.org website-logo metadata pointing to its public `www`
+  URL.
+- Updated the React document title/description and regenerated the tracked
+  production bundle.
+- Added regression assertions that the homepage exposes the public logo and
+  structured-logo URL.
+
+### Verified locally
+
+- The PNG is square (1254×1254), 906,497 bytes, and served as `image/png`.
+- `/static/bizqlab_logo.png` and NiceGUI `/favicon.ico` returned the exact same
+  SHA-256 bytes as the committed image.
+- All 34 Python tests, Python compilation, frontend lint/build, Express checks
+  and test, `git diff --check`, and local page smoke checks passed.
+- An initial local check caught and corrected NiceGUI's requirement that its
+  `favicon` option receive a filesystem path rather than a browser URL.
+
+### Verified in production
+
+- Committed and pushed `e3a38f9`; portfolio, transit API, and transit poller all
+  reached Railway `SUCCESS`.
+- With a Googlebot user agent, the `www` homepage, Privacy, Terms, and public
+  logo returned HTTP 200. The production PNG exactly matched the committed
+  SHA-256, and the homepage contained the visible logo, Open Graph image,
+  Schema.org logo, purpose statement, and data-use/Privacy link.
+- Both apex and `www` homepages were directly reachable with HTTP 200. Google
+  review persistence is therefore treated as a verification-draft/status issue
+  unless the owner supplies a newer finding with different details.
+
+### Google state
+
+- The owner confirmed Search Console ownership through Cloudflare DNS.
+- The same logo uploaded to the consent screen is now directly visible and
+  crawlable on the submitted homepage. Google must still re-run verification;
+  after **Ready to publish**, the owner must select **Publish branding**.
+
+Overall: Step 5/9
+
+Current step: mini-step 4/5

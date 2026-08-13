@@ -682,7 +682,7 @@ already processed from the other feeds in the same cycle.
 ## ADR-022: Use Google identity with opaque server-managed sessions
 
 Date: 2026-08-13
-Status: Accepted; foundation deployed and endpoint implementation locally verified
+Status: Accepted and deployed at `7da2bfa`; credential activation pending
 
 ### Context
 

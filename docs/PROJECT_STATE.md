@@ -17,12 +17,11 @@ removed locally and from production.
 ## Version-control state
 
 - Branch: `main`.
-- Deployed functional baseline: `65b33ea` (`Start secure Google identity
-  foundation`).
-- All three Railway application services run that revision. Continuity-only
-  documentation has advanced `main` to `9a13dc8` without changing that runtime
-  baseline. The Google-login implementation is locally verified but not yet
-  deployed.
+- Deployed functional baseline: `7da2bfa` (`Implement Google sign-in and
+  Project Lab`).
+- `origin/main` and all three Railway application services run that revision.
+  A later continuity-only commit may advance `main` without changing that
+  runtime baseline.
 - Secret-bearing environment profiles, dependencies, runtime caches, the large
   GTFS stop-times export, and the résumé PDF are ignored.
 
@@ -115,8 +114,8 @@ rechecked against today's external feeds.
   Turnstile/verification-link/replay matrix remains unverified.
 - Google OIDC endpoints, server-managed sessions, registered/admin roles,
   logout, local-account deletion, privacy/terms pages, and a registered-only
-  Calgary Project Lab are implemented locally and fail closed without Google
-  credentials. Production activation remains pending.
+  Calgary Project Lab are deployed and fail closed without Google credentials.
+  Credential activation remains pending.
 - There is no admin console or first-party analytics model yet.
 - Several portfolio pages still contain sample résumé, chart, and image data.
 - Superseded commented implementations remain inside some accepted React and
@@ -136,7 +135,7 @@ rechecked against today's external feeds.
 - Transit health reports freshness-aware healthy/degraded/after-hours state. The
   frontend presents expected after-hours downtime, feed transactions are
   isolated, and City of Calgary attribution is displayed in production.
-- Step 5's database foundation is in production. The working tree adds the
+- Step 5's database foundation and application flow are in production. It uses the
   approved official `google-auth` verifier, authorization-code callback,
   digest-only state/nonce/browser binding, first-login registration, session
   rotation/revocation, session-bound CSRF, role enforcement, bounded cleanup,
@@ -290,6 +289,12 @@ deployment, and production smoke checks passed.
   `20260805_01 -> 20260813_02`, then NiceGUI started normally. Home remained
   HTTP 200 and the intentionally unimplemented Google login endpoint returned
   HTTP 404.
+- At deployed commit `7da2bfa`, all three application services reached
+  `SUCCESS`. Production home, Projects, Account, Privacy, Terms, React transit,
+  and transit health returned HTTP 200. Projects displayed the locked Calgary
+  Project Lab and configuration notice, `/api/auth/session` returned the
+  expected unauthenticated response, and Google login failed closed with HTTP
+  503 because its client credentials are intentionally not configured yet.
 - The application deploys branch `main` with Railpack and is detected as a
   Python application.
 - The observed failed build selected Python 3.13.14, installed

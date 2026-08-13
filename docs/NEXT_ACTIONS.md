@@ -52,7 +52,7 @@ Last updated: 2026-08-13
   one-time final delivery, replay, throttling, and provider-failure cases.
 - [ ] Activate and browser-test Google OIDC. Endpoints, secure sessions, roles,
   locked Calgary Project Lab, privacy/terms, logout, and account deletion are
-  locally complete; create the Google web client and configure its client ID,
+  deployed; create the Google web client and configure its client ID,
   secret, and optional admin allowlist in Railway.
 - [ ] Add an admin console for users, logins, sessions, contact state, content,
   job health, and audit events.
@@ -78,8 +78,8 @@ Last updated: 2026-08-13
 
 ## Current recommended next task
 
-Deploy the locally verified auth release, then create/configure the Google web
-client and complete the production browser matrix: first registration, repeat
+Create/configure the Google web client, then complete the production browser
+matrix: first registration, repeat
 login, locked Project Lab, logout, replay/invalid callback, account deletion,
 and optional admin allowlist. The remaining interactive Contact matrix can run
 in parallel.

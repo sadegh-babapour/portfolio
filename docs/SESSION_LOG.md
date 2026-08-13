@@ -923,5 +923,20 @@ meet the Calgary open-data attribution requirement.
 
 ### Remaining
 
-- Commit/deploy the release, configure the Google production web client and
-  Railway credentials, then exercise the complete real-browser identity matrix.
+- Configure the Google production web client and Railway credentials, then
+  exercise the complete real-browser identity matrix.
+
+### Production verification
+
+- Committed and pushed `7da2bfa`; Railway reported `SUCCESS` for portfolio,
+  transit API, and transit poller on that revision.
+- Production home, Projects, Account, Privacy, Terms, React transit, and transit
+  health returned HTTP 200. The session endpoint correctly reported an
+  unauthenticated visitor, and Projects showed the locked Project Lab without
+  exposing its registered-only technique content.
+- Google login returned the intended HTTP 503 because the production client ID
+  and secret are not configured. Runtime logs confirmed normal NiceGUI startup
+  and named only the two missing variable names, without secret values.
+- Railway's agent-tooling health check reported an apparent skill revision
+  update; `railway skills update` then confirmed installed skills were already
+  current.

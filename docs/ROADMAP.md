@@ -191,7 +191,8 @@ link but should not be mandatory for an ordinary recruiter contact.
 
 Status: security/persistence foundation deployed at `65b33ea`; callback,
 sessions, roles, privacy/terms, account controls, and a locked Calgary Project
-Lab are locally verified. Deployment and Google credential configuration remain.
+Lab are deployed at `7da2bfa`. Google credential configuration and the real
+browser matrix remain.
 
 ### Goal
 

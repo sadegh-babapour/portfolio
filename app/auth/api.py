@@ -40,10 +40,10 @@ def _secure_cookie(settings: AuthSettings) -> bool:
     return settings.public_base_url.startswith("https://")
 
 
-def _uses_public_origin(request: Request, settings: AuthSettings) -> bool:
+def _uses_public_host(request: Request, settings: AuthSettings) -> bool:
     supplied = urlsplit(str(request.url))
     expected = urlsplit(settings.public_base_url)
-    return (supplied.scheme, supplied.netloc) == (expected.scheme, expected.netloc)
+    return supplied.netloc == expected.netloc
 
 
 def _canonical_login_url(settings: AuthSettings, return_to: str) -> str:
@@ -67,7 +67,7 @@ def _clear_auth_cookies(response: RedirectResponse, settings: AuthSettings) -> N
 @fastapi_app.get("/api/auth/google/login", include_in_schema=False)
 def google_login(request: Request, return_to: str = "/projects"):
     settings = _settings()
-    if not _uses_public_origin(request, settings):
+    if not _uses_public_host(request, settings):
         response = RedirectResponse(
             _canonical_login_url(settings, return_to),
             status_code=303,

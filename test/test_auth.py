@@ -5,7 +5,7 @@ from datetime import timedelta
 from urllib.parse import parse_qs, urlsplit
 from unittest.mock import MagicMock, patch
 
-from app.auth.api import google_login
+from app.auth.api import _uses_public_host, google_login
 from app.auth.config import AuthSettings
 from app.auth.models import (
     AuthEvent,
@@ -124,6 +124,9 @@ class AuthSecurityTests(unittest.TestCase):
         self.assertEqual(response.headers["cache-control"], "no-store")
         self.assertNotIn("set-cookie", response.headers)
         begin_login.assert_not_called()
+
+        request.url = "http://bizqlab.com/api/auth/google/login"
+        self.assertTrue(_uses_public_host(request, self._settings()))
 
     def test_login_state_is_browser_bound_and_single_use(self):
         now = utc_now()

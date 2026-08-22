@@ -95,8 +95,10 @@ React development server:
 npm run dev --prefix frontend
 ```
 
-Set `VITE_TRANSIT_API_BASE_URL=http://localhost:4000/api` for local React
-development. Build the production bundle with:
+Set `VITE_TRANSIT_API_BASE_URL=http://localhost:4000/api` in
+`frontend/.env.development.local` for local React development. Do not use
+`frontend/.env.local`; Vite also loads that file during production builds.
+Build the production bundle with:
 
 ```bash
 npm run build --prefix frontend

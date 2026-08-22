@@ -451,28 +451,37 @@ function App() {
     let cancelled = false;
 
     const load = async () => {
-      try {
-        const [historyRes, pathRes, healthRes] = await Promise.all([
-          // fetch(`${API_BASE}/vehicles/history?mode=${mode}&window_minutes=${HISTORY_WINDOW_MINUTES}`),
-          fetch(`${API_BASE}/vehicles/history?mode=${mode}&window_minutes=${HISTORY_WINDOW_MINUTES}`),
-          // fetch(`${API_BASE}/vehicles/history?mode=${mode}&density=${density}&window_minutes=${HISTORY_WINDOW_MINUTES}`),
-          fetch(
-            selectedVehicle?.route_short_name
-              ? `${API_BASE}/routes/paths?mode=${mode}&routes=${encodeURIComponent(
-                selectedVehicle.route_short_name
-              )}`
-              : `${API_BASE}/routes/paths?mode=featured`
-          ),
-          fetch(`${API_BASE}/health`),
-        ]);
-
-        const historyData = await historyRes.json();
-        const pathData = await pathRes.json();
-        const healthData = await healthRes.json();
-
-        if (!historyRes.ok || !pathRes.ok) {
-          throw new Error("Transit data request failed");
+      const fetchJson = async (url) => {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Transit request failed with HTTP ${response.status}`);
         }
+        return response.json();
+      };
+
+      const [historyResult, pathResult, healthResult] = await Promise.allSettled([
+        fetchJson(
+          `${API_BASE}/vehicles/history?mode=${mode}&window_minutes=${HISTORY_WINDOW_MINUTES}`
+        ),
+        fetchJson(
+          selectedVehicle?.route_short_name
+            ? `${API_BASE}/routes/paths?mode=${mode}&routes=${encodeURIComponent(
+              selectedVehicle.route_short_name
+            )}`
+            : `${API_BASE}/routes/paths?mode=featured`
+        ),
+        fetchJson(`${API_BASE}/health`),
+      ]);
+
+      if (cancelled) return;
+
+      const hasFreshHistory =
+        historyResult.status === "fulfilled" && Array.isArray(historyResult.value);
+      const hasFreshPaths =
+        pathResult.status === "fulfilled" && Array.isArray(pathResult.value);
+
+      if (hasFreshHistory) {
+        const historyData = historyResult.value;
 
         let latestMs = null;
 
@@ -486,21 +495,23 @@ function App() {
           }
         }
 
-        if (cancelled) return;
-
-        setVehicleHistory(Array.isArray(historyData) ? historyData : []);
-        setRoutePaths(Array.isArray(pathData) ? pathData : []);
+        setVehicleHistory(historyData);
         setLastHistoryFetchMs(Date.now());
         setLatestDataTimestampMs(latestMs);
         setHistoryFetchedAtMs(Date.now());
-        setServiceStatus(healthData.status || (healthRes.ok ? "healthy" : "degraded"));
         setRefreshAgeSeconds(0);
-      } catch {
-        if (!cancelled) {
-          setVehicleHistory([]);
-          setRoutePaths([]);
-          setServiceStatus("unavailable");
-        }
+      }
+
+      if (hasFreshPaths) {
+        setRoutePaths(pathResult.value);
+      }
+
+      if (!hasFreshHistory) {
+        setServiceStatus("unavailable");
+      } else if (!hasFreshPaths || healthResult.status === "rejected") {
+        setServiceStatus("degraded");
+      } else {
+        setServiceStatus(healthResult.value?.status || "healthy");
       }
     };
 
@@ -583,11 +594,12 @@ function App() {
   ]);
 
   const center = useMemo(() => [51.0447, -114.0719], []);
+  const hasVehicleData = vehicles.length > 0;
   const countLabel = serviceStatus === "outside_operating_hours"
     ? "Outside live hours"
-    : serviceStatus === "degraded" || serviceStatus === "unavailable"
+    : (serviceStatus === "degraded" || serviceStatus === "unavailable") && !hasVehicleData
       ? "Live data unavailable"
-      : `${vehicles.length} active buses`;
+      : `${vehicles.length} active buses${serviceStatus === "healthy" ? "" : " · degraded"}`;
   const refreshLabel = serviceStatus === "outside_operating_hours"
     ? "Live polling runs 08:00–21:00 Calgary time"
     : `Last refresh ${refreshAgeSeconds}s ago`;

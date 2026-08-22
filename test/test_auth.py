@@ -5,6 +5,7 @@ from datetime import timedelta
 from urllib.parse import parse_qs, urlsplit
 from unittest.mock import MagicMock, patch
 
+from app.auth.api import google_login
 from app.auth.config import AuthSettings
 from app.auth.models import (
     AuthEvent,
@@ -104,6 +105,25 @@ class AuthSecurityTests(unittest.TestCase):
         self.assertEqual(persisted.browser_digest, token_digest(login.browser_token))
         self.assertNotIn(settings.google_client_secret, login.authorization_url)
         self.assertEqual(persisted.return_path, "/projects#project-calgary")
+
+    def test_login_start_canonicalizes_origin_before_setting_browser_cookie(self):
+        request = MagicMock()
+        request.url = "https://www.bizqlab.com/api/auth/google/login"
+
+        with (
+            patch("app.auth.api._settings", return_value=self._settings()),
+            patch("app.auth.api.begin_google_login") as begin_login,
+        ):
+            response = google_login(request, "/account")
+
+        self.assertEqual(response.status_code, 303)
+        self.assertEqual(
+            response.headers["location"],
+            "https://bizqlab.com/api/auth/google/login?return_to=%2Faccount",
+        )
+        self.assertEqual(response.headers["cache-control"], "no-store")
+        self.assertNotIn("set-cookie", response.headers)
+        begin_login.assert_not_called()
 
     def test_login_state_is_browser_bound_and_single_use(self):
         now = utc_now()

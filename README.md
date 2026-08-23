@@ -14,15 +14,9 @@ Calgary GTFS/GTFS-RT -> Python poller -> PostgreSQL -> Express API -> React
                                                NiceGUI serves the built app
 ```
 
-See `docs/PROJECT_STATE.md` for current limitations,
-`docs/ARCHITECTURE.md` for the detailed design, and `docs/ROADMAP.md` for the
-review-first delivery plan.
-
-Secure contact configuration and Cloudflare/Resend setup are documented in
-`docs/CONTACT_SETUP.md`; the abuse model is in `docs/CONTACT_SECURITY.md`.
-The Step-5 Google identity and server-session boundary, Google Console setup,
-privacy behavior, and exact callback URLs are documented in
-`docs/AUTH_SECURITY.md`.
+The repository README is intentionally the only public Markdown document.
+Operational handoff notes, security reviews, decision records, and deployment
+runbooks are maintained privately and are excluded from Git.
 
 ## Prerequisites
 
@@ -121,12 +115,10 @@ alembic upgrade head
 
 The résumé is read locally from the ignored `static/resume.pdf` by default.
 Production reads it from the Railway volume using
-`RESUME_PDF_PATH=/data/resume.pdf`. See `docs/FILE_STORAGE.md` for the upload
-and replacement workflow.
+`RESUME_PDF_PATH=/data/resume.pdf`.
 
 The on-page résumé timeline and project case studies are separate from the PDF
-and are edited in `content/resume_timeline.json` and `content/projects.json`.
-See `docs/CONTENT_EDITING.md` for the field contract and validation workflow.
+Application validation rejects malformed content before rendering it.
 
 ## Checks
 

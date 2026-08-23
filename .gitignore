@@ -70,3 +70,8 @@ static/resume.pdf
 
 # Historical chat is retained locally and may contain copied credentials
 docs/CHAT_HISTORY_RAW.md
+
+# Operational handoff and agent Markdown is private/local-only. Keep the public
+# repository's root README as its sole tracked Markdown document.
+*.md
+!/README.md

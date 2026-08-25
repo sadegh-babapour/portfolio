@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { shapeSegmentToStop } from "../src/routeGeometry.js";
+import {
+  defaultCorridorStop,
+  resolveCorridorStop,
+  shapeSegmentToStop,
+  stopsThroughDestination,
+} from "../src/routeGeometry.js";
 
 
 test("selected corridor follows ordered shape vertices instead of a direct stop line", () => {
@@ -25,4 +30,30 @@ test("selected corridor follows ordered shape vertices instead of a direct stop 
 
 test("missing shape or stop coordinates produces no invented corridor", () => {
   assert.deepEqual(shapeSegmentToStop([], { lat: 51, lon: -114 }, {}), []);
+});
+
+test("the default corridor runs through the next three stops", () => {
+  const stops = [
+    { stop_id: "1" },
+    { stop_id: "2" },
+    { stop_id: "3" },
+    { stop_id: "4" },
+  ];
+
+  assert.equal(defaultCorridorStop(stops).stop_id, "3");
+  assert.deepEqual(stopsThroughDestination(stops, defaultCorridorStop(stops)), stops.slice(0, 3));
+});
+
+test("a tracked stop keeps every intermediate stop in the corridor", () => {
+  const stops = [
+    { stop_id: "1" },
+    { stop_id: "2" },
+    { stop_id: "3" },
+    { stop_id: "4" },
+  ];
+  const requested = { stop_id: "4", stop_name: "Tracked stop" };
+  const resolved = resolveCorridorStop(stops, requested);
+
+  assert.equal(resolved, stops[3]);
+  assert.deepEqual(stopsThroughDestination(stops, resolved), stops);
 });

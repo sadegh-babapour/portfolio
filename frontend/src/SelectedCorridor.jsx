@@ -1,42 +1,69 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef } from "react";
 import { CircleMarker, Pane, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet-ant-path";
 
-import { shapeSegmentToStop } from "./routeGeometry";
+import {
+  resolveCorridorStop,
+  shapeSegmentToStop,
+  stopsThroughDestination,
+} from "./routeGeometry";
+import { routeColor } from "./routeStyle";
 
 
 export default function SelectedCorridor({ context, vehicle, selectedStop }) {
   const map = useMap();
-  const [pulseOn, setPulseOn] = useState(true);
+  const fittedSelectionRef = useRef("");
+  const antPathRef = useRef(null);
   const nextStops = Array.isArray(context?.next_stops) ? context.next_stops : [];
-  const destinationStop = selectedStop || nextStops[0] || null;
-  const corridor = useMemo(
-    () => shapeSegmentToStop(context?.shape_points, vehicle, destinationStop),
-    [context?.shape_points, destinationStop, vehicle],
-  );
+  const destinationStop = resolveCorridorStop(nextStops, selectedStop);
+  const displayedStops = stopsThroughDestination(nextStops, destinationStop);
+  const corridorColor = routeColor(vehicle);
+  const corridor = shapeSegmentToStop(context?.shape_points, vehicle, destinationStop);
+  const latestCorridorRef = useRef(corridor);
+  const hasCorridor = corridor.length >= 2;
 
   useEffect(() => {
-    const interval = setInterval(() => setPulseOn((value) => !value), 700);
-    return () => clearInterval(interval);
-  }, []);
+    latestCorridorRef.current = corridor;
+  }, [corridor]);
 
   useEffect(() => {
-    if (!map || vehicle?.isStale || corridor.length < 2) return;
-    const layer = L.polyline.antPath(corridor, {
-      delay: 1100,
-      dashArray: [10, 20],
+    if (!map || vehicle?.isStale || !hasCorridor) return;
+    const layer = L.polyline.antPath(latestCorridorRef.current, {
+      delay: 1600,
+      dashArray: [12, 24],
       weight: 6,
-      color: "#2563eb",
-      pulseColor: "#ffffff",
+      color: "transparent",
+      pulseColor: corridorColor,
       paused: false,
       reverse: false,
       hardwareAccelerated: true,
       opacity: 0.82,
     });
     layer.addTo(map);
-    return () => map.removeLayer(layer);
-  }, [corridor, map, vehicle?.isStale]);
+    antPathRef.current = layer;
+    return () => {
+      antPathRef.current = null;
+      map.removeLayer(layer);
+    };
+  }, [corridorColor, hasCorridor, map, vehicle?.isStale]);
+
+  useEffect(() => {
+    if (hasCorridor) antPathRef.current?.setLatLngs(corridor);
+  }, [corridor, hasCorridor]);
+
+  useEffect(() => {
+    if (!map || corridor.length < 2 || !destinationStop) return;
+    const selectionKey = `${vehicle.vehicle_id}-${vehicle.trip_id}-${destinationStop.stop_id}`;
+    if (fittedSelectionRef.current === selectionKey) return;
+    fittedSelectionRef.current = selectionKey;
+    map.fitBounds(L.latLngBounds(corridor), {
+      animate: true,
+      duration: 0.8,
+      maxZoom: 15,
+      padding: [32, 32],
+    });
+  }, [corridor, destinationStop, map, vehicle.trip_id, vehicle.vehicle_id]);
 
   if (!context || !vehicle) return null;
 
@@ -46,12 +73,13 @@ export default function SelectedCorridor({ context, vehicle, selectedStop }) {
         <Pane name="selected-corridor" style={{ zIndex: 650 }}>
           <Polyline
             positions={corridor}
-            pathOptions={{ color: "#1d4ed8", weight: 8, opacity: 0.34 }}
+            interactive={false}
+            pathOptions={{ color: corridorColor, weight: 8, opacity: 0.26 }}
           />
         </Pane>
       )}
       <Pane name="selected-stops" style={{ zIndex: 720 }}>
-        {nextStops.map((stop) => (
+        {displayedStops.map((stop) => (
           <Pane
             key={`next-pane-${stop.stop_id}-${stop.stop_sequence}`}
             name={`next-stop-${stop.stop_id}-${stop.stop_sequence}`}
@@ -59,18 +87,20 @@ export default function SelectedCorridor({ context, vehicle, selectedStop }) {
           >
             {stop === destinationStop && (
               <CircleMarker
+                interactive={false}
                 center={[Number(stop.stop_lat), Number(stop.stop_lon)]}
-                radius={pulseOn ? 15 : 10}
+                radius={13}
                 pathOptions={{
                   color: "#f59e0b",
                   fillColor: "#f59e0b",
                   fillOpacity: 0,
                   weight: 2,
-                  opacity: pulseOn ? 0.2 : 0.42,
+                  opacity: 0.42,
                 }}
               />
             )}
             <CircleMarker
+              interactive={false}
               center={[Number(stop.stop_lat), Number(stop.stop_lon)]}
               radius={stop === destinationStop ? 7 : 5}
               pathOptions={{

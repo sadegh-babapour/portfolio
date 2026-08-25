@@ -8,6 +8,9 @@ export default function TransitSearch({
   onSelectRoute,
   onSelectStop,
   onLocationResolved,
+  onNearbyStopsResolved,
+  nearbyCount,
+  onClearNearby,
 }) {
   const [query, setQuery] = useState("");
   const [routes, setRoutes] = useState([]);
@@ -16,7 +19,6 @@ export default function TransitSearch({
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationMessage, setLocationMessage] = useState("");
-  const [showingNearby, setShowingNearby] = useState(false);
 
   useEffect(() => {
     const normalized = query.trim();
@@ -39,7 +41,6 @@ export default function TransitSearch({
         ]);
         setRoutes(Array.isArray(routeRows) ? routeRows : []);
         setStops(Array.isArray(stopRows) ? stopRows : []);
-        setShowingNearby(false);
       } catch (error) {
         if (error.name !== "AbortError") {
           setRoutes([]);
@@ -71,32 +72,43 @@ export default function TransitSearch({
   const findNearby = () => {
     if (!navigator.geolocation) {
       setLocationMessage("Location is unavailable in this browser. Search for a stop instead.");
-      setOpen(true);
+      setOpen(false);
       return;
     }
     setLocationLoading(true);
     setLocationMessage("");
     navigator.geolocation.getCurrentPosition(
       async ({ coords }) => {
+        const location = [coords.latitude, coords.longitude];
+        onLocationResolved?.(location);
         try {
           const response = await fetch(`${apiBase}/stops/nearby`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ lat: coords.latitude, lon: coords.longitude, limit: 8 }),
+            body: JSON.stringify({
+              lat: coords.latitude,
+              lon: coords.longitude,
+              limit: 8,
+              radius_meters: 800,
+            }),
           });
           if (!response.ok) throw new Error("Nearby stops unavailable");
           const rows = await response.json();
           const nearbyRows = Array.isArray(rows) ? rows : [];
           setQuery("");
           setRoutes([]);
-          setStops(nearbyRows);
-          setShowingNearby(true);
-          setOpen(true);
-          onLocationResolved?.([coords.latitude, coords.longitude]);
-          setLocationMessage(nearbyRows.length ? "" : "No nearby Calgary stops were found.");
+          setStops([]);
+          setOpen(false);
+          onNearbyStopsResolved?.(nearbyRows);
+          setLocationMessage(
+            nearbyRows.length
+              ? `Showing ${nearbyRows.length} stops within 800 m. Tap a stop marker on the map.`
+              : "No Calgary stops were found within 800 m.",
+          );
         } catch {
+          onNearbyStopsResolved?.([]);
           setLocationMessage("Nearby stops are unavailable. Search by stop name or number.");
-          setOpen(true);
+          setOpen(false);
         } finally {
           setLocationLoading(false);
         }
@@ -104,7 +116,7 @@ export default function TransitSearch({
       () => {
         setLocationLoading(false);
         setLocationMessage("Location was not shared. You can still search by stop name or number.");
-        setOpen(true);
+        setOpen(false);
       },
       { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 },
     );
@@ -133,8 +145,11 @@ export default function TransitSearch({
             if (!nextQuery.trim()) {
               setRoutes([]);
               setStops([]);
-              setShowingNearby(false);
               setLoading(false);
+            }
+            if (nextQuery.trim()) {
+              setLocationMessage("");
+              onClearNearby?.();
             }
           }}
           onKeyDown={(event) => {
@@ -168,11 +183,26 @@ export default function TransitSearch({
           </button>
         )}
       </div>
-      {open && (query.trim() || showingNearby || locationMessage) && (
+      {locationMessage && (
+        <div className="nearby-status" role="status">
+          <span>{locationMessage}</span>
+          {nearbyCount > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setLocationMessage("");
+                onClearNearby?.();
+              }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+      {open && query.trim() && (
         <div id="transit-search-results" className="search-results">
-          {locationMessage && <div className="search-message normal-case">{locationMessage}</div>}
           {loading && <div className="search-message">Searching…</div>}
-          {!loading && !locationMessage && routes.length === 0 && stops.length === 0 && (
+          {!loading && routes.length === 0 && stops.length === 0 && (
             <div className="search-message">No matching active routes or stops.</div>
           )}
           {routes.length > 0 && (
@@ -198,7 +228,7 @@ export default function TransitSearch({
           )}
           {stops.length > 0 && (
             <div className="search-group">
-              <div className="search-heading">{showingNearby ? "Nearby stops" : "Stops"}</div>
+              <div className="search-heading">Stops</div>
               {stops.map((stop) => (
                 <button
                   type="button"

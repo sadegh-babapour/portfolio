@@ -74,3 +74,30 @@ export function shapeSegmentToStop(shapePoints, vehicle, stop) {
     || point[1] !== segment[index - 1][1]
   ));
 }
+
+
+export function defaultCorridorStop(stops) {
+  if (!Array.isArray(stops) || stops.length === 0) return null;
+  return stops[Math.min(2, stops.length - 1)];
+}
+
+
+export function resolveCorridorStop(stops, requestedStop) {
+  if (!Array.isArray(stops)) return requestedStop || null;
+  if (requestedStop?.stop_id) {
+    return stops.find((stop) => stop.stop_id === requestedStop.stop_id) || requestedStop;
+  }
+  return defaultCorridorStop(stops);
+}
+
+
+export function stopsThroughDestination(stops, destinationStop) {
+  if (!Array.isArray(stops) || stops.length === 0) return [];
+  if (!destinationStop?.stop_id) return stops.slice(0, 3);
+  const destinationIndex = stops.findIndex(
+    (stop) => stop.stop_id === destinationStop.stop_id,
+  );
+  return destinationIndex >= 0
+    ? stops.slice(0, destinationIndex + 1)
+    : stops.slice(0, 3);
+}

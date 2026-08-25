@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CircleMarker,
   MapContainer,
   Marker,
+  Pane,
   TileLayer,
+  Tooltip,
   useMap,
 } from "react-leaflet";
 
@@ -16,6 +18,8 @@ import RouteLine from "./RouteLine";
 import SelectedCorridor from "./SelectedCorridor";
 import PortfolioNav from "./PortfolioNav";
 import TransitSearch from "./TransitSearch";
+import { defaultCorridorStop, resolveCorridorStop } from "./routeGeometry";
+import { routeColor } from "./routeStyle";
 import {
   computePlaybackVehicles,
   monotonicPlaybackTime,
@@ -73,20 +77,6 @@ function routeBadgeClass(vehicle) {
   return "badge bus";
 }
 
-function routeColor(vehicleOrRoute) {
-  const shortName = vehicleOrRoute.route_short_name;
-
-  if (shortName === "300") return "#b45309";
-  if (shortName === "MP") return "#9333ea";
-  if (shortName === "MO") return "#ea580c";
-  if (shortName === "MG") return "#16a34a";
-  if (shortName === "MT") return "#0f766e";
-  if (shortName === "MY") return "#ca8a04";
-
-  if (vehicleOrRoute.route_mode === "brt") return "#7c3aed";
-  return "#2563eb";
-}
-
 function createBusIcon(vehicle, selected = false) {
   const bg = vehicle.isStale
     ? "#4b5563"
@@ -105,16 +95,6 @@ function createBusIcon(vehicle, selected = false) {
   const markerLabel = String(vehicle.route_short_name || "Bus")
     .replace(/[^a-z0-9-]/gi, "")
     .slice(0, 6) || "Bus";
-  const directionArrow = Number.isFinite(vehicle.heading) && !vehicle.isStopped
-    ? `<div style="
-          height:12px;
-          color:${bg};
-          font-size:13px;
-          line-height:12px;
-          transform:rotate(${vehicle.heading}deg);
-        ">▲</div>`
-    : '<div style="height:12px;"></div>';
-
   return L.divIcon({
     className: "",
     html: `
@@ -133,7 +113,6 @@ function createBusIcon(vehicle, selected = false) {
               ">${statusText}</div>`
         : `<div style="height:18px;"></div>`
       }
-        ${directionArrow}
         <div style="
           width:${selected ? 36 : 30}px;
           height:${selected ? 36 : 30}px;
@@ -154,8 +133,8 @@ function createBusIcon(vehicle, selected = false) {
         </div>
       </div>
     `,
-    iconSize: [selected ? 40 : 34, selected ? 70 : 64],
-    iconAnchor: [selected ? 20 : 17, selected ? 48 : 44],
+    iconSize: [selected ? 40 : 34, selected ? 58 : 52],
+    iconAnchor: [selected ? 20 : 17, selected ? 42 : 38],
   });
 }
 
@@ -206,6 +185,27 @@ function FocusPoint({ point, zoom = 16 }) {
   return null;
 }
 
+function FitNearbyStops({ location, stops }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!location || !Array.isArray(stops) || stops.length === 0) return;
+    const points = [location, ...stops.map((stop) => [
+      Number(stop.stop_lat),
+      Number(stop.stop_lon),
+    ])].filter((point) => point.every(Number.isFinite));
+    if (points.length < 2) return;
+    map.fitBounds(L.latLngBounds(points), {
+      animate: true,
+      duration: 0.8,
+      maxZoom: 16,
+      padding: [44, 44],
+    });
+  }, [location, map, stops]);
+
+  return null;
+}
+
 function arrivalLabel(value) {
   if (!value) return "Prediction unavailable";
   const arrival = new Date(value);
@@ -245,6 +245,7 @@ function VehicleDrawer({
   vehicle,
   context,
   selectedTargetStop,
+  trackedDestinationStop,
   onSelectStop,
   onClose,
   serviceStatus,
@@ -329,6 +330,18 @@ function VehicleDrawer({
       >
         {following ? "Following bus" : "Follow bus on map"}
       </button>
+
+      {trackedDestinationStop && (
+        <div className="tracking-target" role="status">
+          <strong>Tracking this bus to your stop</strong>
+          <span>
+            {trackedDestinationStop.stop_name}
+            {trackedDestinationStop.stop_code
+              ? ` · Stop ${trackedDestinationStop.stop_code}`
+              : ""}
+          </span>
+        </div>
+      )}
 
       <h3>Upcoming stops</h3>
       <div className="list">
@@ -487,15 +500,45 @@ function App() {
   const [selectedContext, setSelectedContext] = useState(null);
   const [selectedTargetStop, setSelectedTargetStop] = useState(null);
   const [selectedPlaceStop, setSelectedPlaceStop] = useState(null);
+  const [trackedDestinationStop, setTrackedDestinationStop] = useState(null);
   const [activeRoute, setActiveRoute] = useState(null);
   const [serviceStatus, setServiceStatus] = useState("loading");
   const [baseMap, setBaseMap] = useState("dark");
   const [following, setFollowing] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
+  const [nearbyStops, setNearbyStops] = useState([]);
   const [authenticated, setAuthenticated] = useState(false);
   const [favoriteStops, setFavoriteStops] = useState(() => new Set());
   const playbackTimeRef = useRef(null);
   const pendingVehicleRef = useRef(null);
+  const drawerRef = useRef(null);
+
+  const clearSelection = useCallback(() => {
+    pendingVehicleRef.current = null;
+    setFollowing(false);
+    setSelectedContext(null);
+    setSelectedTargetStop(null);
+    setSelectedPlaceStop(null);
+    setTrackedDestinationStop(null);
+    setSelectedVehicle(null);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedVehicle && !selectedPlaceStop) return undefined;
+    const dismissOutside = (event) => {
+      if (drawerRef.current?.contains(event.target)) return;
+      clearSelection();
+    };
+    const dismissEscape = (event) => {
+      if (event.key === "Escape") clearSelection();
+    };
+    document.addEventListener("pointerdown", dismissOutside);
+    document.addEventListener("keydown", dismissEscape);
+    return () => {
+      document.removeEventListener("pointerdown", dismissOutside);
+      document.removeEventListener("keydown", dismissEscape);
+    };
+  }, [clearSelection, selectedPlaceStop, selectedVehicle]);
 
   useEffect(() => {
     let cancelled = false;
@@ -663,8 +706,13 @@ function App() {
         if (!res.ok) throw new Error(`Vehicle context failed with HTTP ${res.status}`);
         const data = await res.json();
         if (!cancelled) {
+          const nextStops = Array.isArray(data.next_stops) ? data.next_stops : [];
           setSelectedContext(data);
-          setSelectedTargetStop(Array.isArray(data.next_stops) ? data.next_stops[0] || null : null);
+          setSelectedTargetStop(
+            trackedDestinationStop
+              ? resolveCorridorStop(nextStops, trackedDestinationStop)
+              : defaultCorridorStop(nextStops),
+          );
         }
       } catch {
         if (!cancelled) {
@@ -678,7 +726,11 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [selectedVehicle?.vehicle_id, selectedVehicle?.trip_id]);
+  }, [
+    selectedVehicle?.vehicle_id,
+    selectedVehicle?.trip_id,
+    trackedDestinationStop,
+  ]);
 
   useEffect(() => {
     const tick = () => {
@@ -701,19 +753,23 @@ function App() {
       const playbackVehicles = computePlaybackVehicles(vehicleHistory, playbackTimeMs);
       setVehicles(playbackVehicles);
 
-      setSelectedVehicle((current) => {
-        const pending = pendingVehicleRef.current;
-        if (pending) {
-          const requested = playbackVehicles.find(
-            (vehicle) => vehicle.vehicle_id === pending.vehicle_id
-              && (!pending.trip_id || vehicle.trip_id === pending.trip_id),
-          );
-          if (requested) {
-            pendingVehicleRef.current = null;
-            return requested;
-          }
-          return current;
+      const pending = pendingVehicleRef.current;
+      if (pending) {
+        const requested = playbackVehicles.find(
+          (vehicle) => vehicle.vehicle_id === pending.vehicle_id
+            && (!pending.trip_id || vehicle.trip_id === pending.trip_id),
+        ) || playbackVehicles.find(
+          (vehicle) => vehicle.vehicle_id === pending.vehicle_id,
+        );
+        if (requested) {
+          pendingVehicleRef.current = null;
+          setSelectedPlaceStop(null);
+          setSelectedVehicle(requested);
         }
+        return;
+      }
+
+      setSelectedVehicle((current) => {
         if (!current) return current;
         const updatedSelected = playbackVehicles.find(
           (vehicle) => vehicle.vehicle_id === current.vehicle_id
@@ -738,7 +794,7 @@ function App() {
     if (!selectedPlaceStop) return null;
     return [Number(selectedPlaceStop.stop_lat), Number(selectedPlaceStop.stop_lon)];
   }, [selectedPlaceStop]);
-  const focusPoint = selectedPlacePoint || userLocation;
+  const focusPoint = selectedPlacePoint || (nearbyStops.length ? null : userLocation);
   const hasVehicleData = vehicles.length > 0;
   const countLabel = serviceStatus === "outside_operating_hours"
     ? "Outside live hours"
@@ -772,9 +828,9 @@ function App() {
           mode={mode}
           setMode={(nextMode) => {
             playbackTimeRef.current = null;
-            setFollowing(false);
+            clearSelection();
             setActiveRoute(null);
-            setSelectedPlaceStop(null);
+            setNearbyStops([]);
             setMode(nextMode);
           }}
         />
@@ -800,37 +856,33 @@ function App() {
           activeRoute={activeRoute}
           onClearRoute={() => {
             playbackTimeRef.current = null;
-            pendingVehicleRef.current = null;
+            clearSelection();
             setActiveRoute(null);
-            setSelectedContext(null);
-            setSelectedTargetStop(null);
-            setSelectedVehicle(null);
           }}
           onSelectRoute={(route) => {
             playbackTimeRef.current = null;
-            pendingVehicleRef.current = null;
-            setFollowing(false);
-            setSelectedPlaceStop(null);
-            setSelectedContext(null);
-            setSelectedTargetStop(null);
-            setSelectedVehicle(null);
+            clearSelection();
             setActiveRoute(route.route_short_name);
             setMode("all");
           }}
           onSelectStop={(stop) => {
-            pendingVehicleRef.current = null;
-            setFollowing(false);
-            setSelectedContext(null);
-            setSelectedTargetStop(null);
-            setSelectedVehicle(null);
+            clearSelection();
             setSelectedPlaceStop(stop);
             setActiveRoute(null);
           }}
           onLocationResolved={setUserLocation}
+          onNearbyStopsResolved={(stops) => {
+            clearSelection();
+            setActiveRoute(null);
+            setNearbyStops(stops);
+          }}
+          nearbyCount={nearbyStops.length}
+          onClearNearby={() => setNearbyStops([])}
         />
       </div>
 
-      <div className="content">
+      <div className="transit-workspace">
+        <div className="content">
         <div className="map-wrap">
           <MapContainer center={center} zoom={11} className="map">
 
@@ -841,21 +893,25 @@ function App() {
               url={TILE_CONFIG[baseMap].url}
             />
 
-            <FitToVehicles vehicles={vehicles} fitKey={mode} />
+            <FitToVehicles vehicles={vehicles} fitKey={`${mode}-${activeRoute || "all"}`} />
             <FollowVehicle vehicle={selectedVehicle} enabled={following} />
             <FocusPoint point={focusPoint} />
+            <FitNearbyStops location={userLocation} stops={nearbyStops} />
 
             {userLocation && (
-              <CircleMarker
-                center={userLocation}
-                radius={8}
-                pathOptions={{
-                  color: "#ffffff",
-                  fillColor: "#2563eb",
-                  fillOpacity: 1,
-                  weight: 3,
-                }}
-              />
+              <Pane name="user-location" style={{ zIndex: 760 }}>
+                <CircleMarker
+                  center={userLocation}
+                  radius={11}
+                  interactive={false}
+                  pathOptions={{
+                    color: "#ffffff",
+                    fillColor: "#0ea5e9",
+                    fillOpacity: 1,
+                    weight: 4,
+                  }}
+                />
+              </Pane>
             )}
 
             {selectedPlacePoint && (
@@ -869,6 +925,34 @@ function App() {
                   weight: 3,
                 }}
               />
+            )}
+
+            {nearbyStops.length > 0 && (
+              <Pane name="nearby-stops" style={{ zIndex: 740 }}>
+                {nearbyStops.map((stop) => (
+                  <CircleMarker
+                    key={stop.stop_id}
+                    center={[Number(stop.stop_lat), Number(stop.stop_lon)]}
+                    radius={10}
+                    pathOptions={{
+                      color: "#ffffff",
+                      fillColor: "#0f766e",
+                      fillOpacity: 0.95,
+                      weight: 3,
+                    }}
+                    eventHandlers={{
+                      click: () => {
+                        clearSelection();
+                        setSelectedPlaceStop(stop);
+                      },
+                    }}
+                  >
+                    <Tooltip direction="top" offset={[0, -8]}>
+                      Stop {stop.stop_code || stop.stop_id} · {stop.stop_name}
+                    </Tooltip>
+                  </CircleMarker>
+                ))}
+              </Pane>
             )}
 
 
@@ -899,11 +983,7 @@ function App() {
                 )}
                 eventHandlers={{
                   click: () => {
-                    pendingVehicleRef.current = null;
-                    setSelectedContext(null);
-                    setSelectedTargetStop(null);
-                    setSelectedPlaceStop(null);
-                    setFollowing(false);
+                    clearSelection();
                     setSelectedVehicle(v);
                   },
                 }}
@@ -912,24 +992,33 @@ function App() {
           </MapContainer>
         </div>
 
-
-        <div className={`drawer-wrap ${selectedVehicle || selectedPlaceStop ? "has-selection" : ""}`}>
+        </div>
+        <div
+          ref={drawerRef}
+          className={`drawer-wrap ${selectedVehicle || selectedPlaceStop ? "has-selection" : ""}`}
+        >
           {selectedPlaceStop ? (
             <StopDrawer
               key={selectedPlaceStop.stop_id}
               stop={selectedPlaceStop}
-              onClose={() => setSelectedPlaceStop(null)}
+              onClose={clearSelection}
               onTrackArrival={(arrival) => {
                 playbackTimeRef.current = null;
-                pendingVehicleRef.current = arrival.vehicle_id
-                  ? { vehicle_id: arrival.vehicle_id, trip_id: arrival.trip_id }
-                  : null;
-                setSelectedPlaceStop(null);
                 setSelectedContext(null);
                 setSelectedTargetStop(null);
                 setSelectedVehicle(null);
                 setActiveRoute(arrival.route_short_name);
                 setMode("all");
+                if (arrival.vehicle_id) {
+                  pendingVehicleRef.current = {
+                    vehicle_id: arrival.vehicle_id,
+                    trip_id: arrival.trip_id,
+                  };
+                  setTrackedDestinationStop(selectedPlaceStop);
+                } else {
+                  pendingVehicleRef.current = null;
+                  setTrackedDestinationStop(null);
+                }
               }}
               authenticated={authenticated}
               favorite={favoriteStops.has(selectedPlaceStop.stop_id)}
@@ -941,17 +1030,12 @@ function App() {
               vehicle={selectedVehicle}
               context={selectedContext}
               selectedTargetStop={selectedTargetStop}
+              trackedDestinationStop={trackedDestinationStop}
               onSelectStop={setSelectedTargetStop}
               serviceStatus={serviceStatus}
               following={following}
               onToggleFollow={() => setFollowing((value) => !value)}
-              onClose={() => {
-                pendingVehicleRef.current = null;
-                setFollowing(false);
-                setSelectedContext(null);
-                setSelectedTargetStop(null);
-                setSelectedVehicle(null);
-              }}
+              onClose={clearSelection}
             />
           )}
         </div>

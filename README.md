@@ -97,7 +97,9 @@ npm start --prefix backend/transit_api
 The API listens on `TRANSIT_API_PORT`, then `PORT`, then port 4000.
 Its public transit routes include vehicle history/context, route paths and
 search, stop search and arrivals, and a bounded `POST /api/stops/nearby`
-coordinate lookup.
+coordinate lookup. Nearby lookup is capped at eight stops and accepts a
+server-validated 100–2,000 metre radius; the frontend uses an 800 metre
+walkable radius and renders the returned stops on the map.
 
 React development server:
 

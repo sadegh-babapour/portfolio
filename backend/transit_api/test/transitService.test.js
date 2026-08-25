@@ -171,12 +171,13 @@ test("stop arrivals use the requested stop and a fifteen minute window", async (
   assert.match(pool.calls[0].sql, /interval '15 minutes'/);
 });
 
-test("nearby stops use bounded parameterized coordinates", async () => {
+test("nearby stops use bounded parameterized coordinates and walking radius", async () => {
   const pool = poolReturning([{ stop_id: "1001", distance_meters: 120 }]);
-  const rows = await getNearbyStops(pool, 51.0447, -114.0719, 6);
+  const rows = await getNearbyStops(pool, 51.0447, -114.0719, 6, 800);
   assert.equal(rows[0].distance_meters, 120);
-  assert.deepEqual(pool.calls[0].params, [51.0447, -114.0719, 6]);
+  assert.deepEqual(pool.calls[0].params, [51.0447, -114.0719, 6, 800]);
   assert.match(pool.calls[0].sql, /limit \$3/);
+  assert.match(pool.calls[0].sql, /distance_meters <= \$4/);
   assert.match(pool.calls[0].sql, /distance_meters/);
 });
 
@@ -185,7 +186,7 @@ test("missing vehicle context returns null", async () => {
 
   assert.equal(await getVehicleContext(pool, "missing"), null);
   assert.deepEqual(pool.calls[0].params, ["missing"]);
-  assert.match(pool.calls[0].sql, /next_stops[\s\S]*limit 3/);
+  assert.match(pool.calls[0].sql, /next_stops[\s\S]*limit 24/);
   assert.doesNotMatch(pool.calls[0].sql, /previous_static_stops|previous_stops/);
 });
 

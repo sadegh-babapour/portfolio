@@ -126,20 +126,24 @@ app.post("/api/stops/nearby", async (request, response) => {
   const lat = Number(request.body?.lat);
   const lon = Number(request.body?.lon);
   const requestedLimit = Number(request.body?.limit ?? 8);
+  const radiusMeters = Number(request.body?.radius_meters ?? 800);
   if (
     !Number.isFinite(lat)
     || !Number.isFinite(lon)
     || !Number.isInteger(requestedLimit)
+    || !Number.isInteger(radiusMeters)
     || lat < 50.7
     || lat > 51.4
     || lon < -114.5
     || lon > -113.7
+    || radiusMeters < 100
+    || radiusMeters > 2000
   ) {
     return response.status(400).json({ error: "invalid_calgary_location" });
   }
   const limit = Math.min(8, Math.max(1, requestedLimit));
   try {
-    return response.json(await getNearbyStops(pool, lat, lon, limit));
+    return response.json(await getNearbyStops(pool, lat, lon, limit, radiusMeters));
   } catch (error) {
     console.error(error);
     return response.status(500).json({ error: "failed_to_load_nearby_stops" });

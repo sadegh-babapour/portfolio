@@ -337,7 +337,7 @@ async function getVehicleContext(pool, vehicleId) {
       select *
       from future_tripupdate_stops
       order by stop_sequence
-      limit 3
+      limit 24
     ),
     shape_points as (
       select
@@ -510,30 +510,35 @@ async function getStopArrivals(pool, stopId) {
   return result.rows;
 }
 
-async function getNearbyStops(pool, lat, lon, limit = 8) {
+async function getNearbyStops(pool, lat, lon, limit = 8, radiusMeters = 800) {
   const result = await pool.query(
     `
-    select
-      stop_id,
-      stop_code,
-      stop_name,
-      stop_lat,
-      stop_lon,
-      round((
-        111045 * sqrt(
-          power(stop_lat - $1, 2)
-          + power((stop_lon - $2) * cos(radians($1)), 2)
-        )
-      )::numeric, 0)::integer as distance_meters
-    from transit.stops
-    where stop_lat is not null
-      and stop_lon is not null
-      and stop_lat between $1 - 0.12 and $1 + 0.12
-      and stop_lon between $2 - 0.18 and $2 + 0.18
+    with nearby as (
+      select
+        stop_id,
+        stop_code,
+        stop_name,
+        stop_lat,
+        stop_lon,
+        round((
+          111045 * sqrt(
+            power(stop_lat - $1, 2)
+            + power((stop_lon - $2) * cos(radians($1)), 2)
+          )
+        )::numeric, 0)::integer as distance_meters
+      from transit.stops
+      where stop_lat is not null
+        and stop_lon is not null
+        and stop_lat between $1 - 0.12 and $1 + 0.12
+        and stop_lon between $2 - 0.18 and $2 + 0.18
+    )
+    select *
+    from nearby
+    where distance_meters <= $4
     order by distance_meters, stop_name
     limit $3
     `,
-    [lat, lon, limit],
+    [lat, lon, limit, radiusMeters],
   );
   return result.rows;
 }

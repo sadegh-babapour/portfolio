@@ -235,12 +235,18 @@ body,
   border-color: #111827;
 }
 
+.transit-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+  gap: 12px;
+  width: calc(100% - 24px);
+  margin: 12px;
+}
+
 .content {
   position: relative;
-  width: calc(100% - 24px);
   height: clamp(540px, calc(100dvh - 286px), 820px);
   min-height: 540px;
-  margin: 12px;
   overflow: hidden;
   border: 1px solid var(--border-color);
   border-radius: 18px;
@@ -260,12 +266,9 @@ body,
 }
 
 .drawer-wrap {
-  position: absolute;
-  z-index: 900;
-  top: 14px;
-  right: 14px;
-  bottom: 14px;
-  width: min(380px, calc(100% - 28px));
+  position: relative;
+  z-index: 2;
+  height: clamp(540px, calc(100dvh - 286px), 820px);
   overflow: hidden;
   border: 1px solid var(--border-color);
   border-radius: 16px;
@@ -327,6 +330,23 @@ body,
 .follow-btn.active {
   background: #2563eb;
   color: #ffffff;
+}
+
+.tracking-target {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 18px;
+  padding: 11px 12px;
+  border-left: 4px solid #0f766e;
+  border-radius: 8px;
+  background: color-mix(in srgb, #0f766e 12%, var(--surface));
+  line-height: 1.35;
+}
+
+.tracking-target span {
+  color: var(--text-muted);
+  font-size: 13px;
 }
 
 :root[data-theme="dark"] .follow-btn {
@@ -543,6 +563,28 @@ button.list-item {
   box-shadow: 0 16px 34px rgba(15, 23, 42, 0.28);
 }
 
+.nearby-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 4px 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.nearby-status button {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border: 0;
+  background: transparent;
+  color: #2563eb;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
 .search-heading,
 .search-message {
   padding: 10px 12px;
@@ -726,25 +768,28 @@ button.list-item {
 
   .drawer-wrap {
     top: auto;
-    right: 8px;
-    bottom: 8px;
-    left: 8px;
+    right: auto;
+    bottom: auto;
+    left: auto;
     width: auto;
-    border-left: none;
-    border-top: 1px solid var(--border-color);
+    height: auto;
+    max-height: none;
+    margin-top: 8px;
+    overflow: visible;
     border-radius: 16px;
-    transition: max-height 0.25s ease, box-shadow 0.25s ease;
   }
 
   .drawer-wrap.has-selection {
-    max-height: min(62%, 460px);
+    max-height: none;
   }
 
   .drawer-wrap:not(.has-selection) {
-    max-height: 104px;
+    display: none;
   }
 
   .drawer {
+    height: auto;
+    overflow: visible;
     padding: 14px;
   }
 
@@ -788,12 +833,6 @@ button.list-item {
   color: #93c5fd;
 }
 
-@media (min-width: 1051px) {
-  .content .leaflet-bottom.leaflet-right {
-    right: 394px;
-  }
-}
-
 .basemap-row {
   display: flex;
   align-items: center;
@@ -834,11 +873,15 @@ button.list-item {
   border-color: #111827;
 }
 @media (max-width: 1050px) {
+  .transit-workspace {
+    display: block;
+    width: auto;
+    margin: 8px;
+  }
+
   .content {
-    width: calc(100% - 16px);
     height: max(500px, calc(100dvh - 300px));
     min-height: 500px;
-    margin: 8px;
     border-radius: 14px;
   }
 
@@ -872,4 +915,5 @@ button.list-item {
     align-items: flex-start;
     flex-wrap: wrap;
   }
+
 }

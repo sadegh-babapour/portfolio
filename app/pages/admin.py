@@ -15,6 +15,69 @@ def _metric(title: str, value: object, note: str = "") -> None:
             ui.label(note).classes("text-xs text-grey-7")
 
 
+def _traffic_charts(summary: dict) -> None:
+    daily = summary["daily_views"]
+    paths = summary["top_paths"]
+    with ui.element("section").classes("grid w-full grid-cols-1 gap-5 lg:grid-cols-2"):
+        with ui.card().classes("w-full min-w-0 p-5 gap-3"):
+            ui.label("Daily render trend").classes("text-xl font-semibold")
+            if daily:
+                ui.echart(
+                    {
+                        "tooltip": {"trigger": "axis"},
+                        "grid": {"left": 42, "right": 18, "top": 20, "bottom": 45},
+                        "xAxis": {"type": "category", "data": [row["day"] for row in daily]},
+                        "yAxis": {"type": "value", "minInterval": 1},
+                        "series": [
+                            {
+                                "name": "Page renders",
+                                "type": "line",
+                                "smooth": True,
+                                "areaStyle": {"opacity": 0.18},
+                                "data": [row["views"] for row in daily],
+                                "itemStyle": {"color": "#2563eb"},
+                            }
+                        ],
+                    }
+                ).classes("w-full h-72").props('aria-label="Daily page renders" role="img"')
+                ui.label(
+                    f"{sum(row['views'] for row in daily)} page renders across "
+                    f"{len(daily)} UTC days with recorded traffic."
+                ).classes("text-sm text-grey-7")
+            else:
+                ui.label("No page renders have been recorded in this window.").classes(
+                    "text-sm text-grey-7"
+                )
+
+        with ui.card().classes("w-full min-w-0 p-5 gap-3"):
+            ui.label("Content distribution · 30 days").classes("text-xl font-semibold")
+            if paths:
+                ordered = list(reversed(paths))
+                ui.echart(
+                    {
+                        "tooltip": {"trigger": "axis"},
+                        "grid": {"left": 140, "right": 22, "top": 20, "bottom": 35},
+                        "xAxis": {"type": "value", "minInterval": 1},
+                        "yAxis": {"type": "category", "data": [row["path"] for row in ordered]},
+                        "series": [
+                            {
+                                "name": "Page renders",
+                                "type": "bar",
+                                "data": [row["views"] for row in ordered],
+                                "itemStyle": {"color": "#0f766e"},
+                            }
+                        ],
+                    }
+                ).classes("w-full h-72").props('aria-label="Top page renders" role="img"')
+                ui.label(
+                    "Exact allow-listed paths only; counts are page renders, not visitors."
+                ).classes("text-sm text-grey-7")
+            else:
+                ui.label("No page renders have been recorded in this window.").classes(
+                    "text-sm text-grey-7"
+                )
+
+
 @ui.page("/admin")
 @with_layout
 def admin():
@@ -49,6 +112,7 @@ def admin():
                     rows=summary["top_paths"],
                     row_key="path",
                 ).classes("w-full").props("flat dense")
+
             with ui.card().classes("w-full p-5 gap-3"):
                 ui.label("Daily renders · 14 days").classes("text-xl font-semibold")
                 ui.table(
@@ -59,6 +123,8 @@ def admin():
                     rows=summary["daily_views"],
                     row_key="day",
                 ).classes("w-full").props("flat dense")
+
+        _traffic_charts(summary)
 
         ui.label("Accounts and contact").classes("text-2xl font-semibold")
         with ui.element("section").classes("grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"):

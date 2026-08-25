@@ -1,189 +1,252 @@
-# app/pages/dashboard.py
-# Reads from local dashboard_cache.json — no live DB connection needed here.
-# The cache was populated from the old Supabase data and serves as a static demo.
+from __future__ import annotations
 
 from nicegui import ui
-from datetime import datetime
-import json
-import os
+
 from app.components.navbar import with_layout
+from app.dashboard.service import build_live_transit_analysis, load_cached_analysis
 
 
-CACHE_FILE = 'dashboard_cache.json'
+def _metric(title: str, value: object, note: str) -> None:
+    with ui.card().classes("w-full h-full p-5 gap-2"):
+        ui.label(title).classes("text-sm text-grey-7")
+        ui.label(str(value)).classes("text-3xl font-semibold")
+        ui.label(note).classes("text-xs text-grey-7")
 
 
-def get_cached_table_data(table_name: str) -> list:
-    """Load a specific table from the local JSON cache. Returns [] if missing."""
-    if not os.path.exists(CACHE_FILE):
-        return []
-    try:
-        with open(CACHE_FILE, 'r') as f:
-            cache = json.load(f)
-        return cache.get('data', {}).get(table_name, [])
-    except (json.JSONDecodeError, KeyError):
-        return []
+def _chart_card(title: str, summary: str, options: dict) -> None:
+    with ui.card().classes("w-full min-w-0 p-4 sm:p-5 gap-3"):
+        ui.label(title).classes("text-xl font-semibold")
+        ui.echart(options).classes("w-full h-80").props(
+            f'aria-label="{title}" role="img"'
+        )
+        ui.label(summary).classes("text-sm text-grey-7 leading-relaxed")
 
 
-@ui.page('/dashboard')
+def _live_dashboard(live: dict) -> None:
+    ui.label("Live PostgreSQL analysis").classes("text-2xl font-semibold")
+    ui.label(
+        "Aggregates are calculated when this page renders from the same transit "
+        "tables that power the Calgary map. No vehicle identifiers are exposed."
+    ).classes("text-base text-grey-7 leading-relaxed")
+
+    if not live.get("available"):
+        with ui.card().classes("w-full p-5"):
+            ui.label("Live analysis is temporarily unavailable.").classes("text-negative")
+            ui.label(
+                "The cached analytical case study below remains available."
+            ).classes("text-sm text-grey-7")
+        return
+
+    route_match = live["route_match_percent"]
+    with ui.element("section").classes(
+        "grid w-full grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+    ):
+        _metric("Recent vehicles", live["recent_vehicles"], "latest 3 minutes")
+        _metric("Active routes", live["active_routes"], "route IDs with fresh vehicles")
+        _metric(
+            "Route enrichment",
+            f"{route_match:.1f}%" if route_match is not None else "N/A",
+            "fresh vehicles matched to static GTFS",
+        )
+        _metric(
+            "Retained observations",
+            live["retained_observations"],
+            "raw position rows · latest 15 minutes",
+        )
+
+    cadence = live["observation_cadence"]
+    routes = live["top_routes"]
+    with ui.element("section").classes("grid w-full grid-cols-1 gap-5 lg:grid-cols-2"):
+        if cadence:
+            labels = [row["minute"][11:16] for row in cadence]
+            _chart_card(
+                "Realtime ingestion cadence",
+                f"{sum(row['observations'] for row in cadence):,} position rows across "
+                f"{len(cadence)} observed minutes. Times are UTC.",
+                {
+                    "tooltip": {"trigger": "axis"},
+                    "legend": {"data": ["Observations", "Distinct vehicles"], "bottom": 0},
+                    "grid": {"left": 45, "right": 18, "top": 24, "bottom": 58},
+                    "xAxis": {"type": "category", "data": labels},
+                    "yAxis": {"type": "value", "minInterval": 1},
+                    "series": [
+                        {
+                            "name": "Observations",
+                            "type": "line",
+                            "smooth": True,
+                            "data": [row["observations"] for row in cadence],
+                            "itemStyle": {"color": "#2563eb"},
+                        },
+                        {
+                            "name": "Distinct vehicles",
+                            "type": "line",
+                            "data": [row["vehicles"] for row in cadence],
+                            "itemStyle": {"color": "#d97706"},
+                        },
+                    ],
+                },
+            )
+        else:
+            with ui.card().classes("w-full p-5"):
+                ui.label("Realtime ingestion cadence").classes("text-xl font-semibold")
+                ui.label("No observations are retained outside live polling hours.").classes(
+                    "text-sm text-grey-7"
+                )
+
+        if routes:
+            _chart_card(
+                "Busiest active routes",
+                "Top ten routes by fresh vehicle records; this is service coverage, not ridership.",
+                {
+                    "tooltip": {"trigger": "axis"},
+                    "grid": {"left": 45, "right": 18, "top": 24, "bottom": 48},
+                    "xAxis": {"type": "category", "data": [row["route"] for row in routes]},
+                    "yAxis": {"type": "value", "minInterval": 1},
+                    "series": [
+                        {
+                            "name": "Fresh vehicles",
+                            "type": "bar",
+                            "data": [row["vehicles"] for row in routes],
+                            "itemStyle": {"color": "#0f766e"},
+                        }
+                    ],
+                },
+            )
+        else:
+            with ui.card().classes("w-full p-5"):
+                ui.label("Busiest active routes").classes("text-xl font-semibold")
+                ui.label("No fresh route records are available right now.").classes(
+                    "text-sm text-grey-7"
+                )
+
+    with ui.card().classes("w-full p-5 gap-2"):
+        ui.label("Live pipeline provenance").classes("text-xl font-semibold")
+        ui.label(f"Analysis generated: {live['generated_at']} UTC").classes("text-sm")
+        ui.label(f"Latest VehiclePositions: {live['latest_vehicle_timestamp']}").classes(
+            "text-sm text-grey-7"
+        )
+        ui.label(f"Latest TripUpdates: {live['latest_trip_update_timestamp']}").classes(
+            "text-sm text-grey-7"
+        )
+        ui.label(f"Latest Alerts: {live['latest_alert_timestamp']}").classes(
+            "text-sm text-grey-7"
+        )
+        ui.label(
+            "Source: City of Calgary GTFS and GTFS-Realtime. Freshness and completeness "
+            "depend on the source feeds; polling runs 08:00–21:00 America/Edmonton."
+        ).classes("text-sm text-grey-7 leading-relaxed")
+
+
+def _cached_dashboard(snapshot: dict) -> None:
+    ui.label("Versioned cached analysis").classes("text-2xl font-semibold")
+    ui.label(
+        "A committed theme-park demonstration snapshot shows the low-latency delivery "
+        "pattern for slower-changing analytical products. It is sample data, not live operations."
+    ).classes("text-base text-grey-7 leading-relaxed")
+
+    if not snapshot.get("available"):
+        ui.label("The committed analysis snapshot is unavailable.").classes("text-negative")
+        return
+
+    tables = snapshot["tables"]
+    daily = sorted(tables["daily_stats"], key=lambda row: row["date"])
+    revenue = sorted(tables["revenue_summary"], key=lambda row: row["date"])
+    total_attendance = sum(int(row["total_attendance"]) for row in daily)
+    total_revenue = sum(float(row["total_revenue"]) for row in revenue)
+
+    with ui.element("section").classes("grid w-full grid-cols-1 gap-4 sm:grid-cols-3"):
+        _metric("Snapshot rows", snapshot["row_count"], "four validated tables")
+        _metric("Attendance", f"{total_attendance:,}", "four-day sample")
+        _metric("Revenue", f"${total_revenue:,.0f}", "four-day sample")
+
+    with ui.element("section").classes("grid w-full grid-cols-1 gap-5 lg:grid-cols-2"):
+        _chart_card(
+            "Attendance and member mix",
+            f"Total sample attendance is {total_attendance:,}; stacked bars separate "
+            "general and member admissions.",
+            {
+                "tooltip": {"trigger": "axis"},
+                "legend": {"data": ["General", "Members"], "bottom": 0},
+                "grid": {"left": 50, "right": 18, "top": 24, "bottom": 58},
+                "xAxis": {"type": "category", "data": [row["date"] for row in daily]},
+                "yAxis": {"type": "value"},
+                "series": [
+                    {
+                        "name": "General",
+                        "type": "bar",
+                        "stack": "attendance",
+                        "data": [row["general_admissions"] for row in daily],
+                        "itemStyle": {"color": "#2563eb"},
+                    },
+                    {
+                        "name": "Members",
+                        "type": "bar",
+                        "stack": "attendance",
+                        "data": [row["member_admissions"] for row in daily],
+                        "itemStyle": {"color": "#7c3aed"},
+                    },
+                ],
+            },
+        )
+        _chart_card(
+            "Revenue composition",
+            "Revenue combines admissions, membership, food and beverage, merchandise, and parking.",
+            {
+                "tooltip": {"trigger": "axis"},
+                "legend": {"type": "scroll", "bottom": 0},
+                "grid": {"left": 58, "right": 18, "top": 24, "bottom": 72},
+                "xAxis": {"type": "category", "data": [row["date"] for row in revenue]},
+                "yAxis": {"type": "value"},
+                "series": [
+                    {
+                        "name": label,
+                        "type": "bar",
+                        "stack": "revenue",
+                        "data": [float(row[field]) for row in revenue],
+                    }
+                    for label, field in (
+                        ("Admissions", "admission_revenue"),
+                        ("Membership", "membership_revenue"),
+                        ("Food & beverage", "food_beverage_revenue"),
+                        ("Merchandise", "merchandise_revenue"),
+                        ("Parking", "parking_revenue"),
+                    )
+                ],
+            },
+        )
+
+    with ui.card().classes("w-full p-5 gap-3"):
+        ui.label("Snapshot quality contract").classes("text-xl font-semibold")
+        ui.table(
+            columns=[
+                {"name": "table", "label": "Dataset", "field": "table", "align": "left"},
+                {"name": "rows", "label": "Rows", "field": "rows", "align": "right"},
+                {"name": "status", "label": "Non-empty", "field": "status", "align": "center"},
+            ],
+            rows=snapshot["quality"],
+            row_key="table",
+        ).classes("w-full").props("flat dense")
+        ui.label(
+            f"Snapshot date: {snapshot['cache_date']} · generated: {snapshot['last_updated']}. "
+            "A production snapshot job would publish only after schema and quality checks pass."
+        ).classes("text-sm text-grey-7 leading-relaxed")
+
+
+@ui.page("/dashboard")
 @with_layout
 def dashboard_page():
-    ui.page_title('Theme Park Analytics Dashboard')
+    ui.page_title("Bizqlab Analytics Dashboard")
+    live = build_live_transit_analysis()
+    snapshot = load_cached_analysis()
 
-    with ui.column().classes('w-full max-w-7xl mx-auto px-4 py-8 sm:px-8 gap-6'):
-
-        with ui.column().classes('gap-3 max-w-4xl'):
-            ui.label('Theme Park Analytics').classes('text-4xl sm:text-5xl font-bold')
+    with ui.column().classes("w-full max-w-7xl mx-auto px-4 py-8 sm:px-8 gap-7"):
+        with ui.column().classes("gap-3 max-w-4xl"):
+            ui.label("Data Platform Analytics").classes("text-4xl sm:text-5xl font-bold")
             ui.label(
-                'A responsive analytical presentation built from a committed sample '
-                'snapshot. Values are demonstrative, not live operational data.'
-            ).classes('text-lg text-grey-7 leading-relaxed')
+                "Two delivery patterns in one portfolio: live PostgreSQL aggregates for "
+                "fresh operational questions, and a small versioned snapshot for stable analysis."
+            ).classes("text-lg text-grey-7 leading-relaxed")
 
-        with ui.card().classes('w-full p-4 sm:p-6'):
-            ui.label('📊 Data Tables').classes('text-h5 mb-4')
-
-            with ui.tabs().props('mobile-arrows outside-arrows').classes('w-full') as tabs:
-                daily_tab = ui.tab('Daily Stats')
-                membership_tab = ui.tab('Membership')
-                revenue_tab = ui.tab('Revenue')
-                visits_tab = ui.tab('Member Visits')
-
-            with ui.tab_panels(tabs, value=daily_tab).classes('w-full'):
-
-                with ui.tab_panel(daily_tab):
-                    daily_data = get_cached_table_data('daily_stats')
-                    if daily_data:
-                        columns = [
-                            {'name': 'date', 'label': 'Date', 'field': 'date', 'align': 'left'},
-                            {'name': 'total_attendance', 'label': 'Total Attendance', 'field': 'total_attendance', 'align': 'right'},
-                            {'name': 'general_admissions', 'label': 'General', 'field': 'general_admissions', 'align': 'right'},
-                            {'name': 'member_admissions', 'label': 'Members', 'field': 'member_admissions', 'align': 'right'},
-                            {'name': 'daily_revenue', 'label': 'Revenue ($)', 'field': 'daily_revenue', 'align': 'right'},
-                            {'name': 'weather_condition', 'label': 'Weather', 'field': 'weather_condition', 'align': 'center'},
-                        ]
-                        ui.table(columns=columns, rows=daily_data).props(
-                            'flat bordered'
-                        ).classes('w-full').style('overflow-x: auto')
-                    else:
-                        ui.label('No data available.').classes('text-grey')
-
-                with ui.tab_panel(membership_tab):
-                    membership_data = get_cached_table_data('membership_summary')
-                    if membership_data:
-                        columns = [
-                            {'name': 'period_date', 'label': 'Date', 'field': 'period_date', 'align': 'left'},
-                            {'name': 'membership_type', 'label': 'Type', 'field': 'membership_type', 'align': 'center'},
-                            {'name': 'new_memberships', 'label': 'New', 'field': 'new_memberships', 'align': 'right'},
-                            {'name': 'renewals', 'label': 'Renewals', 'field': 'renewals', 'align': 'right'},
-                            {'name': 'expirations', 'label': 'Expired', 'field': 'expirations', 'align': 'right'},
-                            {'name': 'active_members', 'label': 'Active', 'field': 'active_members', 'align': 'right'},
-                        ]
-                        ui.table(columns=columns, rows=membership_data).props(
-                            'flat bordered'
-                        ).classes('w-full').style('overflow-x: auto')
-                    else:
-                        ui.label('No data available.').classes('text-grey')
-
-                with ui.tab_panel(revenue_tab):
-                    revenue_data = get_cached_table_data('revenue_summary')
-                    if revenue_data:
-                        columns = [
-                            {'name': 'date', 'label': 'Date', 'field': 'date', 'align': 'left'},
-                            {'name': 'admission_revenue', 'label': 'Admissions', 'field': 'admission_revenue', 'align': 'right'},
-                            {'name': 'membership_revenue', 'label': 'Memberships', 'field': 'membership_revenue', 'align': 'right'},
-                            {'name': 'food_beverage_revenue', 'label': 'F&B', 'field': 'food_beverage_revenue', 'align': 'right'},
-                            {'name': 'total_revenue', 'label': 'Total', 'field': 'total_revenue', 'align': 'right'},
-                        ]
-                        ui.table(columns=columns, rows=revenue_data).props(
-                            'flat bordered'
-                        ).classes('w-full').style('overflow-x: auto')
-                    else:
-                        ui.label('No data available.').classes('text-grey')
-
-                with ui.tab_panel(visits_tab):
-                    visits_data = get_cached_table_data('member_visits')
-                    if visits_data:
-                        columns = [
-                            {'name': 'visit_date', 'label': 'Date', 'field': 'visit_date', 'align': 'left'},
-                            {'name': 'member_type', 'label': 'Type', 'field': 'member_type', 'align': 'center'},
-                            {'name': 'visit_count', 'label': 'Visits', 'field': 'visit_count', 'align': 'right'},
-                            {'name': 'avg_visit_duration', 'label': 'Avg Duration (hrs)', 'field': 'avg_visit_duration', 'align': 'right'},
-                            {'name': 'guest_count', 'label': 'Guests', 'field': 'guest_count', 'align': 'right'},
-                        ]
-                        ui.table(columns=columns, rows=visits_data).props(
-                            'flat bordered'
-                        ).classes('w-full').style('overflow-x: auto')
-                    else:
-                        ui.label('No data available.').classes('text-grey')
-
-        with ui.card().classes('w-full p-4 sm:p-6'):
-            ui.label('📈 Analytics Charts').classes('text-h5 mb-4')
-
-            with ui.element('div').classes(
-                'grid w-full grid-cols-1 gap-5 lg:grid-cols-2'
-            ):
-                with ui.column().classes('w-full min-w-0'):
-                    _attendance_chart()
-                with ui.column().classes('w-full min-w-0'):
-                    _revenue_chart()
-                with ui.column().classes('w-full min-w-0'):
-                    _membership_chart()
-                with ui.column().classes('w-full min-w-0'):
-                    _revenue_breakdown_chart()
-
-
-def _attendance_chart():
-    data = get_cached_table_data('daily_stats')
-    ui.echart({
-        'title': {'text': 'Daily Attendance Trend', 'left': 'center'},
-        'tooltip': {'trigger': 'axis'},
-        'xAxis': {'type': 'category', 'data': [d['date'] for d in data]},
-        'yAxis': {'type': 'value'},
-        'series': [{'name': 'Attendance', 'type': 'line', 'smooth': True,
-                    'data': [d['total_attendance'] for d in data],
-                    'itemStyle': {'color': '#1f77b4'}}],
-    }).classes('w-full h-80')
-
-
-def _revenue_chart():
-    data = get_cached_table_data('revenue_summary')
-    ui.echart({
-        'title': {'text': 'Daily Revenue Trend', 'left': 'center'},
-        'tooltip': {'trigger': 'axis'},
-        'xAxis': {'type': 'category', 'data': [d['date'] for d in data]},
-        'yAxis': {'type': 'value'},
-        'series': [{'name': 'Revenue', 'type': 'bar',
-                    'data': [float(d['total_revenue']) for d in data],
-                    'itemStyle': {'color': '#2ca02c'}}],
-    }).classes('w-full h-80')
-
-
-def _membership_chart():
-    data = get_cached_table_data('membership_summary')
-    dates = sorted(set(d['period_date'] for d in data))
-    new_data = [sum(d['new_memberships'] for d in data if d['period_date'] == dt) for dt in dates]
-    renewal_data = [sum(d['renewals'] for d in data if d['period_date'] == dt) for dt in dates]
-    ui.echart({
-        'title': {'text': 'Membership Activities', 'left': 'center'},
-        'tooltip': {'trigger': 'axis'},
-        'legend': {'data': ['New', 'Renewals'], 'bottom': 0},
-        'xAxis': {'type': 'category', 'data': dates},
-        'yAxis': {'type': 'value'},
-        'series': [
-            {'name': 'New', 'type': 'bar', 'data': new_data, 'itemStyle': {'color': '#ff7f0e'}},
-            {'name': 'Renewals', 'type': 'bar', 'data': renewal_data, 'itemStyle': {'color': '#d62728'}},
-        ],
-    }).classes('w-full h-80')
-
-
-def _revenue_breakdown_chart():
-    data = get_cached_table_data('revenue_summary')
-    ui.echart({
-        'title': {'text': 'Revenue Breakdown', 'left': 'center'},
-        'tooltip': {'trigger': 'item'},
-        'series': [{'name': 'Revenue', 'type': 'pie', 'radius': '50%', 'data': [
-            {'value': sum(float(d['admission_revenue']) for d in data), 'name': 'Admissions'},
-            {'value': sum(float(d['membership_revenue']) for d in data), 'name': 'Memberships'},
-            {'value': sum(float(d['food_beverage_revenue']) for d in data), 'name': 'Food & Beverage'},
-            {'value': sum(float(d['merchandise_revenue']) for d in data), 'name': 'Merchandise'},
-        ]}],
-    }).classes('w-full h-80')
+        _live_dashboard(live)
+        ui.separator()
+        _cached_dashboard(snapshot)

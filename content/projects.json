@@ -74,27 +74,28 @@
     },
     {
       "id": "theme-park-analytics",
-      "title": "Theme Park Analytics Dashboard",
-      "status": "Sample dataset",
+      "title": "Data Platform Analytics Dashboard",
+      "status": "Live + versioned snapshot",
       "visibility": "public",
       "featured": false,
-      "summary": "An analytical dashboard prototype covering attendance, membership, visits, and revenue from a committed snapshot.",
-      "problem": "Demonstrate how related operational tables can be summarized into decision-oriented attendance, membership, and revenue views.",
-      "architecture": "Validated snapshot JSON → NiceGUI tables and ECharts. A future scheduled pipeline will publish snapshots with freshness and quality metadata.",
-      "data_sources": ["Committed demonstration snapshot in dashboard_cache.json"],
+      "summary": "A two-mode analytics product combining live PostgreSQL-backed Calgary pipeline quality with a committed theme-park analysis snapshot.",
+      "problem": "Show when an analytical question needs a fresh bounded query and when a validated versioned snapshot is the safer, faster delivery contract.",
+      "architecture": "Calgary GTFS pipeline → PostgreSQL aggregate queries → NiceGUI/ECharts, alongside validated snapshot JSON → quality contract → cached charts.",
+      "data_sources": ["Live aggregate transit tables in PostgreSQL", "Committed demonstration snapshot in dashboard_cache.json"],
       "pipeline": [
-        "Read a small source-controlled analytical snapshot",
-        "Present related tables by business subject",
-        "Aggregate attendance, membership, and revenue series for visualization"
+        "Query bounded recent transit windows without exposing vehicle identifiers",
+        "Calculate route enrichment, ingestion cadence, and active-route coverage",
+        "Validate a small source-controlled snapshot before calculating attendance and revenue series"
       ],
-      "stack": ["Python", "NiceGUI", "ECharts", "JSON"],
+      "stack": ["Python", "SQLAlchemy", "PostgreSQL", "NiceGUI", "ECharts", "JSON"],
       "outcomes": [
-        "Separates a low-change public snapshot from the live transit database path",
-        "Demonstrates tabular and visual analytical presentation"
+        "Separates freshness-sensitive metrics from a low-change public snapshot",
+        "Publishes provenance timestamps, row counts, quality status, empty states, and accessible chart summaries",
+        "Adds private traffic charts without changing the anonymous path-and-time collection boundary"
       ],
       "limitations": [
-        "Current values are demonstration data and are not refreshed automatically",
-        "Pipeline metadata and data-quality checks are planned for the chart-platform phase"
+        "Theme-park values remain demonstration data and are not refreshed automatically",
+        "Transit coverage measures feed records and enrichment quality, not ridership or schedule performance"
       ],
       "data_mode": "static_snapshot",
       "links": [

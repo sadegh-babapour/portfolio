@@ -39,7 +39,7 @@ def privacy():
                 'contain an IP address, account or cookie identifier, device fingerprint, '
                 'referrer, or query string, and they are not unique-visitor counts.',
                 'The Calgary Transit page requests your location only after you choose '
-                '“Use my location.” Coordinates are used for that nearby-stop request and '
+                '“Near me.” Coordinates are used for that nearby-stop request and '
                 'are not stored by Bizqlab. If you are signed in and save a stop, the site '
                 'stores only that transit stop identifier with your local account.',
             ),

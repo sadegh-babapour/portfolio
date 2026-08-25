@@ -13,6 +13,12 @@ predictions. Browser location is requested only after the visitor chooses
 “Near me” and is not retained by Bizqlab. Signed-in users can save stop IDs to
 their portfolio account.
 
+The public analytics dashboard demonstrates two delivery contracts: short-lived,
+timeout-bounded PostgreSQL aggregates for Calgary pipeline quality and a small
+validated JSON snapshot for stable theme-park analysis. The owner-only health
+page charts anonymous allow-listed page renders without expanding the stored
+path-and-time event schema.
+
 The transit data flow is:
 
 ```text

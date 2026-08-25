@@ -31,6 +31,7 @@ class WebBoundaryTests(unittest.TestCase):
                 "/account",
                 "/privacy",
                 "/terms",
+                "/admin",
             }
             <= route_paths
         )
@@ -43,6 +44,7 @@ class WebBoundaryTests(unittest.TestCase):
                 "/api/auth/session",
                 "/api/auth/logout",
                 "/api/auth/account",
+                "/api/admin/summary",
             }
             <= route_paths
         )

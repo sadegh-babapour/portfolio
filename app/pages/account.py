@@ -83,6 +83,18 @@ def account():
                     'text-primary font-semibold no-underline hover:underline'
                 )
 
+            if 'admin' in user.roles:
+                with ui.card().classes('w-full h-full p-5 gap-3'):
+                    ui.icon('monitor_heart', size='md').classes('text-primary')
+                    ui.label('Owner operations').classes('text-xl font-semibold')
+                    ui.label(
+                        'Review privacy-bounded traffic aggregates, account and contact '
+                        'counts, and Calgary Transit feed freshness.'
+                    ).classes('text-sm text-grey-7 leading-relaxed')
+                    ui.link('Open operational health', '/admin').classes(
+                        'text-primary font-semibold no-underline hover:underline'
+                    )
+
         ui.label('Account controls').classes('text-xl font-semibold mt-2')
         with ui.row().classes('gap-3 flex-wrap'):
             ui.button('Sign out', icon='logout').props('id=portfolio-sign-out')

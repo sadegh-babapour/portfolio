@@ -23,7 +23,7 @@ def _section(title: str, paragraphs: tuple[str, ...]) -> None:
 @ui.page('/privacy')
 @with_layout
 def privacy():
-    with _legal_shell('Privacy', 'August 13, 2026'):
+    with _legal_shell('Privacy', 'August 24, 2026'):
         _section(
             'What this site collects',
             (
@@ -34,6 +34,10 @@ def privacy():
                 'Google refresh token. Session and login secrets are stored only as digests.',
                 'If you use the contact form, the site processes the information you submit and '
                 'short-lived anti-abuse data needed to verify and deliver the message.',
+                'The site counts renders of a fixed list of public pages for operational '
+                'reporting. These records contain only the page path and time. They do not '
+                'contain an IP address, account or cookie identifier, device fingerprint, '
+                'referrer, or query string, and they are not unique-visitor counts.',
             ),
         )
         _section(
@@ -54,6 +58,7 @@ def privacy():
                 'contact email. Each provider processes limited data under its own terms.',
                 'Login attempts expire after approximately 10 minutes, application sessions '
                 'after approximately 12 hours, and bounded authentication events after '
+                'approximately 90 days. Anonymous page-render records are also deleted after '
                 'approximately 90 days. Account identity records remain until you delete the '
                 'account or request removal.',
             ),

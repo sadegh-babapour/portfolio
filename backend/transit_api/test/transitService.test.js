@@ -8,6 +8,10 @@ const {
   getVehicleHistory,
   getVehicleContext,
   getVehicleAlerts,
+  searchRoutes,
+  searchStops,
+  getStopArrivals,
+  getNearbyStops,
 } = require("../services/transitService");
 
 function poolReturning(rows) {
@@ -132,14 +136,48 @@ test("vehicle history applies density and window parameters and groups observati
     },
   ]);
 
-  const result = await getVehicleHistory(pool, "bus", "2", 15);
+  const result = await getVehicleHistory(pool, "bus", "2", 15, "23");
 
-  assert.deepEqual(pool.calls[0].params, [2, 15]);
+  assert.deepEqual(pool.calls[0].params, [["23"], 2, 15]);
   assert.match(pool.calls[0].sql, /route_mode = 'bus'/);
+  assert.match(
+    pool.calls[0].sql,
+    /ev\.vehicle_id = vp\.vehicle_id\s+and ev\.trip_id = vp\.trip_id/
+  );
+  assert.match(
+    pool.calls[0].sql,
+    /rp\.vehicle_id = ev\.vehicle_id\s+and rp\.trip_id = ev\.trip_id/
+  );
   assert.deepEqual(result[0].observations, [
     { vehicle_timestamp: "2026-08-03T04:00:00Z", lat: 51.0, lon: -114.0 },
     { vehicle_timestamp: "2026-08-03T04:00:30Z", lat: 51.01, lon: -114.01 },
   ]);
+});
+
+test("route and stop search stay parameterized and bounded", async () => {
+  const routePool = poolReturning([{ route_short_name: "23" }]);
+  assert.deepEqual(await searchRoutes(routePool, " 23 "), [{ route_short_name: "23" }]);
+  assert.deepEqual(routePool.calls[0].params, ["%23%", "23"]);
+
+  const stopPool = poolReturning([{ stop_id: "1001" }]);
+  assert.deepEqual(await searchStops(stopPool, " Centre "), [{ stop_id: "1001" }]);
+  assert.deepEqual(stopPool.calls[0].params, ["%Centre%", "Centre"]);
+});
+
+test("stop arrivals use the requested stop and a fifteen minute window", async () => {
+  const pool = poolReturning([]);
+  assert.deepEqual(await getStopArrivals(pool, "1001"), []);
+  assert.deepEqual(pool.calls[0].params, ["1001"]);
+  assert.match(pool.calls[0].sql, /interval '15 minutes'/);
+});
+
+test("nearby stops use bounded parameterized coordinates", async () => {
+  const pool = poolReturning([{ stop_id: "1001", distance_meters: 120 }]);
+  const rows = await getNearbyStops(pool, 51.0447, -114.0719, 6);
+  assert.equal(rows[0].distance_meters, 120);
+  assert.deepEqual(pool.calls[0].params, [51.0447, -114.0719, 6]);
+  assert.match(pool.calls[0].sql, /limit \$3/);
+  assert.match(pool.calls[0].sql, /distance_meters/);
 });
 
 test("missing vehicle context returns null", async () => {
@@ -147,6 +185,8 @@ test("missing vehicle context returns null", async () => {
 
   assert.equal(await getVehicleContext(pool, "missing"), null);
   assert.deepEqual(pool.calls[0].params, ["missing"]);
+  assert.match(pool.calls[0].sql, /next_stops[\s\S]*limit 3/);
+  assert.doesNotMatch(pool.calls[0].sql, /previous_static_stops|previous_stops/);
 });
 
 test("vehicle alerts require a matching active alert", async () => {
@@ -154,5 +194,6 @@ test("vehicle alerts require a matching active alert", async () => {
 
   assert.deepEqual(await getVehicleAlerts(pool, "8305"), []);
   assert.match(pool.calls[0].sql, /join transit\.v_active_alerts a/);
+  assert.match(pool.calls[0].sql, /a\.header_text/);
   assert.doesNotMatch(pool.calls[0].sql, /left join transit\.v_active_alerts a/);
 });

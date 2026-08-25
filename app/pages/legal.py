@@ -38,6 +38,10 @@ def privacy():
                 'reporting. These records contain only the page path and time. They do not '
                 'contain an IP address, account or cookie identifier, device fingerprint, '
                 'referrer, or query string, and they are not unique-visitor counts.',
+                'The Calgary Transit page requests your location only after you choose '
+                '“Use my location.” Coordinates are used for that nearby-stop request and '
+                'are not stored by Bizqlab. If you are signed in and save a stop, the site '
+                'stores only that transit stop identifier with your local account.',
             ),
         )
         _section(
@@ -60,7 +64,8 @@ def privacy():
                 'after approximately 12 hours, and bounded authentication events after '
                 'approximately 90 days. Anonymous page-render records are also deleted after '
                 'approximately 90 days. Account identity records remain until you delete the '
-                'account or request removal.',
+                'account or request removal. Saved stop identifiers remain until you remove '
+                'them or delete your account.',
             ),
         )
         _section(

@@ -6,6 +6,13 @@ and an interactive Calgary Transit demonstration. The transit page uses a
 React/Leaflet frontend, an Express API, a Python GTFS-Realtime poller, and
 PostgreSQL.
 
+The Calgary rider view supports active route and stop search, delayed
+trip-safe vehicle playback, direction indicators, shape-aligned movement to the
+next three predicted stops, explicit nearby-stop lookup, and 15-minute arrival
+predictions. Browser location is requested only after the visitor chooses
+“Near me” and is not retained by Bizqlab. Signed-in users can save stop IDs to
+their portfolio account.
+
 The transit data flow is:
 
 ```text
@@ -82,6 +89,9 @@ npm start --prefix backend/transit_api
 ```
 
 The API listens on `TRANSIT_API_PORT`, then `PORT`, then port 4000.
+Its public transit routes include vehicle history/context, route paths and
+search, stop search and arrivals, and a bounded `POST /api/stops/nearby`
+coordinate lookup.
 
 React development server:
 

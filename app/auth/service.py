@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hmac
 import logging
+import re
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -19,6 +20,7 @@ from app.auth.models import (
     AuthEvent,
     AuthSession,
     ExternalIdentity,
+    FavoriteStop,
     OidcLoginState,
     User,
     UserRole,
@@ -34,6 +36,7 @@ GOOGLE_PROVIDER = "google"
 SESSION_COOKIE = "portfolio_session"
 CSRF_COOKIE = "portfolio_auth_csrf"
 BROWSER_COOKIE = "portfolio_oidc_browser"
+STOP_ID_PATTERN = re.compile(r"^[A-Za-z0-9:_-]{1,64}$")
 
 
 class AuthenticationError(RuntimeError):
@@ -383,3 +386,41 @@ def delete_account(session_user: SessionUser) -> None:
         database.flush()
         database.delete(user)
         database.commit()
+
+
+def _validated_stop_id(stop_id: str) -> str:
+    normalized = str(stop_id or "").strip()
+    if not STOP_ID_PATTERN.fullmatch(normalized):
+        raise ValueError("Stop identifier is invalid")
+    return normalized
+
+
+def list_favorite_stop_ids(session_user: SessionUser) -> list[str]:
+    with session_scope() as database:
+        return list(
+            database.scalars(
+                select(FavoriteStop.stop_id)
+                .where(FavoriteStop.user_id == session_user.user_id)
+                .order_by(FavoriteStop.created_at, FavoriteStop.stop_id)
+            ).all()
+        )
+
+
+def add_favorite_stop(session_user: SessionUser, stop_id: str) -> str:
+    normalized = _validated_stop_id(stop_id)
+    with session_scope() as database:
+        favorite = database.get(FavoriteStop, (session_user.user_id, normalized))
+        if favorite is None:
+            database.add(FavoriteStop(user_id=session_user.user_id, stop_id=normalized))
+            database.commit()
+    return normalized
+
+
+def remove_favorite_stop(session_user: SessionUser, stop_id: str) -> str:
+    normalized = _validated_stop_id(stop_id)
+    with session_scope() as database:
+        favorite = database.get(FavoriteStop, (session_user.user_id, normalized))
+        if favorite is not None:
+            database.delete(favorite)
+            database.commit()
+    return normalized

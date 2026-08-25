@@ -11,6 +11,7 @@ from app.auth.models import (
     AuthEvent,
     AuthSession,
     ExternalIdentity,
+    FavoriteStop,
     OidcLoginState,
     User,
     UserRole,
@@ -20,6 +21,7 @@ from app.auth.service import (
     AuthenticationError,
     SessionUser,
     begin_google_login,
+    add_favorite_stop,
     consume_login_state,
     require_mutation_session,
     verify_google_identity,
@@ -221,6 +223,7 @@ class AuthModelTests(unittest.TestCase):
                 AuthSession.__table__.fullname,
                 OidcLoginState.__table__.fullname,
                 AuthEvent.__table__.fullname,
+                FavoriteStop.__table__.fullname,
             },
             {
                 "portfolio.users",
@@ -229,8 +232,25 @@ class AuthModelTests(unittest.TestCase):
                 "portfolio.auth_sessions",
                 "portfolio.oidc_login_states",
                 "portfolio.auth_events",
+                "portfolio.favorite_stops",
             },
         )
+
+    def test_favorite_stops_store_only_user_and_stop_identifiers(self):
+        columns = set(FavoriteStop.__table__.columns.keys())
+        self.assertEqual(columns, {"user_id", "stop_id", "created_at"})
+        self.assertFalse(any("lat" in column or "lon" in column for column in columns))
+
+        user = SessionUser(
+            user_id=uuid.uuid4(),
+            display_name="Visitor",
+            email="visitor@example.com",
+            roles=frozenset({"registered"}),
+            session_id=uuid.uuid4(),
+            csrf_digest=token_digest("csrf"),
+        )
+        with self.assertRaisesRegex(ValueError, "invalid"):
+            add_favorite_stop(user, "invalid/stop")
 
     def test_only_token_digests_are_modeled(self):
         session_columns = set(AuthSession.__table__.columns.keys())

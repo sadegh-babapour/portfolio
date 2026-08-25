@@ -4,6 +4,7 @@ import logging
 from urllib.parse import urlencode, urlsplit
 
 from fastapi import HTTPException, Request
+from pydantic import BaseModel
 from fastapi.responses import RedirectResponse
 from nicegui import app as fastapi_app
 
@@ -18,7 +19,10 @@ from app.auth.service import (
     current_session,
     delete_account,
     exchange_google_code,
+    add_favorite_stop,
     issue_local_session,
+    list_favorite_stop_ids,
+    remove_favorite_stop,
     require_mutation_session,
     revoke_session,
     verify_google_identity,
@@ -26,6 +30,10 @@ from app.auth.service import (
 
 
 log = logging.getLogger(__name__)
+
+
+class FavoriteStopRequest(BaseModel):
+    stop_id: str
 
 
 def _settings() -> AuthSettings:
@@ -163,6 +171,51 @@ def auth_session(request: Request):
             "roles": sorted(user.roles),
         },
     }
+
+
+def _authenticated_user(request: Request):
+    user = current_session(request.cookies.get(SESSION_COOKIE))
+    if user is None:
+        raise HTTPException(status_code=401, detail="Sign-in is required")
+    return user
+
+
+def _mutation_user(request: Request):
+    settings = _settings()
+    _validate_origin(request, settings)
+    try:
+        return require_mutation_session(
+            request.cookies.get(SESSION_COOKIE),
+            request.cookies.get(CSRF_COOKIE),
+            request.headers.get("x-csrf-token"),
+        )
+    except AuthenticationError as exc:
+        raise HTTPException(
+            status_code=403, detail="Session expired; reload and try again"
+        ) from exc
+
+
+@fastapi_app.get("/api/auth/favorite-stops", include_in_schema=False)
+def favorite_stops(request: Request):
+    return {"stop_ids": list_favorite_stop_ids(_authenticated_user(request))}
+
+
+@fastapi_app.post("/api/auth/favorite-stops", include_in_schema=False)
+def save_favorite_stop(request: Request, payload: FavoriteStopRequest):
+    try:
+        stop_id = add_favorite_stop(_mutation_user(request), payload.stop_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"stop_id": stop_id, "saved": True}
+
+
+@fastapi_app.delete("/api/auth/favorite-stops/{stop_id}", include_in_schema=False)
+def delete_favorite_stop(request: Request, stop_id: str):
+    try:
+        removed = remove_favorite_stop(_mutation_user(request), stop_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"stop_id": removed, "saved": False}
 
 
 @fastapi_app.post("/api/auth/logout", include_in_schema=False)

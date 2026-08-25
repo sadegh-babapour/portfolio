@@ -44,6 +44,8 @@ class WebBoundaryTests(unittest.TestCase):
                 "/api/auth/session",
                 "/api/auth/logout",
                 "/api/auth/account",
+                "/api/auth/favorite-stops",
+                "/api/auth/favorite-stops/{stop_id}",
                 "/api/admin/summary",
             }
             <= route_paths

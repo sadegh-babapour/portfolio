@@ -128,4 +128,18 @@ class AuthEvent(Base):
     )
 
 
+class FavoriteStop(Base):
+    __tablename__ = "favorite_stops"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("portfolio.users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    stop_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
 Index("ix_external_identity_email", ExternalIdentity.email)

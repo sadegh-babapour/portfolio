@@ -8,6 +8,7 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { alertText } from "./alertText";
 import "./App.css";
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -114,10 +115,8 @@ function VehicleDetails({ vehicleId }) {
             <div className="title">
               {a.route_short_name} {a.stop_name ? `· ${a.stop_name}` : ""}
             </div>
-            <div
-              className="alert-html"
-              dangerouslySetInnerHTML={{ __html: a.description_html || "" }}
-            />
+            {a.header_text && <div className="title">{a.header_text}</div>}
+            <div className="alert-text">{alertText(a.description_html)}</div>
           </div>
         ))}
       </div>

@@ -1,28 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-// import {
-//   MapContainer,
-//   Marker,
-//   Popup,
-//   TileLayer,
-//   useMap,
-// } from "react-leaflet";
 import {
+  CircleMarker,
   MapContainer,
   Marker,
-  // Popup,
   TileLayer,
   useMap,
-  // useMapEvents,
 } from "react-leaflet";
 
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./App.css";
-// import AntPath from "./AntPath";
+import { alertText } from "./alertText";
 import RouteLine from "./RouteLine";
-import SelectedRouteAntPath from "./SelectedRouteAntPath";
 import SelectedCorridor from "./SelectedCorridor";
 import PortfolioNav from "./PortfolioNav";
+import TransitSearch from "./TransitSearch";
+import {
+  computePlaybackVehicles,
+  monotonicPlaybackTime,
+  toMillis,
+} from "./transitPlayback";
 
 
 
@@ -33,7 +30,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-// const API_BASE = "http://localhost:4000/api";
 const API_BASE = import.meta.env.VITE_TRANSIT_API_BASE_URL || "/api";
 const FEATURED_ROUTES = ["300", "MP", "MO", "23", "57"];
 const CALGARY_ATTRIBUTION =
@@ -59,31 +55,11 @@ const TILE_CONFIG = {
 
 const PLAYBACK_DELAY_SECONDS = 75;
 const HISTORY_WINDOW_MINUTES = 4;
-const STOPPED_THRESHOLD_METERS = 20;
-const STALE_THRESHOLD_SECONDS = 120;
 
-function toMillis(value) {
-  return new Date(value).getTime();
-}
-
-function lerp(a, b, t) {
-  return a + (b - a) * t;
-}
-
-function distanceMeters(lat1, lon1, lat2, lon2) {
-  const R = 6371000;
-  const toRad = (d) => (d * Math.PI) / 180;
-
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const p1 = toRad(lat1);
-  const p2 = toRad(lat2);
-
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(p1) * Math.cos(p2) * Math.sin(dLon / 2) ** 2;
-
-  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+function cookieValue(name) {
+  const prefix = `${encodeURIComponent(name)}=`;
+  const part = document.cookie.split("; ").find((value) => value.startsWith(prefix));
+  return part ? decodeURIComponent(part.slice(prefix.length)) : "";
 }
 
 function modeLabel(mode) {
@@ -128,6 +104,18 @@ function createBusIcon(vehicle, selected = false) {
     : vehicle.isStopped
       ? "Stopped"
       : "";
+  const markerLabel = String(vehicle.route_short_name || "Bus")
+    .replace(/[^a-z0-9-]/gi, "")
+    .slice(0, 6) || "Bus";
+  const directionArrow = Number.isFinite(vehicle.heading) && !vehicle.isStopped
+    ? `<div style="
+          height:12px;
+          color:${bg};
+          font-size:13px;
+          line-height:12px;
+          transform:rotate(${vehicle.heading}deg);
+        ">▲</div>`
+    : '<div style="height:12px;"></div>';
 
   return L.divIcon({
     className: "",
@@ -147,6 +135,7 @@ function createBusIcon(vehicle, selected = false) {
               ">${statusText}</div>`
         : `<div style="height:18px;"></div>`
       }
+        ${directionArrow}
         <div style="
           width:${selected ? 36 : 30}px;
           height:${selected ? 36 : 30}px;
@@ -156,100 +145,20 @@ function createBusIcon(vehicle, selected = false) {
           display:flex;
           align-items:center;
           justify-content:center;
-          font-size:${selected ? 18 : 16}px;
+          font-family:Arial,sans-serif;
+          font-size:${selected ? 13 : 12}px;
+          font-weight:800;
           border:${border};
           box-shadow:0 2px 8px rgba(0,0,0,0.25);
           opacity:${opacity};
         ">
-          🚌
+          ${markerLabel}
         </div>
       </div>
     `,
-    iconSize: [selected ? 40 : 34, selected ? 58 : 52],
-    iconAnchor: [selected ? 20 : 17, selected ? 40 : 36],
-    // popupAnchor: [0, -28],
-    // popupAnchor: [0, -46],
+    iconSize: [selected ? 40 : 34, selected ? 70 : 64],
+    iconAnchor: [selected ? 20 : 17, selected ? 48 : 44],
   });
-}
-
-function computePlaybackVehicles(historyRows, playbackTimeMs) {
-  const results = [];
-
-  for (const vehicle of historyRows) {
-    const obs = Array.isArray(vehicle.observations) ? vehicle.observations : [];
-    if (obs.length === 0) continue;
-
-    const sorted = [...obs].sort(
-      (a, b) => toMillis(a.vehicle_timestamp) - toMillis(b.vehicle_timestamp)
-    );
-
-    const latestObservation = sorted[sorted.length - 1];
-    const latestObservationMs = toMillis(latestObservation.vehicle_timestamp);
-
-    if (obs.length === 1) {
-      results.push({
-        ...vehicle,
-        lat: latestObservation.lat,
-        lon: latestObservation.lon,
-        isStopped: true,
-        isStale:
-          latestObservationMs < playbackTimeMs - STALE_THRESHOLD_SECONDS * 1000,
-      });
-      continue;
-    }
-
-    let prev = sorted[0];
-    let next = sorted[sorted.length - 1];
-
-    if (playbackTimeMs <= toMillis(sorted[0].vehicle_timestamp)) {
-      prev = sorted[0];
-      next = sorted[1];
-    } else if (playbackTimeMs >= toMillis(sorted[sorted.length - 1].vehicle_timestamp)) {
-      prev = sorted[sorted.length - 2];
-      next = sorted[sorted.length - 1];
-    } else {
-      for (let i = 0; i < sorted.length - 1; i++) {
-        const a = sorted[i];
-        const b = sorted[i + 1];
-        const ta = toMillis(a.vehicle_timestamp);
-        const tb = toMillis(b.vehicle_timestamp);
-
-        if (playbackTimeMs >= ta && playbackTimeMs <= tb) {
-          prev = a;
-          next = b;
-          break;
-        }
-      }
-    }
-
-    const t0 = toMillis(prev.vehicle_timestamp);
-    const t1 = toMillis(next.vehicle_timestamp);
-
-    let lat = next.lat;
-    let lon = next.lon;
-
-    if (t1 > t0 && playbackTimeMs >= t0 && playbackTimeMs <= t1) {
-      const ratio = (playbackTimeMs - t0) / (t1 - t0);
-      lat = lerp(prev.lat, next.lat, ratio);
-      lon = lerp(prev.lon, next.lon, ratio);
-    }
-
-    const movedMeters = distanceMeters(prev.lat, prev.lon, next.lat, next.lon);
-    const isStopped = movedMeters < STOPPED_THRESHOLD_METERS;
-    const isStale =
-      latestObservationMs < playbackTimeMs - STALE_THRESHOLD_SECONDS * 1000;
-
-    results.push({
-      ...vehicle,
-      lat,
-      lon,
-      isStopped,
-      isStale,
-      latestObservationTimestamp: latestObservation.vehicle_timestamp,
-    });
-  }
-
-  return results;
 }
 
 function FitToVehicles({ vehicles, fitKey }) {
@@ -277,6 +186,40 @@ function FitToVehicles({ vehicles, fitKey }) {
   return null;
 }
 
+function FollowVehicle({ vehicle, enabled }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!enabled || !vehicle) return;
+    map.panTo([vehicle.lat, vehicle.lon], { animate: true, duration: 0.8 });
+  }, [enabled, map, vehicle]);
+
+  return null;
+}
+
+function FocusPoint({ point, zoom = 16 }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!point || !Number.isFinite(point[0]) || !Number.isFinite(point[1])) return;
+    map.flyTo(point, zoom, { animate: true, duration: 0.8 });
+  }, [map, point, zoom]);
+
+  return null;
+}
+
+function arrivalLabel(value) {
+  if (!value) return "Prediction unavailable";
+  const arrival = new Date(value);
+  const minutes = Math.max(0, Math.ceil((arrival.getTime() - Date.now()) / 60000));
+  const time = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Edmonton",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(arrival);
+  return minutes <= 1 ? `Due · ${time}` : `${minutes} min · ${time}`;
+}
+
 function Filters({ mode, setMode }) {
   const modes = [
     { value: "featured", label: "Featured" },
@@ -300,27 +243,30 @@ function Filters({ mode, setMode }) {
   );
 }
 
-function VehicleDrawer({ vehicle, onClose, serviceStatus }) {
-  const [stops, setStops] = useState([]);
+function VehicleDrawer({
+  vehicle,
+  context,
+  selectedTargetStop,
+  onSelectStop,
+  onClose,
+  serviceStatus,
+  following,
+  onToggleFollow,
+}) {
   const [alerts, setAlerts] = useState([]);
+  const stops = Array.isArray(context?.next_stops) ? context.next_stops : [];
 
   useEffect(() => {
     if (!vehicle?.vehicle_id) {
       return;
     }
-
-    Promise.all([
-      fetch(`${API_BASE}/vehicles/${vehicle.vehicle_id}/stops`).then((r) => r.json()),
-      fetch(`${API_BASE}/vehicles/${vehicle.vehicle_id}/alerts`).then((r) => r.json()),
-    ])
-      .then(([stopsData, alertsData]) => {
-        setStops(Array.isArray(stopsData) ? stopsData : []);
-        setAlerts(Array.isArray(alertsData) ? alertsData : []);
+    fetch(`${API_BASE}/vehicles/${vehicle.vehicle_id}/alerts`)
+      .then((response) => {
+        if (!response.ok) throw new Error("Alerts unavailable");
+        return response.json();
       })
-      .catch(() => {
-        setStops([]);
-        setAlerts([]);
-      });
+      .then((alertsData) => setAlerts(Array.isArray(alertsData) ? alertsData : []))
+      .catch(() => setAlerts([]));
   }, [vehicle]);
 
   if (!vehicle) {
@@ -354,12 +300,12 @@ function VehicleDrawer({ vehicle, onClose, serviceStatus }) {
 
       <div className="meta-grid">
         <div>
-          <div className="meta-label">Vehicle</div>
-          <div>{vehicle.vehicle_id}</div>
+          <div className="meta-label">Toward</div>
+          <div>{vehicle.trip_headsign || "Destination unavailable"}</div>
         </div>
         <div>
-          <div className="meta-label">Trip</div>
-          <div>{vehicle.trip_id}</div>
+          <div className="meta-label">Playback</div>
+          <div>About {PLAYBACK_DELAY_SECONDS} seconds delayed</div>
         </div>
         <div>
           <div className="meta-label">Playback status</div>
@@ -377,21 +323,34 @@ function VehicleDrawer({ vehicle, onClose, serviceStatus }) {
         </div>
       </div>
 
+      <button
+        type="button"
+        className={`follow-btn ${following ? "active" : ""}`}
+        aria-pressed={following}
+        onClick={onToggleFollow}
+      >
+        {following ? "Following bus" : "Follow bus on map"}
+      </button>
+
       <h3>Upcoming stops</h3>
       <div className="list">
         {stops.length === 0 && (
           <div className="list-item">No stop predictions currently available.</div>
         )}
-        {stops.slice(0, 8).map((s) => (
-          <div key={`${s.trip_id}-${s.stop_sequence}`} className="list-item">
+        {stops.slice(0, 3).map((s) => (
+          <button
+            type="button"
+            key={`${s.trip_id}-${s.stop_sequence}`}
+            className={`list-item stop-choice ${selectedTargetStop?.stop_id === s.stop_id ? "active" : ""}`}
+            onClick={() => onSelectStop(s)}
+          >
             <div className="title">
-              {s.stop_sequence}. {s.stop_name}
+              {s.stop_name}
             </div>
             <div className="meta">
-              Stop {s.stop_id} · Arrival{" "}
-              {s.arrival_time ? String(s.arrival_time).replace("T", " ") : "-"}
+              Stop {s.stop_id} · {arrivalLabel(s.arrival_time)}
             </div>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -406,11 +365,109 @@ function VehicleDrawer({ vehicle, onClose, serviceStatus }) {
               {a.route_short_name}
               {a.stop_name ? ` · ${a.stop_name}` : ""}
             </div>
-            <div
-              className="alert-html"
-              dangerouslySetInnerHTML={{ __html: a.description_html || "" }}
-            />
+            {a.header_text && <div className="title">{a.header_text}</div>}
+            <div className="alert-text">{alertText(a.description_html)}</div>
           </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function StopDrawer({
+  stop,
+  onClose,
+  onTrackArrival,
+  authenticated,
+  favorite,
+  onToggleFavorite,
+}) {
+  const [arrivals, setArrivals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [favoriteError, setFavoriteError] = useState("");
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(
+          `${API_BASE}/stops/${encodeURIComponent(stop.stop_id)}/arrivals`,
+        );
+        if (!response.ok) throw new Error("Arrivals unavailable");
+        const rows = await response.json();
+        if (!cancelled) setArrivals(Array.isArray(rows) ? rows : []);
+      } catch {
+        if (!cancelled) setArrivals([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    const interval = window.setInterval(load, 30_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [stop.stop_id]);
+
+  return (
+    <div className="drawer">
+      <div className="drawer-header">
+        <div>
+          <div className="badge stop">Stop {stop.stop_code || stop.stop_id}</div>
+          <h2>{stop.stop_name}</h2>
+          <div className="subtle">Predicted arrivals in the next 15 minutes</div>
+        </div>
+        <button className="close-btn" onClick={onClose}>×</button>
+      </div>
+      {authenticated ? (
+        <button
+          type="button"
+          className={`favorite-btn ${favorite ? "active" : ""}`}
+          disabled={favoriteLoading}
+          onClick={async () => {
+            setFavoriteLoading(true);
+            setFavoriteError("");
+            try {
+              await onToggleFavorite(stop.stop_id);
+            } catch {
+              setFavoriteError("Could not update this saved stop. Please try again.");
+            } finally {
+              setFavoriteLoading(false);
+            }
+          }}
+        >
+          {favoriteLoading ? "Saving…" : favorite ? "★ Saved stop" : "☆ Save stop"}
+        </button>
+      ) : (
+        <div className="favorite-note">
+          <a href="/account">Sign in</a> to save this stop. Nearby location is not stored.
+        </div>
+      )}
+      {favoriteError && <div className="favorite-error">{favoriteError}</div>}
+      <div className="list">
+        {loading && <div className="list-item">Loading arrivals…</div>}
+        {!loading && arrivals.length === 0 && (
+          <div className="list-item">No live predictions are currently available.</div>
+        )}
+        {arrivals.map((arrival) => (
+          <button
+            type="button"
+            key={`${arrival.trip_id}-${arrival.stop_sequence}`}
+            className="list-item arrival-choice"
+            onClick={() => onTrackArrival(arrival)}
+          >
+            <span className="arrival-route">{arrival.route_short_name || "Bus"}</span>
+            <span>
+              <strong>{arrivalLabel(arrival.arrival_time)}</strong>
+              <small>{arrival.trip_headsign || arrival.route_long_name}</small>
+            </span>
+            <span className="arrival-action">
+              {arrival.vehicle_id ? "Track" : "Route"}
+            </span>
+          </button>
         ))}
       </div>
     </div>
@@ -430,9 +487,76 @@ function App() {
   const [latestDataTimestampMs, setLatestDataTimestampMs] = useState(null);
   const [historyFetchedAtMs, setHistoryFetchedAtMs] = useState(null);
   const [selectedContext, setSelectedContext] = useState(null);
+  const [selectedTargetStop, setSelectedTargetStop] = useState(null);
+  const [selectedPlaceStop, setSelectedPlaceStop] = useState(null);
+  const [activeRoute, setActiveRoute] = useState(null);
   const [serviceStatus, setServiceStatus] = useState("loading");
   const [baseMap, setBaseMap] = useState("dark");
-  // const [density, setDensity] = useState("all");
+  const [following, setFollowing] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
+  const [authenticated, setAuthenticated] = useState(false);
+  const [favoriteStops, setFavoriteStops] = useState(() => new Set());
+  const playbackTimeRef = useRef(null);
+  const pendingVehicleRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadAccount = async () => {
+      try {
+        const sessionResponse = await fetch("/api/auth/session", { credentials: "same-origin" });
+        if (!sessionResponse.ok) throw new Error("Session unavailable");
+        const session = await sessionResponse.json();
+        if (cancelled) return;
+        setAuthenticated(session.authenticated === true);
+        if (session.authenticated === true) {
+          try {
+            const favoritesResponse = await fetch("/api/auth/favorite-stops", {
+              credentials: "same-origin",
+            });
+            if (!favoritesResponse.ok) throw new Error("Favorites unavailable");
+            const payload = await favoritesResponse.json();
+            if (!cancelled) setFavoriteStops(new Set(payload.stop_ids || []));
+          } catch {
+            if (!cancelled) setFavoriteStops(new Set());
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setAuthenticated(false);
+          setFavoriteStops(new Set());
+        }
+      }
+    };
+    loadAccount();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const toggleFavoriteStop = async (stopId) => {
+    const isFavorite = favoriteStops.has(stopId);
+    const response = await fetch(
+      isFavorite
+        ? `/api/auth/favorite-stops/${encodeURIComponent(stopId)}`
+        : "/api/auth/favorite-stops",
+      {
+        method: isFavorite ? "DELETE" : "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": cookieValue("portfolio_auth_csrf"),
+        },
+        ...(isFavorite ? {} : { body: JSON.stringify({ stop_id: stopId }) }),
+      },
+    );
+    if (!response.ok) throw new Error("Favorite update failed");
+    setFavoriteStops((current) => {
+      const next = new Set(current);
+      if (isFavorite) next.delete(stopId);
+      else next.add(stopId);
+      return next;
+    });
+  };
 
 
   useEffect(() => {
@@ -461,14 +585,18 @@ function App() {
 
       const [historyResult, pathResult, healthResult] = await Promise.allSettled([
         fetchJson(
-          `${API_BASE}/vehicles/history?mode=${mode}&window_minutes=${HISTORY_WINDOW_MINUTES}`
+          `${API_BASE}/vehicles/history?mode=${activeRoute ? "all" : mode}`
+          + `&window_minutes=${HISTORY_WINDOW_MINUTES}`
+          + (activeRoute ? `&routes=${encodeURIComponent(activeRoute)}` : "")
         ),
         fetchJson(
           selectedVehicle?.route_short_name
             ? `${API_BASE}/routes/paths?mode=${mode}&routes=${encodeURIComponent(
               selectedVehicle.route_short_name
             )}`
-            : `${API_BASE}/routes/paths?mode=featured`
+            : activeRoute
+              ? `${API_BASE}/routes/paths?mode=all&routes=${encodeURIComponent(activeRoute)}`
+              : `${API_BASE}/routes/paths?mode=${mode}`
         ),
         fetchJson(`${API_BASE}/health`),
       ]);
@@ -522,7 +650,7 @@ function App() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [mode, selectedVehicle?.route_short_name]);
+  }, [activeRoute, mode, selectedVehicle?.route_short_name]);
 
   useEffect(() => {
     if (!selectedVehicle?.vehicle_id) {
@@ -534,9 +662,11 @@ function App() {
     const loadContext = async () => {
       try {
         const res = await fetch(`${API_BASE}/vehicles/${selectedVehicle.vehicle_id}/context`);
+        if (!res.ok) throw new Error(`Vehicle context failed with HTTP ${res.status}`);
         const data = await res.json();
         if (!cancelled) {
           setSelectedContext(data);
+          setSelectedTargetStop(Array.isArray(data.next_stops) ? data.next_stops[0] || null : null);
         }
       } catch {
         if (!cancelled) {
@@ -550,7 +680,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [selectedVehicle?.vehicle_id]);
+  }, [selectedVehicle?.vehicle_id, selectedVehicle?.trip_id]);
 
   useEffect(() => {
     const tick = () => {
@@ -560,24 +690,36 @@ function App() {
         return;
       }
 
-      const elapsedSinceFetchMs = Date.now() - historyFetchedAtMs;
-
-      const uncappedPlaybackTimeMs =
-        latestDataTimestampMs -
-        PLAYBACK_DELAY_SECONDS * 1000 +
-        elapsedSinceFetchMs;
-
-      const maxPlaybackTimeMs = latestDataTimestampMs - 5000;
-
-      const playbackTimeMs = Math.min(uncappedPlaybackTimeMs, maxPlaybackTimeMs);
+      const playbackTimeMs = monotonicPlaybackTime({
+        previousTimeMs: playbackTimeRef.current,
+        latestDataTimeMs: latestDataTimestampMs,
+        fetchedAtMs: historyFetchedAtMs,
+        nowMs: Date.now(),
+        delaySeconds: PLAYBACK_DELAY_SECONDS,
+      });
+      if (!Number.isFinite(playbackTimeMs)) return;
+      playbackTimeRef.current = playbackTimeMs;
 
       const playbackVehicles = computePlaybackVehicles(vehicleHistory, playbackTimeMs);
       setVehicles(playbackVehicles);
 
       setSelectedVehicle((current) => {
+        const pending = pendingVehicleRef.current;
+        if (pending) {
+          const requested = playbackVehicles.find(
+            (vehicle) => vehicle.vehicle_id === pending.vehicle_id
+              && (!pending.trip_id || vehicle.trip_id === pending.trip_id),
+          );
+          if (requested) {
+            pendingVehicleRef.current = null;
+            return requested;
+          }
+          return current;
+        }
         if (!current) return current;
         const updatedSelected = playbackVehicles.find(
-          (v) => v.vehicle_id === current.vehicle_id
+          (vehicle) => vehicle.vehicle_id === current.vehicle_id
+            && vehicle.trip_id === current.trip_id
         );
         return updatedSelected || null;
       });
@@ -594,6 +736,11 @@ function App() {
   ]);
 
   const center = useMemo(() => [51.0447, -114.0719], []);
+  const selectedPlacePoint = useMemo(() => {
+    if (!selectedPlaceStop) return null;
+    return [Number(selectedPlaceStop.stop_lat), Number(selectedPlaceStop.stop_lon)];
+  }, [selectedPlaceStop]);
+  const focusPoint = selectedPlacePoint || userLocation;
   const hasVehicleData = vehicles.length > 0;
   const countLabel = serviceStatus === "outside_operating_hours"
     ? "Outside live hours"
@@ -611,7 +758,9 @@ function App() {
         <div className="topbar-text">
           <h1>Calgary Transit Live</h1>
           <div className="subtle">
-            Delayed playback ~75s · tap a bus to highlight its route and view stops/alerts
+            {activeRoute
+              ? `Tracking active route ${activeRoute} · choose a bus or stop`
+              : "Delayed playback ~75s · search a route or stop, or tap a bus"}
           </div>
         </div>
         <div className="status-group">
@@ -621,7 +770,16 @@ function App() {
       </div>
 
       <div className="filter-row">
-        <Filters mode={mode} setMode={setMode} />
+        <Filters
+          mode={mode}
+          setMode={(nextMode) => {
+            playbackTimeRef.current = null;
+            setFollowing(false);
+            setActiveRoute(null);
+            setSelectedPlaceStop(null);
+            setMode(nextMode);
+          }}
+        />
       </div>
 
       <div className="basemap-row">
@@ -642,6 +800,39 @@ function App() {
 
 
       <div className="content">
+        <TransitSearch
+          apiBase={API_BASE}
+          activeRoute={activeRoute}
+          onClearRoute={() => {
+            playbackTimeRef.current = null;
+            pendingVehicleRef.current = null;
+            setActiveRoute(null);
+            setSelectedContext(null);
+            setSelectedTargetStop(null);
+            setSelectedVehicle(null);
+          }}
+          onSelectRoute={(route) => {
+            playbackTimeRef.current = null;
+            pendingVehicleRef.current = null;
+            setFollowing(false);
+            setSelectedPlaceStop(null);
+            setSelectedContext(null);
+            setSelectedTargetStop(null);
+            setSelectedVehicle(null);
+            setActiveRoute(route.route_short_name);
+            setMode("all");
+          }}
+          onSelectStop={(stop) => {
+            pendingVehicleRef.current = null;
+            setFollowing(false);
+            setSelectedContext(null);
+            setSelectedTargetStop(null);
+            setSelectedVehicle(null);
+            setSelectedPlaceStop(stop);
+            setActiveRoute(null);
+          }}
+          onLocationResolved={setUserLocation}
+        />
         <div className="map-wrap">
           <MapContainer center={center} zoom={11} className="map">
 
@@ -653,6 +844,34 @@ function App() {
             />
 
             <FitToVehicles vehicles={vehicles} fitKey={mode} />
+            <FollowVehicle vehicle={selectedVehicle} enabled={following} />
+            <FocusPoint point={focusPoint} />
+
+            {userLocation && (
+              <CircleMarker
+                center={userLocation}
+                radius={8}
+                pathOptions={{
+                  color: "#ffffff",
+                  fillColor: "#2563eb",
+                  fillOpacity: 1,
+                  weight: 3,
+                }}
+              />
+            )}
+
+            {selectedPlacePoint && (
+              <CircleMarker
+                center={selectedPlacePoint}
+                radius={10}
+                pathOptions={{
+                  color: "#111827",
+                  fillColor: "#f59e0b",
+                  fillOpacity: 0.95,
+                  weight: 3,
+                }}
+              />
+            )}
 
 
             {routePaths.map((route) => (
@@ -667,39 +886,94 @@ function App() {
               <SelectedCorridor
                 context={selectedContext}
                 vehicle={selectedVehicle}
+                selectedStop={selectedTargetStop}
               />
             )}
 
             {vehicles.map((v) => (
               <Marker
-                key={v.vehicle_id}
+                key={`${v.vehicle_id}-${v.trip_id}`}
                 position={[v.lat, v.lon]}
-                icon={createBusIcon(v, selectedVehicle?.vehicle_id === v.vehicle_id)}
+                icon={createBusIcon(
+                  v,
+                  selectedVehicle?.vehicle_id === v.vehicle_id
+                    && selectedVehicle?.trip_id === v.trip_id,
+                )}
                 eventHandlers={{
                   click: () => {
+                    pendingVehicleRef.current = null;
                     setSelectedContext(null);
+                    setSelectedTargetStop(null);
+                    setSelectedPlaceStop(null);
+                    setFollowing(false);
                     setSelectedVehicle(v);
                   },
                 }}
-              >
-
-              </Marker>
+              />
             ))}
           </MapContainer>
         </div>
 
 
-        <div className={`drawer-wrap ${selectedVehicle ? "has-selection" : ""}`}>
-          <VehicleDrawer
-            key={selectedVehicle?.vehicle_id || "no-selection"}
-            vehicle={selectedVehicle}
-            serviceStatus={serviceStatus}
-            onClose={() => {
-              setSelectedContext(null);
-              setSelectedVehicle(null);
-            }}
-          />
+        <div className={`drawer-wrap ${selectedVehicle || selectedPlaceStop ? "has-selection" : ""}`}>
+          {selectedPlaceStop ? (
+            <StopDrawer
+              key={selectedPlaceStop.stop_id}
+              stop={selectedPlaceStop}
+              onClose={() => setSelectedPlaceStop(null)}
+              onTrackArrival={(arrival) => {
+                playbackTimeRef.current = null;
+                pendingVehicleRef.current = arrival.vehicle_id
+                  ? { vehicle_id: arrival.vehicle_id, trip_id: arrival.trip_id }
+                  : null;
+                setSelectedPlaceStop(null);
+                setSelectedContext(null);
+                setSelectedTargetStop(null);
+                setSelectedVehicle(null);
+                setActiveRoute(arrival.route_short_name);
+                setMode("all");
+              }}
+              authenticated={authenticated}
+              favorite={favoriteStops.has(selectedPlaceStop.stop_id)}
+              onToggleFavorite={toggleFavoriteStop}
+            />
+          ) : (
+            <VehicleDrawer
+              key={selectedVehicle ? `${selectedVehicle.vehicle_id}-${selectedVehicle.trip_id}` : "no-selection"}
+              vehicle={selectedVehicle}
+              context={selectedContext}
+              selectedTargetStop={selectedTargetStop}
+              onSelectStop={setSelectedTargetStop}
+              serviceStatus={serviceStatus}
+              following={following}
+              onToggleFollow={() => setFollowing((value) => !value)}
+              onClose={() => {
+                pendingVehicleRef.current = null;
+                setFollowing(false);
+                setSelectedContext(null);
+                setSelectedTargetStop(null);
+                setSelectedVehicle(null);
+              }}
+            />
+          )}
         </div>
+      </div>
+      <div className="data-source-note" role="note">
+        <span>
+          Live positions and arrival predictions come from the City of Calgary and may be
+          delayed, incomplete, or unavailable. Bizqlab displays the latest usable source data.
+        </span>
+        <span className="data-source-links">
+          <a
+            href="https://data.calgary.ca/stories/s/Open-Calgary-Terms-of-Use/u45n-7awa/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            City of Calgary Open Government Licence
+          </a>
+          <span aria-hidden="true">·</span>
+          <span>Map © OpenStreetMap/CARTO</span>
+        </span>
       </div>
     </div>
   );

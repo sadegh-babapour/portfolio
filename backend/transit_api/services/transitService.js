@@ -163,9 +163,16 @@ async function getRoutePaths(pool, mode, routesParam) {
   return Array.from(grouped.values());
 }
 
-async function getVehicleHistory(pool, mode, density, windowMinutes) {
+async function getVehicleHistory(pool, mode, density, windowMinutes, routesParam) {
   const params = [];
-  const where = buildVehicleWhere(mode, params);
+  let where = buildVehicleWhere(mode, params);
+  const requestedRoutes = typeof routesParam === "string"
+    ? routesParam.split(",").map((route) => route.trim()).filter(Boolean).slice(0, 10)
+    : [];
+  if (requestedRoutes.length > 0) {
+    params.push(requestedRoutes);
+    where += ` and route_short_name = any($${params.length})`;
+  }
 
   const perRouteLimit =
     density === "1" ? 1 :
@@ -235,6 +242,7 @@ async function getVehicleHistory(pool, mode, density, windowMinutes) {
       from transit.vehicle_positions_raw vp
       join eligible_vehicles ev
         on ev.vehicle_id = vp.vehicle_id
+       and ev.trip_id = vp.trip_id
       where vp.vehicle_timestamp >= now() - make_interval(mins => $${params.length})
     )
     select
@@ -251,6 +259,7 @@ async function getVehicleHistory(pool, mode, density, windowMinutes) {
     from eligible_vehicles ev
     join recent_points rp
       on rp.vehicle_id = ev.vehicle_id
+     and rp.trip_id = ev.trip_id
     order by ev.vehicle_id, rp.vehicle_timestamp
   `;
 
@@ -330,30 +339,6 @@ async function getVehicleContext(pool, vehicleId) {
       order by stop_sequence
       limit 3
     ),
-    anchor_stop as (
-      select min(stop_sequence) as next_stop_sequence
-      from next_stops
-    ),
-    previous_static_stops as (
-      select
-        st.trip_id,
-        st.stop_sequence,
-        st.stop_id,
-        s.stop_name,
-        s.stop_lat,
-        s.stop_lon,
-        st.arrival_time,
-        st.departure_time
-      from transit.stop_times st
-      left join transit.stops s
-        on s.stop_id = st.stop_id
-      join selected_trip trip
-        on trip.trip_id = st.trip_id
-      join anchor_stop a
-        on st.stop_sequence < a.next_stop_sequence
-      order by st.stop_sequence desc
-      limit 3
-    ),
     shape_points as (
       select
         sh.shape_id,
@@ -370,14 +355,6 @@ async function getVehicleContext(pool, vehicleId) {
         select row_to_json(st)
         from selected_trip st
         limit 1
-      ),
-      'previous_stops', (
-        select coalesce(json_agg(row_to_json(ps) order by ps.stop_sequence), '[]'::json)
-        from (
-          select *
-          from previous_static_stops
-          order by stop_sequence
-        ) ps
       ),
       'next_stops', (
         select coalesce(json_agg(row_to_json(ns) order by ns.stop_sequence), '[]'::json)
@@ -436,6 +413,7 @@ async function getVehicleAlerts(pool, vehicleId) {
       a.feed_entity_id,
       a.active_start,
       a.active_end,
+      a.header_text,
       a.route_short_name,
       a.route_long_name,
       a.stop_id,
@@ -451,6 +429,115 @@ async function getVehicleAlerts(pool, vehicleId) {
   return result.rows;
 }
 
+async function searchRoutes(pool, query) {
+  const normalized = String(query || "").trim().slice(0, 60);
+  if (!normalized) return [];
+  const result = await pool.query(
+    `
+    select
+      route_short_name,
+      max(route_long_name) as route_long_name,
+      max(route_mode) as route_mode,
+      count(distinct vehicle_id)::integer as active_vehicle_count,
+      array_remove(array_agg(distinct nullif(trim(trip_headsign), '')), null) as headsigns
+    from transit.v_vehicle_dashboard
+    where vehicle_status = 'in_service'
+      and (
+        route_short_name ilike $1
+        or route_long_name ilike $1
+        or trip_headsign ilike $1
+      )
+    group by route_short_name
+    order by
+      case when upper(route_short_name) = upper($2) then 0 else 1 end,
+      route_short_name
+    limit 12
+    `,
+    [`%${normalized}%`, normalized],
+  );
+  return result.rows;
+}
+
+async function searchStops(pool, query) {
+  const normalized = String(query || "").trim().slice(0, 60);
+  if (!normalized) return [];
+  const result = await pool.query(
+    `
+    select stop_id, stop_code, stop_name, stop_lat, stop_lon
+    from transit.stops
+    where stop_code ilike $1 or stop_name ilike $1
+    order by
+      case when upper(coalesce(stop_code, '')) = upper($2) then 0 else 1 end,
+      stop_name,
+      stop_code nulls last
+    limit 12
+    `,
+    [`%${normalized}%`, normalized],
+  );
+  return result.rows;
+}
+
+async function getStopArrivals(pool, stopId) {
+  const result = await pool.query(
+    `
+    select
+      stu.trip_id,
+      stu.stop_sequence,
+      stu.stop_id,
+      s.stop_code,
+      s.stop_name,
+      stu.arrival_time,
+      stu.departure_time,
+      coalesce(r.route_short_name, tu.route_id) as route_short_name,
+      r.route_long_name,
+      t.trip_headsign,
+      vd.vehicle_id
+    from transit.trip_update_stop_times_current stu
+    join transit.trip_updates_current tu on tu.trip_id = stu.trip_id
+    left join transit.trips t on t.trip_id = stu.trip_id
+    left join transit.routes r on r.route_id = t.route_id
+    left join transit.stops s on s.stop_id = stu.stop_id
+    left join transit.v_vehicle_dashboard vd
+      on vd.trip_id = stu.trip_id and vd.vehicle_status = 'in_service'
+    where stu.stop_id = $1
+      and stu.arrival_time >= now() - interval '30 seconds'
+      and stu.arrival_time <= now() + interval '15 minutes'
+    order by stu.arrival_time, route_short_name
+    limit 24
+    `,
+    [stopId],
+  );
+  return result.rows;
+}
+
+async function getNearbyStops(pool, lat, lon, limit = 8) {
+  const result = await pool.query(
+    `
+    select
+      stop_id,
+      stop_code,
+      stop_name,
+      stop_lat,
+      stop_lon,
+      round((
+        111045 * sqrt(
+          power(stop_lat - $1, 2)
+          + power((stop_lon - $2) * cos(radians($1)), 2)
+        )
+      )::numeric, 0)::integer as distance_meters
+    from transit.stops
+    where stop_lat is not null
+      and stop_lon is not null
+      and stop_lat between $1 - 0.12 and $1 + 0.12
+      and stop_lon between $2 - 0.18 and $2 + 0.18
+    order by distance_meters, stop_name
+    limit $3
+    `,
+    [lat, lon, limit],
+  );
+  return result.rows;
+}
+
 module.exports = {
   getTransitHealth,
   getVehicles,
@@ -459,4 +546,8 @@ module.exports = {
   getVehicleContext,
   getVehicleStops,
   getVehicleAlerts,
+  searchRoutes,
+  searchStops,
+  getStopArrivals,
+  getNearbyStops,
 };

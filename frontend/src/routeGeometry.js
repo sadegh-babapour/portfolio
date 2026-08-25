@@ -91,6 +91,23 @@ export function resolveCorridorStop(stops, requestedStop) {
 }
 
 
+export function upcomingStopById(stops, requestedStop) {
+  if (!Array.isArray(stops) || !requestedStop?.stop_id) return null;
+  return stops.find((stop) => stop.stop_id === requestedStop.stop_id) || null;
+}
+
+
+export function corridorViewportPoints(corridor, vehicle, stop) {
+  const vehiclePoint = [Number(vehicle?.lat), Number(vehicle?.lon)];
+  const stopPoint = [Number(stop?.stop_lat), Number(stop?.stop_lon)];
+  return [
+    ...(Array.isArray(corridor) ? corridor : []),
+    vehiclePoint,
+    stopPoint,
+  ].filter(validCoordinate);
+}
+
+
 export function stopsThroughDestination(stops, destinationStop) {
   if (!Array.isArray(stops) || stops.length === 0) return [];
   if (!destinationStop?.stop_id) return stops.slice(0, 3);

@@ -7,6 +7,7 @@ import {
   TileLayer,
   Tooltip,
   useMap,
+  useMapEvents,
 } from "react-leaflet";
 
 import L from "leaflet";
@@ -18,7 +19,8 @@ import RouteLine from "./RouteLine";
 import SelectedCorridor from "./SelectedCorridor";
 import PortfolioNav from "./PortfolioNav";
 import TransitSearch from "./TransitSearch";
-import { defaultCorridorStop, resolveCorridorStop } from "./routeGeometry";
+import { defaultCorridorStop, upcomingStopById } from "./routeGeometry";
+import { isShortBlankMapTap } from "./mapInteraction";
 import { routeColor } from "./routeStyle";
 import {
   computePlaybackVehicles,
@@ -206,6 +208,70 @@ function FitNearbyStops({ location, stops }) {
   return null;
 }
 
+function MapSelectionGesture({ enabled, onClear }) {
+  const map = useMap();
+  const gestureRef = useRef(null);
+
+  useEffect(() => {
+    const container = map.getContainer();
+    const pointerDown = (event) => {
+      gestureRef.current = {
+        pointerId: event.pointerId,
+        startedAt: performance.now(),
+        startX: event.clientX,
+        startY: event.clientY,
+        durationMs: null,
+        moved: false,
+      };
+    };
+    const pointerMove = (event) => {
+      const gesture = gestureRef.current;
+      if (!gesture || gesture.pointerId !== event.pointerId) return;
+      if (Math.hypot(event.clientX - gesture.startX, event.clientY - gesture.startY) > 8) {
+        gesture.moved = true;
+      }
+    };
+    const pointerUp = (event) => {
+      const gesture = gestureRef.current;
+      if (!gesture || gesture.pointerId !== event.pointerId) return;
+      gesture.durationMs = performance.now() - gesture.startedAt;
+    };
+    const pointerCancel = () => {
+      gestureRef.current = null;
+    };
+
+    container.addEventListener("pointerdown", pointerDown, true);
+    container.addEventListener("pointermove", pointerMove, true);
+    container.addEventListener("pointerup", pointerUp, true);
+    container.addEventListener("pointercancel", pointerCancel, true);
+    return () => {
+      container.removeEventListener("pointerdown", pointerDown, true);
+      container.removeEventListener("pointermove", pointerMove, true);
+      container.removeEventListener("pointerup", pointerUp, true);
+      container.removeEventListener("pointercancel", pointerCancel, true);
+    };
+  }, [map]);
+
+  useMapEvents({
+    click(event) {
+      const gesture = gestureRef.current;
+      const target = event.originalEvent?.target;
+      const interactiveTarget = target instanceof Element
+        && Boolean(target.closest(".leaflet-interactive, .leaflet-marker-icon, .leaflet-control"));
+      if (enabled && isShortBlankMapTap({
+        durationMs: gesture?.durationMs,
+        moved: gesture?.moved,
+        interactiveTarget,
+      })) {
+        onClear();
+      }
+      gestureRef.current = null;
+    },
+  });
+
+  return null;
+}
+
 function arrivalLabel(value) {
   if (!value) return "Prediction unavailable";
   const arrival = new Date(value);
@@ -218,7 +284,7 @@ function arrivalLabel(value) {
   return minutes <= 1 ? `Due · ${time}` : `${minutes} min · ${time}`;
 }
 
-function Filters({ mode, setMode }) {
+function Filters({ mode, setMode, disabled = false }) {
   const modes = [
     { value: "featured", label: "Featured" },
     { value: "brt", label: "BRT / MAX" },
@@ -232,6 +298,7 @@ function Filters({ mode, setMode }) {
         <button
           key={m.value}
           className={mode === m.value ? "active" : ""}
+          disabled={disabled}
           onClick={() => setMode(m.value)}
         >
           {m.label}
@@ -251,6 +318,7 @@ function VehicleDrawer({
   serviceStatus,
   following,
   onToggleFollow,
+  trackingLocked,
 }) {
   const [alerts, setAlerts] = useState([]);
   const stops = Array.isArray(context?.next_stops) ? context.next_stops : [];
@@ -266,7 +334,7 @@ function VehicleDrawer({
       })
       .then((alertsData) => setAlerts(Array.isArray(alertsData) ? alertsData : []))
       .catch(() => setAlerts([]));
-  }, [vehicle]);
+  }, [vehicle?.vehicle_id]);
 
   if (!vehicle) {
     const emptyMessage = serviceStatus === "outside_operating_hours"
@@ -322,18 +390,24 @@ function VehicleDrawer({
         </div>
       </div>
 
-      <button
-        type="button"
-        className={`follow-btn ${following ? "active" : ""}`}
-        aria-pressed={following}
-        onClick={onToggleFollow}
-      >
-        {following ? "Following bus" : "Follow bus on map"}
-      </button>
+      {trackingLocked ? (
+        <div className="tracking-lock-note">
+          Tracking is locked. Zoom remains available; dragging returns to this bus and stop.
+        </div>
+      ) : (
+        <button
+          type="button"
+          className={`follow-btn ${following ? "active" : ""}`}
+          aria-pressed={following}
+          onClick={onToggleFollow}
+        >
+          {following ? "Following bus" : "Follow bus on map"}
+        </button>
+      )}
 
       {trackedDestinationStop && (
         <div className="tracking-target" role="status">
-          <strong>Tracking this bus to your stop</strong>
+          <strong>{selectedTargetStop ? "Tracking this bus to your stop" : "Tracking destination is no longer upcoming"}</strong>
           <span>
             {trackedDestinationStop.stop_name}
             {trackedDestinationStop.stop_code
@@ -353,6 +427,7 @@ function VehicleDrawer({
             type="button"
             key={`${s.trip_id}-${s.stop_sequence}`}
             className={`list-item stop-choice ${selectedTargetStop?.stop_id === s.stop_id ? "active" : ""}`}
+            disabled={trackingLocked}
             onClick={() => onSelectStop(s)}
           >
             <div className="title">
@@ -512,6 +587,9 @@ function App() {
   const playbackTimeRef = useRef(null);
   const pendingVehicleRef = useRef(null);
   const drawerRef = useRef(null);
+  const trackingRequested = Boolean(trackedDestinationStop);
+  const trackingLocked = trackingRequested && Boolean(selectedVehicle);
+  const hasDrawerSelection = Boolean(selectedVehicle || selectedPlaceStop);
 
   const clearSelection = useCallback(() => {
     pendingVehicleRef.current = null;
@@ -525,20 +603,28 @@ function App() {
 
   useEffect(() => {
     if (!selectedVehicle && !selectedPlaceStop) return undefined;
-    const dismissOutside = (event) => {
-      if (drawerRef.current?.contains(event.target)) return;
-      clearSelection();
-    };
     const dismissEscape = (event) => {
       if (event.key === "Escape") clearSelection();
     };
-    document.addEventListener("pointerdown", dismissOutside);
     document.addEventListener("keydown", dismissEscape);
     return () => {
-      document.removeEventListener("pointerdown", dismissOutside);
       document.removeEventListener("keydown", dismissEscape);
     };
   }, [clearSelection, selectedPlaceStop, selectedVehicle]);
+
+  useEffect(() => {
+    if (!hasDrawerSelection || window.innerWidth > 1050) return;
+    const frame = window.requestAnimationFrame(() => {
+      const drawer = drawerRef.current;
+      if (!drawer) return;
+      const drawerTop = drawer.getBoundingClientRect().top + window.scrollY;
+      const revealTop = Math.max(0, drawerTop - window.innerHeight + 112);
+      if (revealTop > window.scrollY) {
+        window.scrollTo({ top: revealTop, behavior: "smooth" });
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [hasDrawerSelection, selectedPlaceStop?.stop_id, selectedVehicle?.trip_id, selectedVehicle?.vehicle_id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -710,7 +796,7 @@ function App() {
           setSelectedContext(data);
           setSelectedTargetStop(
             trackedDestinationStop
-              ? resolveCorridorStop(nextStops, trackedDestinationStop)
+              ? upcomingStopById(nextStops, trackedDestinationStop)
               : defaultCorridorStop(nextStops),
           );
         }
@@ -722,9 +808,11 @@ function App() {
     };
 
     loadContext();
+    const interval = window.setInterval(loadContext, 15_000);
 
     return () => {
       cancelled = true;
+      window.clearInterval(interval);
     };
   }, [
     selectedVehicle?.vehicle_id,
@@ -736,7 +824,7 @@ function App() {
     const tick = () => {
       if (!vehicleHistory.length || !latestDataTimestampMs || !historyFetchedAtMs) {
         setVehicles([]);
-        setSelectedVehicle((current) => (current ? null : current));
+        setSelectedVehicle((current) => (current && trackedDestinationStop ? current : null));
         return;
       }
 
@@ -775,7 +863,7 @@ function App() {
           (vehicle) => vehicle.vehicle_id === current.vehicle_id
             && vehicle.trip_id === current.trip_id
         );
-        return updatedSelected || null;
+        return updatedSelected || (trackedDestinationStop ? current : null);
       });
     };
 
@@ -787,6 +875,7 @@ function App() {
     vehicleHistory,
     latestDataTimestampMs,
     historyFetchedAtMs,
+    trackedDestinationStop,
   ]);
 
   const center = useMemo(() => [51.0447, -114.0719], []);
@@ -795,6 +884,11 @@ function App() {
     return [Number(selectedPlaceStop.stop_lat), Number(selectedPlaceStop.stop_lon)];
   }, [selectedPlaceStop]);
   const focusPoint = selectedPlacePoint || (nearbyStops.length ? null : userLocation);
+  const visibleVehicles = trackingLocked ? [selectedVehicle] : vehicles;
+  const visibleRoutePaths = trackingLocked
+    ? routePaths.filter((route) => route.route_short_name === selectedVehicle.route_short_name)
+    : routePaths;
+  const beaconColor = baseMap === "dark" ? "#f8fafc" : "#111827";
   const hasVehicleData = vehicles.length > 0;
   const countLabel = serviceStatus === "outside_operating_hours"
     ? "Outside live hours"
@@ -826,6 +920,7 @@ function App() {
       <div className="filter-row">
         <Filters
           mode={mode}
+          disabled={trackingRequested}
           setMode={(nextMode) => {
             playbackTimeRef.current = null;
             clearSelection();
@@ -853,6 +948,7 @@ function App() {
       <div className="transit-search-bar">
         <TransitSearch
           apiBase={API_BASE}
+          disabled={trackingRequested}
           activeRoute={activeRoute}
           onClearRoute={() => {
             playbackTimeRef.current = null;
@@ -879,6 +975,11 @@ function App() {
           nearbyCount={nearbyStops.length}
           onClearNearby={() => setNearbyStops([])}
         />
+        {trackingRequested && (
+          <div className="tracking-search-lock" role="status">
+            Close the tracked bus to search or change route filters.
+          </div>
+        )}
       </div>
 
       <div className="transit-workspace">
@@ -894,21 +995,38 @@ function App() {
             />
 
             <FitToVehicles vehicles={vehicles} fitKey={`${mode}-${activeRoute || "all"}`} />
-            <FollowVehicle vehicle={selectedVehicle} enabled={following} />
+            <FollowVehicle vehicle={selectedVehicle} enabled={following && !trackingLocked} />
             <FocusPoint point={focusPoint} />
-            <FitNearbyStops location={userLocation} stops={nearbyStops} />
+            <FitNearbyStops location={userLocation} stops={trackingRequested ? [] : nearbyStops} />
+            <MapSelectionGesture
+              enabled={Boolean(selectedVehicle) && !trackingRequested}
+              onClear={clearSelection}
+            />
 
             {userLocation && (
               <Pane name="user-location" style={{ zIndex: 760 }}>
                 <CircleMarker
                   center={userLocation}
-                  radius={11}
+                  radius={18}
+                  interactive={false}
+                  className="user-location-pulse"
+                  pathOptions={{
+                    color: beaconColor,
+                    fillColor: beaconColor,
+                    fillOpacity: 0.12,
+                    opacity: 0.42,
+                    weight: 2,
+                  }}
+                />
+                <CircleMarker
+                  center={userLocation}
+                  radius={7}
                   interactive={false}
                   pathOptions={{
-                    color: "#ffffff",
-                    fillColor: "#0ea5e9",
-                    fillOpacity: 1,
-                    weight: 4,
+                    color: baseMap === "dark" ? "#111827" : "#ffffff",
+                    fillColor: beaconColor,
+                    fillOpacity: 0.94,
+                    weight: 3,
                   }}
                 />
               </Pane>
@@ -927,7 +1045,7 @@ function App() {
               />
             )}
 
-            {nearbyStops.length > 0 && (
+            {!trackingRequested && nearbyStops.length > 0 && (
               <Pane name="nearby-stops" style={{ zIndex: 740 }}>
                 {nearbyStops.map((stop) => (
                   <CircleMarker
@@ -946,6 +1064,7 @@ function App() {
                         setSelectedPlaceStop(stop);
                       },
                     }}
+                    bubblingMouseEvents={false}
                   >
                     <Tooltip direction="top" offset={[0, -8]}>
                       Stop {stop.stop_code || stop.stop_id} · {stop.stop_name}
@@ -956,7 +1075,7 @@ function App() {
             )}
 
 
-            {routePaths.map((route) => (
+            {visibleRoutePaths.map((route) => (
               <RouteLine
                 key={`${route.route_short_name}-${route.shape_id}`}
                 route={route}
@@ -969,10 +1088,11 @@ function App() {
                 context={selectedContext}
                 vehicle={selectedVehicle}
                 selectedStop={selectedTargetStop}
+                trackingLocked={trackingLocked}
               />
             )}
 
-            {vehicles.map((v) => (
+            {visibleVehicles.map((v) => (
               <Marker
                 key={`${v.vehicle_id}-${v.trip_id}`}
                 position={[v.lat, v.lon]}
@@ -983,10 +1103,12 @@ function App() {
                 )}
                 eventHandlers={{
                   click: () => {
+                    if (trackingRequested) return;
                     clearSelection();
                     setSelectedVehicle(v);
                   },
                 }}
+                bubblingMouseEvents={false}
               />
             ))}
           </MapContainer>
@@ -997,6 +1119,7 @@ function App() {
           ref={drawerRef}
           className={`drawer-wrap ${selectedVehicle || selectedPlaceStop ? "has-selection" : ""}`}
         >
+          {(selectedVehicle || selectedPlaceStop) && <div className="drawer-handle" aria-hidden="true" />}
           {selectedPlaceStop ? (
             <StopDrawer
               key={selectedPlaceStop.stop_id}
@@ -1035,6 +1158,7 @@ function App() {
               serviceStatus={serviceStatus}
               following={following}
               onToggleFollow={() => setFollowing((value) => !value)}
+              trackingLocked={trackingLocked}
               onClose={clearSelection}
             />
           )}
@@ -1044,6 +1168,7 @@ function App() {
         <span>
           Live positions and arrival predictions come from the City of Calgary and may be
           delayed, incomplete, or unavailable. Bizqlab displays the latest usable source data.
+          Live LRT vehicle locations are not shown because the City feed does not provide them.
         </span>
         <span className="data-source-links">
           <a

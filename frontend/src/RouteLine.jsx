@@ -9,9 +9,10 @@ export default function RouteLine({ route, highlighted = false }) {
       positions={route.positions}
       pathOptions={{
         color: routeColor(route),
-        weight: highlighted ? 5 : 3,
-        opacity: highlighted ? 0.7 : 0.5,
+        weight: highlighted ? 7 : 4,
+        opacity: highlighted ? 0.12 : 0.72,
       }}
+      interactive={false}
     />
   );
 }

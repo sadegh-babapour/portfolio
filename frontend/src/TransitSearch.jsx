@@ -11,6 +11,7 @@ export default function TransitSearch({
   onNearbyStopsResolved,
   nearbyCount,
   onClearNearby,
+  disabled = false,
 }) {
   const [query, setQuery] = useState("");
   const [routes, setRoutes] = useState([]);
@@ -22,7 +23,7 @@ export default function TransitSearch({
 
   useEffect(() => {
     const normalized = query.trim();
-    if (!open || normalized.length < 1) {
+    if (disabled || !open || normalized.length < 1) {
       return undefined;
     }
     const controller = new AbortController();
@@ -54,7 +55,7 @@ export default function TransitSearch({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [apiBase, open, query]);
+  }, [apiBase, disabled, open, query]);
 
   const chooseRoute = (route) => {
     setQuery(route.route_short_name);
@@ -70,6 +71,7 @@ export default function TransitSearch({
   };
 
   const findNearby = () => {
+    if (disabled) return;
     if (!navigator.geolocation) {
       setLocationMessage("Location is unavailable in this browser. Search for a stop instead.");
       setOpen(false);
@@ -137,6 +139,7 @@ export default function TransitSearch({
           autoComplete="off"
           aria-expanded={open}
           aria-controls="transit-search-results"
+          disabled={disabled}
           onFocus={() => setOpen(true)}
           onChange={(event) => {
             const nextQuery = event.target.value;
@@ -163,7 +166,7 @@ export default function TransitSearch({
           type="button"
           className="nearby-button"
           onClick={findNearby}
-          disabled={locationLoading}
+          disabled={disabled || locationLoading}
         >
           {locationLoading ? "Locating…" : "Near me"}
         </button>
@@ -171,6 +174,7 @@ export default function TransitSearch({
           <button
             type="button"
             className="search-clear"
+            disabled={disabled}
             onClick={() => {
               setQuery("");
               setRoutes([]);

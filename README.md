@@ -108,6 +108,8 @@ npm run dev --prefix frontend
 Set `VITE_TRANSIT_API_BASE_URL=http://localhost:4000/api` in
 `frontend/.env.development.local` for local React development. Do not use
 `frontend/.env.local`; Vite also loads that file during production builds.
+When no override is supplied, the bundle uses the deployed public transit API;
+it never falls back to NiceGUI's unrelated same-origin `/api` namespace.
 Build the production bundle with:
 
 ```bash

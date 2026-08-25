@@ -11,6 +11,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./App.css";
 import { alertText } from "./alertText";
+import { resolveTransitApiBase } from "./apiConfig";
 import RouteLine from "./RouteLine";
 import SelectedCorridor from "./SelectedCorridor";
 import PortfolioNav from "./PortfolioNav";
@@ -30,25 +31,22 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-const API_BASE = import.meta.env.VITE_TRANSIT_API_BASE_URL || "/api";
+const API_BASE = resolveTransitApiBase(import.meta.env.VITE_TRANSIT_API_BASE_URL);
 const FEATURED_ROUTES = ["300", "MP", "MO", "23", "57"];
-const CALGARY_ATTRIBUTION =
-  'Contains information licensed under the <a href="https://data.calgary.ca/stories/s/Open-Calgary-Terms-of-Use/u45n-7awa/" target="_blank" rel="noopener noreferrer">Open Government Licence – City of Calgary</a>';
-
 const TILE_CONFIG = {
   light: {
     url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    attribution: `&copy; OpenStreetMap contributors | ${CALGARY_ATTRIBUTION}`,
+    attribution: "&copy; OpenStreetMap contributors",
     label: "Light",
   },
   dark: {
     url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-    attribution: `&copy; OpenStreetMap &copy; CARTO | ${CALGARY_ATTRIBUTION}`,
+    attribution: "&copy; OpenStreetMap &copy; CARTO",
     label: "Dark",
   },
   white: {
     url: "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",
-    attribution: `&copy; OpenStreetMap &copy; CARTO | ${CALGARY_ATTRIBUTION}`,
+    attribution: "&copy; OpenStreetMap &copy; CARTO",
     label: "White",
   },
 };
@@ -796,10 +794,7 @@ function App() {
           ))}
         </div>
       </div>
-
-
-
-      <div className="content">
+      <div className="transit-search-bar">
         <TransitSearch
           apiBase={API_BASE}
           activeRoute={activeRoute}
@@ -833,6 +828,9 @@ function App() {
           }}
           onLocationResolved={setUserLocation}
         />
+      </div>
+
+      <div className="content">
         <div className="map-wrap">
           <MapContainer center={center} zoom={11} className="map">
 

@@ -135,7 +135,7 @@ export default function TransitSearch({
           id="transit-search-input"
           type="search"
           value={query}
-          placeholder="Route 23, destination, or stop"
+          placeholder="Route 90, stop 4775, or destination"
           autoComplete="off"
           aria-expanded={open}
           aria-controls="transit-search-results"

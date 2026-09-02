@@ -12,6 +12,8 @@ const {
   getVehicleAlerts,
   searchRoutes,
   searchStops,
+  getStopsByIds,
+  getStopRoutes,
   getStopArrivals,
   getNearbyStops,
 } = require("./services/transitService");
@@ -150,12 +152,43 @@ app.post("/api/stops/nearby", async (request, response) => {
   }
 });
 
-app.get("/api/stops/:stopId/arrivals", async (request, response) => {
+app.get("/api/stops", async (request, response) => {
+  const ids = String(request.query.ids || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .slice(0, 20);
   try {
-    response.json(await getStopArrivals(pool, request.params.stopId));
+    response.json(await getStopsByIds(pool, ids));
   } catch (error) {
     console.error(error);
-    response.status(500).json({ error: "failed_to_load_stop_arrivals" });
+    response.status(500).json({ error: "failed_to_load_stops" });
+  }
+});
+
+app.get("/api/stops/:stopId/routes", async (request, response) => {
+  try {
+    response.json(await getStopRoutes(pool, request.params.stopId));
+  } catch (error) {
+    console.error(error);
+    response.status(500).json({ error: "failed_to_load_stop_routes" });
+  }
+});
+
+app.get("/api/stops/:stopId/arrivals", async (request, response) => {
+  const requestedWindow = Number(request.query.window_minutes || 60);
+  if (!Number.isInteger(requestedWindow) || requestedWindow < 15 || requestedWindow > 180) {
+    return response.status(400).json({ error: "invalid_arrival_window" });
+  }
+  try {
+    return response.json(await getStopArrivals(
+      pool,
+      request.params.stopId,
+      requestedWindow,
+    ));
+  } catch (error) {
+    console.error(error);
+    return response.status(500).json({ error: "failed_to_load_stop_arrivals" });
   }
 });
 

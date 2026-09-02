@@ -41,19 +41,16 @@ const API_BASE = resolveTransitApiBase(import.meta.env.VITE_TRANSIT_API_BASE_URL
 const FEATURED_ROUTES = ["300", "MP", "MO", "23", "57"];
 const TILE_CONFIG = {
   light: {
-    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
     attribution: "&copy; OpenStreetMap contributors",
     label: "Light",
+    className: "",
   },
   dark: {
-    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-    attribution: "&copy; OpenStreetMap &copy; CARTO",
+    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution: "&copy; OpenStreetMap contributors",
     label: "Dark",
-  },
-  white: {
-    url: "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",
-    attribution: "&copy; OpenStreetMap &copy; CARTO",
-    label: "White",
+    className: "osm-dark-tiles",
   },
 };
 
@@ -392,7 +389,7 @@ function VehicleDrawer({
 
       {trackingLocked ? (
         <div className="tracking-lock-note">
-          Tracking is locked. Zoom remains available; dragging returns to this bus and stop.
+          This bus remains selected. The map fits it once, then keeps your pan and zoom choices.
         </div>
       ) : (
         <button
@@ -469,6 +466,8 @@ function StopDrawer({
   onToggleFavorite,
 }) {
   const [arrivals, setArrivals] = useState([]);
+  const [routes, setRoutes] = useState([]);
+  const [selectedRoute, setSelectedRoute] = useState("all");
   const [loading, setLoading] = useState(true);
   const [favoriteError, setFavoriteError] = useState("");
   const [favoriteLoading, setFavoriteLoading] = useState(false);
@@ -478,12 +477,19 @@ function StopDrawer({
     const load = async () => {
       setLoading(true);
       try {
-        const response = await fetch(
-          `${API_BASE}/stops/${encodeURIComponent(stop.stop_id)}/arrivals`,
-        );
-        if (!response.ok) throw new Error("Arrivals unavailable");
-        const rows = await response.json();
-        if (!cancelled) setArrivals(Array.isArray(rows) ? rows : []);
+        const stopId = encodeURIComponent(stop.stop_id);
+        const [arrivalResult, routeResult] = await Promise.allSettled([
+          fetch(`${API_BASE}/stops/${stopId}/arrivals?window_minutes=180`),
+          fetch(`${API_BASE}/stops/${stopId}/routes`),
+        ]);
+        if (!cancelled && arrivalResult.status === "fulfilled" && arrivalResult.value.ok) {
+          const rows = await arrivalResult.value.json();
+          setArrivals(Array.isArray(rows) ? rows : []);
+        }
+        if (!cancelled && routeResult.status === "fulfilled" && routeResult.value.ok) {
+          const rows = await routeResult.value.json();
+          setRoutes(Array.isArray(rows) ? rows : []);
+        }
       } catch {
         if (!cancelled) setArrivals([]);
       } finally {
@@ -498,13 +504,32 @@ function StopDrawer({
     };
   }, [stop.stop_id]);
 
+  const routeOptions = useMemo(() => {
+    const byRoute = new Map();
+    for (const route of [...routes, ...arrivals]) {
+      const routeNumber = String(route.route_short_name || "").trim();
+      if (routeNumber && !byRoute.has(routeNumber)) {
+        byRoute.set(routeNumber, {
+          route_short_name: routeNumber,
+          route_long_name: route.route_long_name || "",
+        });
+      }
+    }
+    return [...byRoute.values()].sort((left, right) =>
+      left.route_short_name.localeCompare(right.route_short_name, undefined, { numeric: true })
+    );
+  }, [arrivals, routes]);
+  const visibleArrivals = selectedRoute === "all"
+    ? arrivals
+    : arrivals.filter((arrival) => arrival.route_short_name === selectedRoute);
+
   return (
     <div className="drawer">
       <div className="drawer-header">
         <div>
           <div className="badge stop">Stop {stop.stop_code || stop.stop_id}</div>
           <h2>{stop.stop_name}</h2>
-          <div className="subtle">Predicted arrivals in the next 15 minutes</div>
+          <div className="subtle">Next three arrivals per route within three hours</div>
         </div>
         <button className="close-btn" onClick={onClose}>×</button>
       </div>
@@ -533,12 +558,38 @@ function StopDrawer({
         </div>
       )}
       {favoriteError && <div className="favorite-error">{favoriteError}</div>}
+      {routeOptions.length > 0 && (
+        <div className="stop-route-picker" aria-label="Routes serving this stop">
+          <button
+            type="button"
+            className={selectedRoute === "all" ? "active" : ""}
+            onClick={() => setSelectedRoute("all")}
+          >
+            All
+          </button>
+          {routeOptions.map((route) => (
+            <button
+              type="button"
+              key={route.route_short_name}
+              className={selectedRoute === route.route_short_name ? "active" : ""}
+              title={route.route_long_name || undefined}
+              onClick={() => setSelectedRoute(route.route_short_name)}
+            >
+              {route.route_short_name}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="list">
         {loading && <div className="list-item">Loading arrivals…</div>}
-        {!loading && arrivals.length === 0 && (
-          <div className="list-item">No live predictions are currently available.</div>
+        {!loading && visibleArrivals.length === 0 && (
+          <div className="list-item">
+            {selectedRoute === "all"
+              ? "No scheduled or live arrivals are available in the next three hours."
+              : `No Route ${selectedRoute} arrival is available in the next three hours.`}
+          </div>
         )}
-        {arrivals.map((arrival) => (
+        {visibleArrivals.map((arrival) => (
           <button
             type="button"
             key={`${arrival.trip_id}-${arrival.stop_sequence}`}
@@ -548,14 +599,50 @@ function StopDrawer({
             <span className="arrival-route">{arrival.route_short_name || "Bus"}</span>
             <span>
               <strong>{arrivalLabel(arrival.arrival_time)}</strong>
-              <small>{arrival.trip_headsign || arrival.route_long_name}</small>
+              <small>
+                {arrival.trip_headsign || arrival.route_long_name || "Destination unavailable"}
+                {` · ${arrival.prediction_source === "scheduled" ? "Scheduled" : "Live prediction"}`}
+              </small>
             </span>
             <span className="arrival-action">
-              {arrival.vehicle_id ? "Track" : "Route"}
+              {arrival.vehicle_id ? "Track" : "Show route"}
             </span>
           </button>
         ))}
       </div>
+      <div className="teletext-note">
+        <a
+          href="https://www.calgarytransit.com/rider-information/rider-tools.html"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Calgary Teletext
+        </a>
+        : send stop number{selectedRoute === "all" ? " and route" : ""}{" "}
+        <strong>
+          {stop.stop_code || stop.stop_id}
+          {selectedRoute === "all" ? " [route]" : ` ${selectedRoute}`}
+        </strong>{" "}
+        to <strong>74000</strong> for Calgary Transit's official next times.
+      </div>
+    </div>
+  );
+}
+
+function SavedStops({ stops, loading, failed, onSelect }) {
+  return (
+    <div className="saved-stops-row" aria-label="Saved stops">
+      <span className="saved-stops-label">Saved stops</span>
+      {loading && <span className="subtle">Loading…</span>}
+      {!loading && failed && <span className="subtle">Temporarily unavailable.</span>}
+      {!loading && !failed && stops.length === 0 && (
+        <span className="subtle">Save a stop to keep it here.</span>
+      )}
+      {stops.map((stop) => (
+        <button type="button" key={stop.stop_id} onClick={() => onSelect(stop)}>
+          ★ {stop.stop_code || stop.stop_id} · {stop.stop_name}
+        </button>
+      ))}
     </div>
   );
 }
@@ -584,6 +671,11 @@ function App() {
   const [nearbyStops, setNearbyStops] = useState([]);
   const [authenticated, setAuthenticated] = useState(false);
   const [favoriteStops, setFavoriteStops] = useState(() => new Set());
+  const [favoriteHydration, setFavoriteHydration] = useState({
+    key: "",
+    stops: [],
+    failed: false,
+  });
   const playbackTimeRef = useRef(null);
   const pendingVehicleRef = useRef(null);
   const drawerRef = useRef(null);
@@ -600,6 +692,35 @@ function App() {
     setTrackedDestinationStop(null);
     setSelectedVehicle(null);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const ids = [...favoriteStops];
+    if (!authenticated || ids.length === 0) return undefined;
+    const hydrationKey = ids.join(",");
+    fetch(`${API_BASE}/stops?ids=${encodeURIComponent(ids.join(","))}`)
+      .then((response) => {
+        if (!response.ok) throw new Error("Saved stops unavailable");
+        return response.json();
+      })
+      .then((rows) => {
+        if (!cancelled) {
+          setFavoriteHydration({
+            key: hydrationKey,
+            stops: Array.isArray(rows) ? rows : [],
+            failed: false,
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setFavoriteHydration({ key: hydrationKey, stops: [], failed: true });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [authenticated, favoriteStops]);
 
   useEffect(() => {
     if (!selectedVehicle && !selectedPlaceStop) return undefined;
@@ -889,6 +1010,12 @@ function App() {
     ? routePaths.filter((route) => route.route_short_name === selectedVehicle.route_short_name)
     : routePaths;
   const beaconColor = baseMap === "dark" ? "#f8fafc" : "#111827";
+  const favoriteHydrationKey = [...favoriteStops].join(",");
+  const favoriteStopDetails = favoriteHydration.key === favoriteHydrationKey
+    ? favoriteHydration.stops
+    : [];
+  const favoritesLoading = Boolean(favoriteHydrationKey)
+    && favoriteHydration.key !== favoriteHydrationKey;
   const hasVehicleData = vehicles.length > 0;
   const countLabel = serviceStatus === "outside_operating_hours"
     ? "Outside live hours"
@@ -981,6 +1108,18 @@ function App() {
           </div>
         )}
       </div>
+      {authenticated && (
+        <SavedStops
+          stops={favoriteStopDetails}
+          loading={favoritesLoading}
+          failed={favoriteHydration.key === favoriteHydrationKey && favoriteHydration.failed}
+          onSelect={(stop) => {
+            clearSelection();
+            setSelectedPlaceStop(stop);
+            setActiveRoute(null);
+          }}
+        />
+      )}
 
       <div className="transit-workspace">
         <div className="content">
@@ -990,7 +1129,9 @@ function App() {
 
 
             <TileLayer
+              key={baseMap}
               attribution={TILE_CONFIG[baseMap].attribution}
+              className={TILE_CONFIG[baseMap].className}
               url={TILE_CONFIG[baseMap].url}
             />
 
@@ -1179,7 +1320,7 @@ function App() {
             City of Calgary Open Government Licence
           </a>
           <span aria-hidden="true">·</span>
-          <span>Map © OpenStreetMap/CARTO</span>
+          <span>Map © OpenStreetMap contributors</span>
         </span>
       </div>
     </div>

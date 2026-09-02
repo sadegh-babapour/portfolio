@@ -6,12 +6,12 @@ and an interactive Calgary Transit demonstration. The transit page uses a
 React/Leaflet frontend, an Express API, a Python GTFS-Realtime poller, and
 PostgreSQL.
 
-The Calgary rider view supports active route and stop search, delayed
-trip-safe vehicle playback, direction indicators, shape-aligned movement to the
-next three predicted stops, explicit nearby-stop lookup, and 15-minute arrival
-predictions. Browser location is requested only after the visitor chooses
-“Near me” and is not retained by Bizqlab. Signed-in users can save stop IDs to
-their portfolio account.
+The Calgary rider view supports route and stop-number search, delayed trip-safe
+vehicle playback, direction indicators, shape-aligned movement, explicit
+nearby-stop lookup, per-stop route choices, and the next three scheduled or
+predicted arrivals per route within three hours. Browser location is requested
+only after the visitor chooses “Near me” and is not retained by Bizqlab.
+Signed-in users can save stop IDs and reopen those stops from the transit page.
 
 The public analytics dashboard demonstrates two delivery contracts: short-lived,
 timeout-bounded PostgreSQL aggregates for Calgary pipeline quality and a small
@@ -71,7 +71,9 @@ python scripts/bootstrap_transit_db.py --load-static \
 ```
 
 Running the command again is supported. Static GTFS tables are replaced only
-when `--load-static` is supplied; realtime tables are retained.
+when `--load-static` is supplied; realtime tables are retained. The large raw
+`stop_times.txt` does not need to be kept in the repository: the loader reads
+it from Calgary's downloadable GTFS ZIP.
 
 ## Run locally
 
@@ -84,9 +86,15 @@ Current-state GTFS-Realtime poller:
 python -m poller.poll_calgary_gtfs_rt_current
 ```
 
-Use `--once` for a single ingestion pass. Polling behavior is controlled by
+Use `--once` for a single realtime ingestion pass. The long-running worker also
+applies the idempotent transit migrations on startup and checks Calgary's
+static GTFS every six hours. It uses HTTP ETags and an archive SHA-256 to avoid
+unnecessary reloads, and replaces the static tables plus its import state in
+one transaction when the source changes. Polling behavior is controlled by
 `POLL_INTERVAL_SECONDS`, `POLL_ENABLED`, `POLL_START_HOUR`, `POLL_END_HOUR`,
-`POLL_TIMEZONE`, `ADMIN_KILL_SWITCH`, and `RAW_RETENTION_MINUTES`.
+`POLL_TIMEZONE`, `ADMIN_KILL_SWITCH`, `RAW_RETENTION_MINUTES`,
+`GTFS_AUTO_SYNC_ENABLED`, `GTFS_SYNC_INTERVAL_SECONDS`, `GTFS_STATIC_URL`,
+`GTFS_ROUTE_CATALOG`, and `TRANSIT_APPLY_MIGRATIONS`.
 
 Express transit API:
 
@@ -96,10 +104,11 @@ npm start --prefix backend/transit_api
 
 The API listens on `TRANSIT_API_PORT`, then `PORT`, then port 4000.
 Its public transit routes include vehicle history/context, route paths and
-search, stop search and arrivals, and a bounded `POST /api/stops/nearby`
-coordinate lookup. Nearby lookup is capped at eight stops and accepts a
-server-validated 100–2,000 metre radius; the frontend uses an 800 metre
-walkable radius and renders the returned stops on the map.
+search, stop search, saved-stop detail hydration, routes serving a stop, and
+scheduled/live arrivals, plus a bounded `POST /api/stops/nearby` coordinate
+lookup. Nearby lookup is capped at eight stops and accepts a server-validated
+100–2,000 metre radius; the frontend uses an 800 metre walkable radius and
+renders the returned stops on the map.
 
 React development server:
 

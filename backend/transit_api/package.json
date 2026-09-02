@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node server.js",
     "check": "node --check server.js && node --check db/pool.js && node --check services/transitService.js && node --check config/transitConfig.js",
-    "test": "node --test"
+    "test": "node test/transitService.test.js"
   },
   "dependencies": {
     "cors": "^2.8.6",

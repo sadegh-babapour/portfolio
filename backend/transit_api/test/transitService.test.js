@@ -10,6 +10,8 @@ const {
   getVehicleAlerts,
   searchRoutes,
   searchStops,
+  getStopsByIds,
+  getStopRoutes,
   getStopArrivals,
   getNearbyStops,
 } = require("../services/transitService");
@@ -41,6 +43,8 @@ test("transit health distinguishes fresh and after-hours data", async () => {
     latest_vehicle_timestamp: "2026-08-13T17:59:30Z",
     vehicle_age_seconds: "30",
     recent_vehicle_count: "287",
+    usable_vehicle_count: "280",
+    enriched_vehicle_count: "279",
     latest_trip_update_timestamp: "2026-08-13T17:59:31Z",
     latest_alert_timestamp: "2026-08-13T17:59:32Z",
   }]);
@@ -48,6 +52,8 @@ test("transit health distinguishes fresh and after-hours data", async () => {
   assert.equal(fresh.ok, true);
   assert.equal(fresh.status, "healthy");
   assert.equal(fresh.recent_vehicle_count, 287);
+  assert.equal(fresh.usable_vehicle_count, 280);
+  assert.equal(fresh.enriched_vehicle_count, 279);
 
   const afterHoursPool = poolReturning([{
     checked_at: "2026-08-13T05:00:00Z",
@@ -67,6 +73,21 @@ test("transit health is degraded when vehicles are stale during operating hours"
     latest_vehicle_timestamp: "2026-08-13T17:50:00Z",
     vehicle_age_seconds: "600",
     recent_vehicle_count: "0",
+  }]);
+
+  const health = await getTransitHealth(pool);
+  assert.equal(health.ok, false);
+  assert.equal(health.status, "degraded");
+});
+
+test("transit health is degraded when fresh positions cannot be statically enriched", async () => {
+  const pool = poolReturning([{
+    within_operating_hours: true,
+    latest_vehicle_timestamp: "2026-09-02T22:32:01Z",
+    vehicle_age_seconds: "79",
+    recent_vehicle_count: "551",
+    usable_vehicle_count: "540",
+    enriched_vehicle_count: "0",
   }]);
 
   const health = await getTransitHealth(pool);
@@ -164,11 +185,27 @@ test("route and stop search stay parameterized and bounded", async () => {
   assert.deepEqual(stopPool.calls[0].params, ["%Centre%", "Centre"]);
 });
 
-test("stop arrivals use the requested stop and a fifteen minute window", async () => {
+test("stop arrivals use the requested stop and requested prediction window", async () => {
   const pool = poolReturning([]);
-  assert.deepEqual(await getStopArrivals(pool, "1001"), []);
-  assert.deepEqual(pool.calls[0].params, ["1001"]);
-  assert.match(pool.calls[0].sql, /interval '15 minutes'/);
+  assert.deepEqual(await getStopArrivals(pool, "1001", 60), []);
+  assert.deepEqual(pool.calls[0].params, ["1001", 60]);
+  assert.match(pool.calls[0].sql, /make_interval\(mins => \$2\)/);
+});
+
+test("saved-stop hydration and stop routes stay parameterized and bounded", async () => {
+  const savedPool = poolReturning([{ stop_id: "4775" }]);
+  assert.deepEqual(await getStopsByIds(savedPool, ["4775", "1001"]), [
+    { stop_id: "4775" },
+  ]);
+  assert.deepEqual(savedPool.calls[0].params, [["4775", "1001"]]);
+  assert.match(savedPool.calls[0].sql, /stop_id = any\(\$1::text\[\]\)/);
+
+  const routePool = poolReturning([{ route_short_name: "78" }]);
+  assert.deepEqual(await getStopRoutes(routePool, "4775"), [
+    { route_short_name: "78" },
+  ]);
+  assert.deepEqual(routePool.calls[0].params, ["4775"]);
+  assert.match(routePool.calls[0].sql, /where st\.stop_id = \$1/);
 });
 
 test("nearby stops use bounded parameterized coordinates and walking radius", async () => {

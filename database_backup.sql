@@ -263,6 +263,25 @@ CREATE TABLE transit.stop_times (
 
 ALTER TABLE transit.stop_times OWNER TO postgres;
 
+
+--
+-- Name: static_gtfs_import_state; Type: TABLE; Schema: transit; Owner: postgres
+--
+
+CREATE TABLE transit.static_gtfs_import_state (
+    singleton boolean DEFAULT true NOT NULL PRIMARY KEY,
+    source_url text NOT NULL,
+    source_etag text,
+    archive_sha256 text NOT NULL,
+    checked_at timestamp with time zone NOT NULL,
+    loaded_at timestamp with time zone NOT NULL,
+    max_service_date date,
+    CONSTRAINT static_gtfs_import_state_singleton_check CHECK (singleton)
+);
+
+
+ALTER TABLE transit.static_gtfs_import_state OWNER TO postgres;
+
 --
 -- Name: stops; Type: TABLE; Schema: transit; Owner: postgres
 --
@@ -720,63 +739,52 @@ ALTER TABLE transit.vehicle_positions_current OWNER TO postgres;
 
 CREATE VIEW transit.v_vehicle_dashboard AS
  WITH latest_tripupdates AS (
-         SELECT DISTINCT trip_updates_current.trip_id
+         SELECT trip_updates_current.trip_id,
+            trip_updates_current.route_id
            FROM transit.trip_updates_current
+        ), classified AS (
+         SELECT v.vehicle_id,
+            v.trip_id,
+            v.vehicle_timestamp,
+            (v.vehicle_timestamp AT TIME ZONE 'America/Edmonton'::text) AS vehicle_timestamp_edmonton,
+            v.lat,
+            v.lon,
+            t.route_id AS static_route_id,
+            COALESCE(r.route_short_name, lr.route_short_name, ltu.route_id) AS route_short_name,
+            COALESCE(r.route_long_name, lr.route_long_name, rc.route_long_name) AS route_long_name,
+            t.trip_headsign,
+            t.direction_id,
+            t.shape_id,
+            COALESCE(rc.route_category,
+                CASE
+                    WHEN (COALESCE(r.route_long_name, lr.route_long_name, rc.route_long_name) ~~* 'MAX %'::text) THEN 'MAX'::text
+                    WHEN (COALESCE(r.route_short_name, lr.route_short_name, ltu.route_id) = ANY (ARRAY['MG'::text, 'MO'::text, 'MP'::text, 'MT'::text, 'MY'::text])) THEN 'MAX'::text
+                    WHEN (COALESCE(r.route_short_name, lr.route_short_name, ltu.route_id) = ANY (ARRAY['201'::text, '202'::text])) THEN 'LRT'::text
+                    ELSE NULL::text
+                END) AS route_category,
+            (t.trip_id IS NOT NULL) AS matched_to_static,
+            (ltu.trip_id IS NOT NULL) AS has_trip_update
+           FROM transit.vehicle_positions_current v
+             LEFT JOIN transit.trips t ON t.trip_id = v.trip_id
+             LEFT JOIN transit.routes r ON r.route_id = t.route_id
+             LEFT JOIN latest_tripupdates ltu ON ltu.trip_id = v.trip_id
+             LEFT JOIN transit.routes lr ON lr.route_id = ltu.route_id
+             LEFT JOIN transit.v_route_catalog_lookup rc
+               ON upper(TRIM(BOTH FROM COALESCE(r.route_short_name, lr.route_short_name, ltu.route_id))) = rc.route_short_name_norm
         )
- SELECT v.vehicle_id,
-    v.trip_id,
-    v.vehicle_timestamp,
-    (v.vehicle_timestamp AT TIME ZONE 'America/Edmonton'::text) AS vehicle_timestamp_edmonton,
-    v.lat,
-    v.lon,
-    t.route_id AS static_route_id,
-    r.route_short_name,
-    r.route_long_name,
-    t.trip_headsign,
-    t.direction_id,
-    t.shape_id,
-    COALESCE(rc.route_category,
-        CASE
-            WHEN (r.route_long_name ~~* 'MAX %'::text) THEN 'MAX'::text
-            WHEN (r.route_short_name = ANY (ARRAY['MG'::text, 'MO'::text, 'MP'::text, 'MT'::text, 'MY'::text])) THEN 'MAX'::text
-            WHEN (r.route_short_name = ANY (ARRAY['201'::text, '202'::text])) THEN 'LRT'::text
-            ELSE NULL::text
-        END) AS route_category,
-        CASE
-            WHEN (t.trip_id IS NOT NULL) THEN true
-            ELSE false
-        END AS matched_to_static,
-        CASE
-            WHEN (ltu.trip_id IS NOT NULL) THEN true
-            ELSE false
-        END AS has_trip_update,
-        CASE
-            WHEN (t.trip_id IS NULL) THEN 'unmatched_live'::text
-            WHEN (ltu.trip_id IS NULL) THEN 'matched_no_tripupdate'::text
-            ELSE 'in_service'::text
-        END AS vehicle_status,
-        CASE
-            WHEN (COALESCE(rc.route_category,
-            CASE
-                WHEN (r.route_long_name ~~* 'MAX %'::text) THEN 'MAX'::text
-                WHEN (r.route_short_name = ANY (ARRAY['MG'::text, 'MO'::text, 'MP'::text, 'MT'::text, 'MY'::text])) THEN 'MAX'::text
-                WHEN (r.route_short_name = ANY (ARRAY['201'::text, '202'::text])) THEN 'LRT'::text
-                ELSE NULL::text
-            END) = 'LRT'::text) THEN 'lrt'::text
-            WHEN (COALESCE(rc.route_category,
-            CASE
-                WHEN (r.route_long_name ~~* 'MAX %'::text) THEN 'MAX'::text
-                WHEN (r.route_short_name = ANY (ARRAY['MG'::text, 'MO'::text, 'MP'::text, 'MT'::text, 'MY'::text])) THEN 'MAX'::text
-                ELSE NULL::text
-            END) = ANY (ARRAY['BRT'::text, 'MAX'::text, 'EXPRESS'::text])) THEN 'brt'::text
-            WHEN (COALESCE(rc.route_category, 'REGULAR'::text) = ANY (ARRAY['REGULAR'::text, 'SCHOOL'::text, 'SPECIAL'::text])) THEN 'bus'::text
-            ELSE 'unknown'::text
-        END AS route_mode
-   FROM ((((transit.vehicle_positions_current v
-     LEFT JOIN transit.trips t ON ((t.trip_id = v.trip_id)))
-     LEFT JOIN transit.routes r ON ((r.route_id = t.route_id)))
-     LEFT JOIN transit.v_route_catalog_lookup rc ON ((upper(TRIM(BOTH FROM r.route_short_name)) = rc.route_short_name_norm)))
-     LEFT JOIN latest_tripupdates ltu ON ((ltu.trip_id = v.trip_id)));
+ SELECT classified.*,
+    CASE
+        WHEN ((NOT classified.matched_to_static) AND (NOT classified.has_trip_update)) THEN 'unmatched_live'::text
+        WHEN (NOT classified.has_trip_update) THEN 'matched_no_tripupdate'::text
+        ELSE 'in_service'::text
+    END AS vehicle_status,
+    CASE
+        WHEN (classified.route_category = 'LRT'::text) THEN 'lrt'::text
+        WHEN (classified.route_category = ANY (ARRAY['BRT'::text, 'MAX'::text, 'EXPRESS'::text])) THEN 'brt'::text
+        WHEN (COALESCE(classified.route_category, 'REGULAR'::text) = ANY (ARRAY['REGULAR'::text, 'SCHOOL'::text, 'SPECIAL'::text])) THEN 'bus'::text
+        ELSE 'unknown'::text
+    END AS route_mode
+   FROM classified;
 
 
 ALTER VIEW transit.v_vehicle_dashboard OWNER TO postgres;
@@ -1264,4 +1272,3 @@ ALTER TABLE ONLY transit.trip_update_stop_times_raw
 --
 
 \unrestrict CWCrH22cJFDgLOC1g9uYOmdE9BWdVu8ey0v6saBNu5SftX0yw7G7aCCRLmwiLzN
-

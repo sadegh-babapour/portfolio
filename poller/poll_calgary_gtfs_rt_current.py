@@ -12,6 +12,9 @@ import psycopg2
 import requests
 from google.transit import gtfs_realtime_pb2
 
+from poller.static_gtfs_sync import sync_static_gtfs
+from scripts.bootstrap_transit_db import apply_migrations
+
 VEHICLE_POSITIONS_URL = "https://data.calgary.ca/download/am7c-qe3u/application%2Foctet-stream"
 TRIP_UPDATES_URL = "https://data.calgary.ca/download/gs4m-mdc2/application%2Foctet-stream"
 ALERTS_URL = "https://data.calgary.ca/download/jhgn-ynqj/application%2Foctet-stream"
@@ -469,9 +472,18 @@ def main() -> int:
     try:
         conn.autocommit = False
 
+        if env_bool("TRANSIT_APPLY_MIGRATIONS", True):
+            apply_migrations(conn)
+
         if args.once:
             run_once(conn)
             return 0
+
+        last_static_sync_attempt = 0.0
+        static_sync_interval = max(
+            300,
+            int(os.getenv("GTFS_SYNC_INTERVAL_SECONDS", "21600")),
+        )
 
         while True:
             polling_enabled = env_bool("POLL_ENABLED", True)
@@ -481,14 +493,28 @@ def main() -> int:
                 print("polling disabled by ADMIN_KILL_SWITCH")
             elif not polling_enabled:
                 print("polling disabled by POLL_ENABLED=false")
-            elif within_hours(args.start_hour, args.end_hour, args.timezone):
-                try:
-                    run_once(conn)
-                except Exception as e:
-                    conn.rollback()
-                    print(f"poll error: {e}", file=sys.stderr)
             else:
-                print("outside polling hours, sleeping")
+                monotonic_now = time.monotonic()
+                if (
+                    env_bool("GTFS_AUTO_SYNC_ENABLED", True)
+                    and monotonic_now - last_static_sync_attempt >= static_sync_interval
+                ):
+                    last_static_sync_attempt = monotonic_now
+                    try:
+                        result = sync_static_gtfs(conn)
+                        print(f"static GTFS sync: {result}")
+                    except Exception as exc:
+                        conn.rollback()
+                        print(f"static GTFS sync error: {exc}", file=sys.stderr)
+
+                if within_hours(args.start_hour, args.end_hour, args.timezone):
+                    try:
+                        run_once(conn)
+                    except Exception as e:
+                        conn.rollback()
+                        print(f"poll error: {e}", file=sys.stderr)
+                else:
+                    print("outside polling hours, sleeping")
 
             time.sleep(args.interval_seconds)
 

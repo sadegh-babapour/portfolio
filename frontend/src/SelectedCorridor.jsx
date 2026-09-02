@@ -25,9 +25,6 @@ export default function SelectedCorridor({ context, vehicle, selectedStop, track
     : stopsThroughDestination(nextStops, destinationStop);
   const corridorColor = routeColor(vehicle);
   const corridor = shapeSegmentToStop(context?.shape_points, vehicle, destinationStop);
-  const progressKey = trackingLocked
-    ? `${nextStops[0]?.stop_id || "none"}-${nextStops[0]?.stop_sequence || "none"}`
-    : "preview";
   const latestCorridorRef = useRef(corridor);
   const hasCorridor = corridor.length >= 2;
 
@@ -62,7 +59,7 @@ export default function SelectedCorridor({ context, vehicle, selectedStop, track
 
   useEffect(() => {
     if (!map || corridor.length < 2 || !destinationStop) return;
-    const selectionKey = `${vehicle.vehicle_id}-${vehicle.trip_id}-${destinationStop.stop_id}-${progressKey}`;
+    const selectionKey = `${vehicle.vehicle_id}-${vehicle.trip_id}-${destinationStop.stop_id}`;
     if (fittedSelectionRef.current === selectionKey) return;
     fittedSelectionRef.current = selectionKey;
     map.fitBounds(L.latLngBounds(corridorViewportPoints(corridor, vehicle, destinationStop)), {
@@ -71,21 +68,7 @@ export default function SelectedCorridor({ context, vehicle, selectedStop, track
       maxZoom: 15,
       padding: [32, 32],
     });
-  }, [corridor, destinationStop, map, progressKey, vehicle, vehicle.trip_id, vehicle.vehicle_id]);
-
-  useEffect(() => {
-    if (!trackingLocked || !destinationStop || corridor.length < 2) return undefined;
-    const restoreTrackingView = () => {
-      map.fitBounds(L.latLngBounds(corridorViewportPoints(corridor, vehicle, destinationStop)), {
-        animate: true,
-        duration: 0.65,
-        maxZoom: 15,
-        padding: window.innerWidth <= 1050 ? [26, 26] : [38, 38],
-      });
-    };
-    map.on("dragend", restoreTrackingView);
-    return () => map.off("dragend", restoreTrackingView);
-  }, [corridor, destinationStop, map, trackingLocked, vehicle]);
+  }, [corridor, destinationStop, map, vehicle, vehicle.trip_id, vehicle.vehicle_id]);
 
   if (!context || !vehicle) return null;
 

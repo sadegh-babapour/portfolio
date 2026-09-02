@@ -12,6 +12,15 @@ async function getTransitHealth(pool) {
       count(*) filter (
         where vehicle_timestamp >= now() - interval '3 minutes'
       ) as recent_vehicle_count,
+      (select count(*)
+       from transit.v_vehicle_dashboard
+       where vehicle_timestamp >= now() - interval '3 minutes'
+         and vehicle_status = 'in_service') as usable_vehicle_count,
+      (select count(*)
+       from transit.v_vehicle_dashboard
+       where vehicle_timestamp >= now() - interval '3 minutes'
+         and vehicle_status = 'in_service'
+         and matched_to_static) as enriched_vehicle_count,
       (select max(feed_header_timestamp) from transit.trip_updates_current)
         as latest_trip_update_timestamp,
       (select max(feed_header_timestamp) from transit.alerts_current)
@@ -27,9 +36,15 @@ async function getTransitHealth(pool) {
     ? null
     : Number(row.vehicle_age_seconds);
   const recentVehicleCount = Number(row.recent_vehicle_count || 0);
+  const usableVehicleCount = Number(row.usable_vehicle_count || 0);
+  const enrichedVehicleCount = Number(row.enriched_vehicle_count || 0);
   const status = !withinOperatingHours
     ? "outside_operating_hours"
-    : ageSeconds !== null && ageSeconds <= 180 && recentVehicleCount > 0
+    : ageSeconds !== null
+      && ageSeconds <= 180
+      && recentVehicleCount > 0
+      && usableVehicleCount > 0
+      && enrichedVehicleCount > 0
       ? "healthy"
       : "degraded";
 
@@ -45,6 +60,8 @@ async function getTransitHealth(pool) {
     latest_vehicle_timestamp: row.latest_vehicle_timestamp || null,
     vehicle_age_seconds: ageSeconds,
     recent_vehicle_count: recentVehicleCount,
+    usable_vehicle_count: usableVehicleCount,
+    enriched_vehicle_count: enrichedVehicleCount,
     latest_trip_update_timestamp: row.latest_trip_update_timestamp || null,
     latest_alert_timestamp: row.latest_alert_timestamp || null,
   };
@@ -477,35 +494,193 @@ async function searchStops(pool, query) {
   return result.rows;
 }
 
-async function getStopArrivals(pool, stopId) {
+async function getStopsByIds(pool, stopIds) {
+  const ids = Array.isArray(stopIds)
+    ? stopIds.map((value) => String(value).trim()).filter(Boolean).slice(0, 20)
+    : [];
+  if (ids.length === 0) return [];
   const result = await pool.query(
     `
+    select stop_id, stop_code, stop_name, stop_lat, stop_lon
+    from transit.stops
+    where stop_id = any($1::text[])
+    order by array_position($1::text[], stop_id)
+    `,
+    [ids],
+  );
+  return result.rows;
+}
+
+async function getStopRoutes(pool, stopId) {
+  const result = await pool.query(
+    `
+    with local_context as (
+      select (now() at time zone 'America/Edmonton')::date as service_date
+    ), base_services as (
+      select c.service_id
+      from transit.calendar c
+      cross join local_context lc
+      where lc.service_date between c.start_date and c.end_date
+        and case extract(isodow from lc.service_date)::integer
+          when 1 then c.monday
+          when 2 then c.tuesday
+          when 3 then c.wednesday
+          when 4 then c.thursday
+          when 5 then c.friday
+          when 6 then c.saturday
+          when 7 then c.sunday
+        end = 1
+    ), active_services as (
+      (select service_id from base_services
+       union
+       select cd.service_id
+       from transit.calendar_dates cd
+       cross join local_context lc
+       where cd.date = lc.service_date and cd.exception_type = 1)
+      except
+      select cd.service_id
+      from transit.calendar_dates cd
+      cross join local_context lc
+      where cd.date = lc.service_date and cd.exception_type = 2
+    )
     select
-      stu.trip_id,
-      stu.stop_sequence,
-      stu.stop_id,
-      s.stop_code,
-      s.stop_name,
-      stu.arrival_time,
-      stu.departure_time,
-      coalesce(r.route_short_name, tu.route_id) as route_short_name,
-      r.route_long_name,
-      t.trip_headsign,
-      vd.vehicle_id
-    from transit.trip_update_stop_times_current stu
-    join transit.trip_updates_current tu on tu.trip_id = stu.trip_id
-    left join transit.trips t on t.trip_id = stu.trip_id
-    left join transit.routes r on r.route_id = t.route_id
-    left join transit.stops s on s.stop_id = stu.stop_id
-    left join transit.v_vehicle_dashboard vd
-      on vd.trip_id = stu.trip_id and vd.vehicle_status = 'in_service'
-    where stu.stop_id = $1
-      and stu.arrival_time >= now() - interval '30 seconds'
-      and stu.arrival_time <= now() + interval '15 minutes'
-    order by stu.arrival_time, route_short_name
-    limit 24
+      r.route_short_name,
+      max(r.route_long_name) as route_long_name
+    from transit.stop_times st
+    join transit.trips t on t.trip_id = st.trip_id
+    join active_services active on active.service_id = t.service_id
+    join transit.routes r on r.route_id = t.route_id
+    where st.stop_id = $1
+      and nullif(trim(r.route_short_name), '') is not null
+    group by r.route_short_name
+    order by r.route_short_name
     `,
     [stopId],
+  );
+  return result.rows;
+}
+
+async function getStopArrivals(pool, stopId, windowMinutes = 60) {
+  const result = await pool.query(
+    `
+    with local_context as (
+      select (now() at time zone 'America/Edmonton')::date as service_date
+    ), base_services as (
+      select c.service_id
+      from transit.calendar c
+      cross join local_context lc
+      where lc.service_date between c.start_date and c.end_date
+        and case extract(isodow from lc.service_date)::integer
+          when 1 then c.monday
+          when 2 then c.tuesday
+          when 3 then c.wednesday
+          when 4 then c.thursday
+          when 5 then c.friday
+          when 6 then c.saturday
+          when 7 then c.sunday
+        end = 1
+    ), active_services as (
+      (select service_id from base_services
+       union
+       select cd.service_id
+       from transit.calendar_dates cd
+       cross join local_context lc
+       where cd.date = lc.service_date and cd.exception_type = 1)
+      except
+      select cd.service_id
+      from transit.calendar_dates cd
+      cross join local_context lc
+      where cd.date = lc.service_date and cd.exception_type = 2
+    ), realtime as (
+      select
+        stu.trip_id,
+        stu.stop_sequence,
+        stu.stop_id,
+        s.stop_code,
+        s.stop_name,
+        stu.arrival_time,
+        stu.departure_time,
+        coalesce(r.route_short_name, lr.route_short_name, tu.route_id) as route_short_name,
+        coalesce(r.route_long_name, lr.route_long_name) as route_long_name,
+        t.trip_headsign,
+        vd.vehicle_id,
+        'predicted'::text as prediction_source
+      from transit.trip_update_stop_times_current stu
+      join transit.trip_updates_current tu on tu.trip_id = stu.trip_id
+      left join transit.trips t on t.trip_id = stu.trip_id
+      left join transit.routes r on r.route_id = t.route_id
+      left join transit.routes lr on lr.route_id = tu.route_id
+      left join transit.stops s on s.stop_id = stu.stop_id
+      left join transit.v_vehicle_dashboard vd
+        on vd.trip_id = stu.trip_id and vd.vehicle_status = 'in_service'
+      where stu.stop_id = $1
+    ), scheduled as (
+      select
+        st.trip_id,
+        st.stop_sequence,
+        st.stop_id,
+        s.stop_code,
+        s.stop_name,
+        (
+          lc.service_date::timestamp
+          + make_interval(secs =>
+              split_part(st.arrival_time, ':', 1)::integer * 3600
+              + split_part(st.arrival_time, ':', 2)::integer * 60
+              + split_part(st.arrival_time, ':', 3)::integer)
+        ) at time zone 'America/Edmonton' as arrival_time,
+        (
+          lc.service_date::timestamp
+          + make_interval(secs =>
+              split_part(st.departure_time, ':', 1)::integer * 3600
+              + split_part(st.departure_time, ':', 2)::integer * 60
+              + split_part(st.departure_time, ':', 3)::integer)
+        ) at time zone 'America/Edmonton' as departure_time,
+        r.route_short_name,
+        r.route_long_name,
+        t.trip_headsign,
+        null::text as vehicle_id,
+        'scheduled'::text as prediction_source
+      from transit.stop_times st
+      join transit.trips t on t.trip_id = st.trip_id
+      join active_services active on active.service_id = t.service_id
+      join transit.routes r on r.route_id = t.route_id
+      join transit.stops s on s.stop_id = st.stop_id
+      cross join local_context lc
+      where st.stop_id = $1
+        and st.arrival_time ~ '^[0-9]{1,2}:[0-9]{2}:[0-9]{2}$'
+        and st.departure_time ~ '^[0-9]{1,2}:[0-9]{2}:[0-9]{2}$'
+    ), combined as (
+      select * from realtime
+      union all
+      select scheduled.*
+      from scheduled
+      where not exists (
+        select 1
+        from realtime
+        where realtime.trip_id = scheduled.trip_id
+          and realtime.stop_sequence = scheduled.stop_sequence
+      )
+    ), ranked as (
+      select
+        combined.*,
+        row_number() over (
+          partition by route_short_name
+          order by arrival_time
+        ) as route_arrival_rank
+      from combined
+      where arrival_time >= now() - interval '30 seconds'
+        and arrival_time <= now() + make_interval(mins => $2)
+    )
+    select
+      trip_id, stop_sequence, stop_id, stop_code, stop_name,
+      arrival_time, departure_time, route_short_name, route_long_name,
+      trip_headsign, vehicle_id, prediction_source
+    from ranked
+    where route_arrival_rank <= 3
+    order by arrival_time, route_short_name
+    limit 48
+    `,
+    [stopId, windowMinutes],
   );
   return result.rows;
 }
@@ -553,6 +728,8 @@ module.exports = {
   getVehicleAlerts,
   searchRoutes,
   searchStops,
+  getStopsByIds,
+  getStopRoutes,
   getStopArrivals,
   getNearbyStops,
 };

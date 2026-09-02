@@ -23,6 +23,7 @@ MIGRATIONS = (
     "002_create_transit_tables.sql",
     "003_create_transit_views.sql",
     "004_indexes.sql",
+    "005_static_gtfs_import_state.sql",
 )
 REQUIRED_GTFS_FILES = (
     "routes.txt",
@@ -83,8 +84,7 @@ def copy_member(cur, zf: ZipFile, member: str, table: str, columns: str) -> None
     print(f"loaded {member} -> {table}")
 
 
-def load_gtfs(conn, source: str, route_catalog: Path | None) -> None:
-    archive = read_source(source)
+def load_gtfs_archive(conn, archive: bytes, route_catalog: Path | None) -> None:
     with ZipFile(io.BytesIO(archive)) as zf:
         missing = sorted(set(REQUIRED_GTFS_FILES) - set(zf.namelist()))
         if missing:
@@ -217,7 +217,13 @@ def load_gtfs(conn, source: str, route_catalog: Path | None) -> None:
                     )
                 print(f"loaded {route_catalog} -> transit.route_catalog_raw")
 
-        conn.commit()
+        # The caller owns the transaction so an automated refresh can record
+        # its import state atomically with the static table replacement.
+
+
+def load_gtfs(conn, source: str, route_catalog: Path | None) -> None:
+    load_gtfs_archive(conn, read_source(source), route_catalog)
+    conn.commit()
 
 
 def print_counts(conn) -> None:

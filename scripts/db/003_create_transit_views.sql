@@ -159,7 +159,7 @@ WHERE a.active_end IS NULL OR a.active_end >= now();
 
 CREATE OR REPLACE VIEW transit.v_vehicle_dashboard AS
 WITH latest_tripupdates AS (
-    SELECT DISTINCT trip_id
+    SELECT trip_id, route_id
     FROM transit.trip_updates_current
 ), classified AS (
     SELECT
@@ -171,18 +171,22 @@ WITH latest_tripupdates AS (
         v.lat,
         v.lon,
         t.route_id AS static_route_id,
-        r.route_short_name,
-        r.route_long_name,
+        coalesce(r.route_short_name, lr.route_short_name, ltu.route_id) AS route_short_name,
+        coalesce(r.route_long_name, lr.route_long_name, rc.route_long_name) AS route_long_name,
         t.trip_headsign,
         t.direction_id,
         t.shape_id,
         coalesce(
             rc.route_category,
             CASE
-                WHEN r.route_long_name ILIKE 'MAX %' THEN 'MAX'
-                WHEN r.route_short_name IN ('MG', 'MO', 'MP', 'MT', 'MY')
+                WHEN coalesce(r.route_long_name, lr.route_long_name, rc.route_long_name)
+                    ILIKE 'MAX %' THEN 'MAX'
+                WHEN coalesce(r.route_short_name, lr.route_short_name, ltu.route_id)
+                    IN ('MG', 'MO', 'MP', 'MT', 'MY')
                     THEN 'MAX'
-                WHEN r.route_short_name IN ('201', '202') THEN 'LRT'
+                WHEN coalesce(r.route_short_name, lr.route_short_name, ltu.route_id)
+                    IN ('201', '202')
+                    THEN 'LRT'
                 ELSE NULL
             END
         ) AS route_category,
@@ -191,14 +195,16 @@ WITH latest_tripupdates AS (
     FROM transit.vehicle_positions_current v
     LEFT JOIN transit.trips t ON t.trip_id = v.trip_id
     LEFT JOIN transit.routes r ON r.route_id = t.route_id
-    LEFT JOIN transit.v_route_catalog_lookup rc
-        ON upper(trim(r.route_short_name)) = rc.route_short_name_norm
     LEFT JOIN latest_tripupdates ltu ON ltu.trip_id = v.trip_id
+    LEFT JOIN transit.routes lr ON lr.route_id = ltu.route_id
+    LEFT JOIN transit.v_route_catalog_lookup rc
+        ON upper(trim(coalesce(r.route_short_name, lr.route_short_name, ltu.route_id)))
+            = rc.route_short_name_norm
 )
 SELECT
     classified.*,
     CASE
-        WHEN NOT matched_to_static THEN 'unmatched_live'
+        WHEN NOT matched_to_static AND NOT has_trip_update THEN 'unmatched_live'
         WHEN NOT has_trip_update THEN 'matched_no_tripupdate'
         ELSE 'in_service'
     END AS vehicle_status,

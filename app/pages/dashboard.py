@@ -28,6 +28,10 @@ def _live_dashboard(live: dict) -> None:
         "Aggregates are calculated when this page renders from the same transit "
         "tables that power the Calgary map. No vehicle identifiers are exposed."
     ).classes("text-base text-grey-7 leading-relaxed")
+    ui.link(
+        "See the Calgary Transit pipeline case study",
+        "/projects#project-calgary-transit-live",
+    ).classes("text-primary font-semibold no-underline hover:underline")
 
     if not live.get("available"):
         with ui.card().classes("w-full p-5"):
@@ -56,7 +60,33 @@ def _live_dashboard(live: dict) -> None:
 
     cadence = live["observation_cadence"]
     routes = live["top_routes"]
-    with ui.element("section").classes("grid w-full grid-cols-1 gap-5 lg:grid-cols-2"):
+    modes = live["route_modes"]
+    with ui.element("section").classes(
+        "grid w-full grid-cols-1 gap-5 lg:grid-cols-2 xl:grid-cols-3"
+    ):
+        if modes:
+            _chart_card(
+                "Fresh fleet by service type",
+                "A current quality slice of map-usable records by Calgary route category; "
+                "it measures feed coverage, not ridership.",
+                {
+                    "tooltip": {"trigger": "item"},
+                    "legend": {"type": "scroll", "bottom": 0},
+                    "series": [
+                        {
+                            "name": "Fresh vehicles",
+                            "type": "pie",
+                            "radius": ["38%", "68%"],
+                            "center": ["50%", "44%"],
+                            "data": [
+                                {"name": row["mode"].replace("_", " ").title(), "value": row["vehicles"]}
+                                for row in modes
+                            ],
+                        }
+                    ],
+                },
+            )
+
         if cadence:
             labels = [row["minute"][11:16] for row in cadence]
             _chart_card(
@@ -143,6 +173,10 @@ def _cached_dashboard(snapshot: dict) -> None:
         "A committed theme-park demonstration snapshot shows the low-latency delivery "
         "pattern for slower-changing analytical products. It is sample data, not live operations."
     ).classes("text-base text-grey-7 leading-relaxed")
+    ui.link(
+        "See the analytics delivery case study",
+        "/projects#project-theme-park-analytics",
+    ).classes("text-primary font-semibold no-underline hover:underline")
 
     if not snapshot.get("available"):
         ui.label("The committed analysis snapshot is unavailable.").classes("text-negative")
@@ -246,6 +280,28 @@ def dashboard_page():
                 "Two delivery patterns in one portfolio: live PostgreSQL aggregates for "
                 "fresh operational questions, and a small versioned snapshot for stable analysis."
             ).classes("text-lg text-grey-7 leading-relaxed")
+
+        with ui.element("section").classes(
+            "grid w-full grid-cols-1 gap-4 md:grid-cols-2"
+        ):
+            with ui.card().classes("w-full h-full p-5 gap-2 border"):
+                ui.icon("directions_bus", size="md").classes("text-primary")
+                ui.label("Project 1 · Realtime transit pipeline").classes(
+                    "text-xl font-semibold"
+                )
+                ui.label(
+                    "The live metrics below validate ingestion cadence, static-GTFS "
+                    "enrichment, active-route coverage, and retained observations used by the map."
+                ).classes("text-sm text-grey-7 leading-relaxed")
+            with ui.card().classes("w-full h-full p-5 gap-2 border"):
+                ui.icon("inventory_2", size="md").classes("text-primary")
+                ui.label("Project 2 · Versioned analytics delivery").classes(
+                    "text-xl font-semibold"
+                )
+                ui.label(
+                    "The snapshot section demonstrates schema validation, quality gates, "
+                    "provenance, and fast delivery for slower-changing analytical data."
+                ).classes("text-sm text-grey-7 leading-relaxed")
 
         _live_dashboard(live)
         ui.separator()

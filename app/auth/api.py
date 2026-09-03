@@ -17,7 +17,6 @@ from app.auth.service import (
     begin_google_login,
     consume_login_state,
     current_session,
-    delete_account,
     exchange_google_code,
     add_favorite_stop,
     issue_local_session,
@@ -241,14 +240,17 @@ def remove_account(request: Request):
     settings = _settings()
     _validate_origin(request, settings)
     try:
-        user = require_mutation_session(
+        require_mutation_session(
             request.cookies.get(SESSION_COOKIE),
             request.cookies.get(CSRF_COOKIE),
             request.headers.get("x-csrf-token"),
         )
     except AuthenticationError as exc:
         raise HTTPException(status_code=403, detail="Session expired; reload and try again") from exc
-    delete_account(user)
-    response = RedirectResponse("/", status_code=303)
-    _clear_auth_cookies(response, settings)
-    return response
+    raise HTTPException(
+        status_code=409,
+        detail=(
+            "Account deletion is handled through a verified request. "
+            "Use /contact?topic=account-deletion; we respond within three business days."
+        ),
+    )

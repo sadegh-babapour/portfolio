@@ -12,6 +12,9 @@ from app.contact.config import ContactSettings
 @with_layout
 def contact():
     settings = ContactSettings.from_env()
+    request = ui.context.client.request
+    requested_topic = request.query_params.get("topic") if request else None
+    account_request = requested_topic == "account-deletion"
     if settings.turnstile_site_key:
         ui.add_head_html(
             '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js'
@@ -46,6 +49,7 @@ def contact():
                     <option value="job-opportunity">Job opportunity</option>
                     <option value="project">Project collaboration</option>
                     <option value="networking">Professional networking</option>
+                    <option value="account-privacy">Account or privacy request</option>
                     <option value="other">Other</option>
                   </select></label>
                   <label>Subject<input id="contact-subject" maxlength="120" required></label>
@@ -64,7 +68,7 @@ def contact():
                 with ui.card().classes("w-full p-5 gap-3"):
                     ui.icon("schedule", size="md").classes("text-primary")
                     ui.label("What to expect").classes("text-xl font-semibold")
-                    ui.label("Typical reply: within two business days.").classes("text-sm")
+                    ui.label("We will respond within three business days.").classes("text-sm")
                     ui.label(
                         "Please don’t include passwords, private datasets, or other secrets."
                     ).classes("text-sm text-grey-7")
@@ -83,6 +87,7 @@ def contact():
             ).classes("text-warning text-sm")
 
     site_key = json.dumps(settings.turnstile_site_key)
+    prefill_account_request = "true" if account_request else "false"
     enabled = "true" if settings.configured else "false"
     ui.add_css("""
       .contact-native-form { display:grid; gap:1rem; }
@@ -117,6 +122,7 @@ def contact():
       (() => {{
         const configured = {enabled};
         const siteKey = {site_key};
+        const accountRequest = {prefill_account_request};
         const form = document.getElementById('portfolio-contact-form');
         const button = document.getElementById('contact-submit');
         const status = document.getElementById('contact-status');
@@ -124,6 +130,13 @@ def contact():
         let csrfToken = '';
         if (!form || form.dataset.bound === 'true') return;
         form.dataset.bound = 'true';
+        if (accountRequest) {{
+          document.getElementById('contact-category').value = 'account-privacy';
+          document.getElementById('contact-subject').value = 'Account deletion request';
+          document.getElementById('contact-message').value =
+            'Please delete my local Bizqlab account and its saved transit stops. ' +
+            'I understand you will verify the request before completing it.';
+        }}
         if (!configured) {{ button.disabled = true; return; }}
 
         const resetSubmission = () => {{

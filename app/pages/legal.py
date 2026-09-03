@@ -23,7 +23,7 @@ def _section(title: str, paragraphs: tuple[str, ...]) -> None:
 @ui.page('/privacy')
 @with_layout
 def privacy():
-    with _legal_shell('Privacy', 'August 24, 2026'):
+    with _legal_shell('Privacy', 'September 2, 2026'):
         _section(
             'What this site collects',
             (
@@ -48,7 +48,7 @@ def privacy():
             'Why the data is used',
             (
                 'Identity data creates and secures your local account, unlocks Project Lab '
-                'material, supports sign-out and account deletion, and helps investigate '
+                'material, supports sign-out and reviewed account-deletion requests, and helps investigate '
                 'authentication failures or abuse.',
                 'The site does not sell personal information or use Google identity data for '
                 'advertising.',
@@ -63,17 +63,17 @@ def privacy():
                 'Login attempts expire after approximately 10 minutes, application sessions '
                 'after approximately 12 hours, and bounded authentication events after '
                 'approximately 90 days. Anonymous page-render records are also deleted after '
-                'approximately 90 days. Account identity records remain until you delete the '
-                'account or request removal. Saved stop identifiers remain until you remove '
-                'them or delete your account.',
+                'approximately 90 days. Account identity records remain until a verified '
+                'removal request is completed. Saved stop identifiers remain until you remove '
+                'them or the associated account is deleted.',
             ),
         )
         _section(
             'Your choices',
             (
                 'You can browse the public portfolio without signing in. Signed-in users can '
-                'sign out or permanently delete their local portfolio account from the Account '
-                'page. For another privacy request, use the Contact page.',
+                'sign out from the Account page. Account deletion and other privacy requests '
+                'use the verified Contact workflow; Bizqlab responds within three business days.',
             ),
         )
 

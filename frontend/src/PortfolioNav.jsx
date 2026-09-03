@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
-
-const THEME_STORAGE_KEY = "portfolio-theme";
+import {
+  formatMountainClock,
+  nextThemeMode,
+  resolveTheme,
+  RESOLVED_THEME_STORAGE_KEY,
+  THEME_MODE_STORAGE_KEY,
+} from "./mountainTime.js";
 
 const NAV_LINKS = [
   ["Home", "/"],
@@ -35,21 +40,28 @@ function NavLinks({ className, mobile = false }) {
 }
 
 export default function PortfolioNav() {
-  const [theme, setTheme] = useState(() => {
-    const initializedTheme = document.documentElement.dataset.theme;
-    if (initializedTheme === "dark" || initializedTheme === "light") return initializedTheme;
-    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
-    if (storedTheme === "dark" || storedTheme === "light") return storedTheme;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  const [mode, setMode] = useState(() => {
+    const storedMode = window.localStorage.getItem(THEME_MODE_STORAGE_KEY);
+    return ["auto", "light", "dark"].includes(storedMode) ? storedMode : "auto";
   });
+  const [now, setNow] = useState(() => new Date());
+  const theme = resolveTheme(mode, now);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = theme;
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-  }, [theme]);
+    window.localStorage.setItem(RESOLVED_THEME_STORAGE_KEY, theme);
+    window.localStorage.setItem(THEME_MODE_STORAGE_KEY, mode);
+  }, [mode, theme]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(new Date()), 1_000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   const dark = theme === "dark";
+  const nextMode = nextThemeMode(mode);
+  const modeLabel = mode === "auto" ? "Auto" : mode === "light" ? "Light" : "Dark";
 
   return (
     <header className="portfolio-nav">
@@ -61,14 +73,18 @@ export default function PortfolioNav() {
       <NavLinks className="portfolio-nav-desktop" />
 
       <div className="portfolio-nav-actions">
+        <time className="portfolio-mountain-clock" dateTime={now.toISOString()}>
+          <span>Calgary</span>
+          <strong>{formatMountainClock(now)}</strong>
+        </time>
         <button
           className="portfolio-theme-toggle"
           type="button"
-          aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
-          title="Switch theme"
-          onClick={() => setTheme(dark ? "light" : "dark")}
+          aria-label={`Theme: ${modeLabel}. Switch to ${nextMode}.`}
+          title={`Theme: ${modeLabel}. Next: ${nextMode}.`}
+          onClick={() => setMode(nextMode)}
         >
-          <span aria-hidden="true">{dark ? "☀️" : "🌙"}</span>
+          <span aria-hidden="true">{mode === "auto" ? "◐" : dark ? "☀️" : "🌙"}</span>
         </button>
 
         <details className="portfolio-nav-mobile">

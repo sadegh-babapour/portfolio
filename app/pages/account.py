@@ -96,11 +96,18 @@ def account():
                     )
 
         ui.label('Account controls').classes('text-xl font-semibold mt-2')
-        with ui.row().classes('gap-3 flex-wrap'):
-            ui.button('Sign out', icon='logout').props('id=portfolio-sign-out')
-            ui.button('Delete local account', icon='delete', color='negative').props(
-                'id=portfolio-delete-account outline'
-            )
+        ui.button('Sign out', icon='logout').props('id=portfolio-sign-out')
+        with ui.expansion('Account help and deletion', icon='manage_accounts').classes('w-full'):
+            with ui.column().classes('w-full gap-3 p-3'):
+                ui.label(
+                    'Account deletion is handled as a verified privacy request so it is '
+                    'not triggered accidentally. Send the request through Contact and we '
+                    'will respond within three business days.'
+                ).classes('text-sm text-grey-7 leading-relaxed')
+                ui.link(
+                    'Request account deletion',
+                    '/contact?topic=account-deletion',
+                ).classes('text-primary font-semibold no-underline hover:underline')
         ui.label('').props('id=portfolio-account-status').classes('text-sm text-negative')
 
     ui.run_javascript('''
@@ -128,11 +135,6 @@ def account():
         };
         document.getElementById('portfolio-sign-out')?.addEventListener('click', async () => {
           try { await mutate('/api/auth/logout', 'POST'); }
-          catch (error) { status.textContent = error.message; }
-        });
-        document.getElementById('portfolio-delete-account')?.addEventListener('click', async () => {
-          if (!window.confirm('Permanently delete your local portfolio account and sessions?')) return;
-          try { await mutate('/api/auth/account', 'DELETE'); }
           catch (error) { status.textContent = error.message; }
         });
       })();

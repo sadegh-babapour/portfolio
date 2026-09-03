@@ -60,7 +60,7 @@ const TILE_CONFIG = {
   },
 };
 
-const PLAYBACK_DELAY_SECONDS = 75;
+const PLAYBACK_DELAY_SECONDS = 45;
 const HISTORY_WINDOW_MINUTES = 4;
 
 function cookieValue(name) {
@@ -734,7 +734,9 @@ function App() {
   const [manualViewportTaken, setManualViewportTaken] = useState(false);
   const [activeRoute, setActiveRoute] = useState(null);
   const [serviceStatus, setServiceStatus] = useState("loading");
-  const [baseMap, setBaseMap] = useState("dark");
+  const [baseMap, setBaseMap] = useState(() =>
+    document.documentElement.dataset.theme === "light" ? "light" : "dark"
+  );
   const [following, setFollowing] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
   const [nearbyStops, setNearbyStops] = useState([]);
@@ -1424,7 +1426,9 @@ function App() {
                     route: arrival.route_short_name,
                     vehicleIds: [],
                     tripId: arrival.trip_id,
-                    availability: "trip",
+                    availability: arrival.prediction_source === "predicted"
+                      ? "awaiting"
+                      : "scheduled",
                   });
                   return;
                 }

@@ -25,10 +25,13 @@ def navbar():
       <link rel="apple-touch-icon" href="/static/bizqlab_logo.png">
       <script>
         (() => {
-          const stored = localStorage.getItem('portfolio-theme');
-          const theme = stored === 'dark' || stored === 'light'
-            ? stored
-            : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+          const mode = localStorage.getItem('portfolio-theme-mode');
+          const parts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'America/Edmonton', hour: '2-digit', hourCycle: 'h23'
+          }).formatToParts(new Date());
+          const hour = Number(parts.find((part) => part.type === 'hour')?.value || 0);
+          const automatic = hour >= 7 && hour < 19 ? 'light' : 'dark';
+          const theme = mode === 'light' || mode === 'dark' ? mode : automatic;
           document.documentElement.dataset.theme = theme;
           document.documentElement.style.colorScheme = theme;
         })();
@@ -126,9 +129,15 @@ def navbar():
           .portfolio-theme-toggle:focus-visible {{
             background: rgba(255, 255, 255, 0.14);
           }}
-          .theme-icon-dark {{ display: none; }}
-          html[data-theme="dark"] .theme-icon-light {{ display: none; }}
-          html[data-theme="dark"] .theme-icon-dark {{ display: inline; }}
+          .portfolio-mountain-clock {{
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            white-space: nowrap;
+            font-size: 11px;
+            line-height: 1.2;
+          }}
+          .portfolio-mountain-clock strong {{ font-size: 12px; }}
           .nicegui-portfolio-links a,
           .nicegui-mobile-links a {{ font-size: 14px; font-weight: 600; }}
           .nicegui-portfolio-links .portfolio-account-link {{
@@ -219,6 +228,7 @@ def navbar():
             .nicegui-portfolio-nav {{ height: 56px; min-height: 56px; padding: 8px 16px; }}
             .nicegui-portfolio-brand {{ font-size: 19px; }}
             .nicegui-portfolio-brand-logo {{ width: 36px; height: 36px; }}
+            .portfolio-mountain-clock span {{ display: none; }}
             .nicegui-portfolio-links {{ display: none; }}
             .nicegui-mobile-menu {{ display: block; }}
             .nicegui-mobile-menu summary {{
@@ -271,10 +281,13 @@ def navbar():
             {desktop_links}
           </nav>
           <div class="nicegui-nav-actions">
+            <time class="portfolio-mountain-clock">
+              <span>Calgary</span>
+              <strong>--:--</strong>
+            </time>
             <button class="portfolio-theme-toggle" type="button"
-                    aria-label="Switch to dark theme" title="Switch theme">
-              <span class="theme-icon-light" aria-hidden="true">🌙</span>
-              <span class="theme-icon-dark" aria-hidden="true">☀️</span>
+                    aria-label="Theme: Auto" title="Theme: Auto">
+              <span class="theme-mode-icon" aria-hidden="true">◐</span>
             </button>
             <details class="nicegui-mobile-menu">
               <summary aria-label="Open portfolio navigation">Menu</summary>
@@ -288,12 +301,30 @@ def navbar():
     ).classes('w-full').style('position: sticky; top: 0; z-index: 1400;')
     ui.run_javascript('''
       (() => {
-        const storageKey = 'portfolio-theme';
+        const modeStorageKey = 'portfolio-theme-mode';
+        const resolvedStorageKey = 'portfolio-theme';
         const button = document.querySelector('.portfolio-theme-toggle');
+        const clock = document.querySelector('.portfolio-mountain-clock');
         if (!button || button.dataset.themeReady === 'true') return;
         button.dataset.themeReady = 'true';
 
+        let mode = localStorage.getItem(modeStorageKey);
+        if (!['auto', 'light', 'dark'].includes(mode)) mode = 'auto';
         let theme = document.documentElement.dataset.theme || 'light';
+
+        const mountainHour = (date) => {
+          const parts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'America/Edmonton', hour: '2-digit', hourCycle: 'h23'
+          }).formatToParts(date);
+          return Number(parts.find((part) => part.type === 'hour')?.value || 0);
+        };
+        const resolveTheme = (date) => {
+          if (mode === 'light' || mode === 'dark') return mode;
+          const hour = mountainHour(date);
+          return hour >= 7 && hour < 19 ? 'light' : 'dark';
+        };
+        const modeLabel = () => mode === 'auto' ? 'Auto' : mode === 'light' ? 'Light' : 'Dark';
+        const nextMode = () => mode === 'auto' ? 'light' : mode === 'light' ? 'dark' : 'auto';
 
         const applyChartTheme = () => {
           const dark = theme === 'dark';
@@ -346,20 +377,39 @@ def navbar():
 
         const applyTheme = (nextTheme) => {
           theme = nextTheme;
-          const dark = theme === 'dark';
           document.documentElement.dataset.theme = theme;
-          button.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
           document.documentElement.style.colorScheme = theme;
+          localStorage.setItem(resolvedStorageKey, theme);
+          localStorage.setItem(modeStorageKey, mode);
+          const upcoming = nextMode();
+          button.setAttribute('aria-label', `Theme: ${modeLabel()}. Switch to ${upcoming}.`);
+          button.setAttribute('title', `Theme: ${modeLabel()}. Next: ${upcoming}.`);
+          button.querySelector('.theme-mode-icon').textContent =
+            mode === 'auto' ? '◐' : theme === 'dark' ? '☀️' : '🌙';
           window.setTimeout(applyChartTheme, 0);
           window.setTimeout(applyChartTheme, 300);
           window.setTimeout(applyChartTheme, 1000);
         };
 
-        applyTheme(theme);
+        const updateClockAndAutomaticTheme = () => {
+          const now = new Date();
+          if (clock) {
+            clock.dateTime = now.toISOString();
+            clock.querySelector('strong').textContent = new Intl.DateTimeFormat('en-CA', {
+              timeZone: 'America/Edmonton', hour: 'numeric', minute: '2-digit',
+              second: '2-digit', timeZoneName: 'short'
+            }).format(now);
+          }
+          const resolved = resolveTheme(now);
+          if (resolved !== theme) applyTheme(resolved);
+        };
+
+        applyTheme(resolveTheme(new Date()));
+        updateClockAndAutomaticTheme();
+        window.setInterval(updateClockAndAutomaticTheme, 1000);
         button.addEventListener('click', () => {
-          const nextTheme = theme === 'dark' ? 'light' : 'dark';
-          localStorage.setItem(storageKey, nextTheme);
-          applyTheme(nextTheme);
+          mode = nextMode();
+          applyTheme(resolveTheme(new Date()));
         });
 
       })();

@@ -31,7 +31,7 @@ test("arrival refresh upgrades an open trip-only route when an exact vehicle app
     route: "90",
     tripId: "trip-90",
     vehicleIds: [],
-    availability: "trip",
+    availability: "awaiting",
   };
   const refreshed = {
     route: "90",
@@ -47,11 +47,21 @@ test("arrival refresh upgrades an open trip-only route when an exact vehicle app
   );
 });
 
-test("route availability distinguishes schedule-only and no-upcoming routes", () => {
+test("route availability distinguishes awaiting, scheduled, and no-upcoming routes", () => {
   assert.equal(routeAvailability([
-    { route_short_name: "54", trip_id: "scheduled", vehicle_id: null },
-  ], "54").availability, "trip");
+    {
+      route_short_name: "54", trip_id: "predicted", vehicle_id: null,
+      prediction_source: "predicted",
+    },
+  ], "54").availability, "awaiting");
+  assert.equal(routeAvailability([
+    {
+      route_short_name: "54", trip_id: "scheduled", vehicle_id: null,
+      prediction_source: "scheduled",
+    },
+  ], "54").availability, "scheduled");
   assert.equal(routeAvailability([], "706").availability, "none");
-  assert.equal(routeAvailabilityLabel("trip"), "Trip only");
+  assert.equal(routeAvailabilityLabel("awaiting"), "Awaiting vehicle");
+  assert.equal(routeAvailabilityLabel("scheduled"), "Scheduled");
   assert.equal(routeAvailabilityLabel("none"), "No upcoming");
 });

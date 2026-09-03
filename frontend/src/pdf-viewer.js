@@ -20,11 +20,15 @@ let renderVersion = 0;
 let resizeTimer = null;
 
 function applyStoredTheme() {
-  const stored = localStorage.getItem("portfolio-theme");
-  if (stored === "dark" || stored === "light") {
-    document.documentElement.dataset.theme = stored;
-    document.documentElement.style.colorScheme = stored;
-  }
+  const mode = localStorage.getItem("portfolio-theme-mode");
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Edmonton", hour: "2-digit", hourCycle: "h23",
+  }).formatToParts(new Date());
+  const hour = Number(parts.find((part) => part.type === "hour")?.value || 0);
+  const automatic = hour >= 7 && hour < 19 ? "light" : "dark";
+  const theme = mode === "light" || mode === "dark" ? mode : automatic;
+  document.documentElement.dataset.theme = theme;
+  document.documentElement.style.colorScheme = theme;
 }
 
 function showError(message) {

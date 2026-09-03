@@ -8,7 +8,13 @@ import time
 
 
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
-ALLOWED_CATEGORIES = {"job-opportunity", "project", "networking", "other"}
+ALLOWED_CATEGORIES = {
+    "job-opportunity",
+    "project",
+    "networking",
+    "account-privacy",
+    "other",
+}
 
 
 class ContactValidationError(ValueError):

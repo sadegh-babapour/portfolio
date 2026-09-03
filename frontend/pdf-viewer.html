@@ -5,10 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
       (() => {
-        const stored = localStorage.getItem("portfolio-theme");
-        const theme = stored === "dark" || stored === "light"
-          ? stored
-          : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        const mode = localStorage.getItem("portfolio-theme-mode");
+        const parts = new Intl.DateTimeFormat("en-CA", {
+          timeZone: "America/Edmonton", hour: "2-digit", hourCycle: "h23"
+        }).formatToParts(new Date());
+        const hour = Number(parts.find((part) => part.type === "hour")?.value || 0);
+        const automatic = hour >= 7 && hour < 19 ? "light" : "dark";
+        const theme = mode === "light" || mode === "dark" ? mode : automatic;
         document.documentElement.dataset.theme = theme;
         document.documentElement.style.colorScheme = theme;
       })();

@@ -74,6 +74,19 @@ class WebBoundaryTests(unittest.TestCase):
         self.assertIn("window.turnstile.execute(widgetId)", source)
         self.assertNotIn("window.turnstile.getResponse", source)
 
+    def test_account_page_uses_reviewed_deletion_requests(self):
+        account_source = (
+            Path(__file__).resolve().parents[1] / "app" / "pages" / "account.py"
+        ).read_text(encoding="utf-8")
+        api_source = (
+            Path(__file__).resolve().parents[1] / "app" / "auth" / "api.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("/contact?topic=account-deletion", account_source)
+        self.assertNotIn("portfolio-delete-account", account_source)
+        self.assertIn("status_code=409", api_source)
+        self.assertNotIn("delete_account(user)", api_source)
+
 
 class CurrentPollerBoundaryTests(unittest.TestCase):
     def test_run_once_updates_and_commits_each_feed_independently(self):

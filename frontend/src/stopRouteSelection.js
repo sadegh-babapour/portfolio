@@ -5,13 +5,19 @@ export function routeAvailability(arrivals, routeNumber) {
   const vehicleIds = [...new Set(
     routeArrivals.map((arrival) => arrival.vehicle_id).filter(Boolean),
   )];
-  const representative = routeArrivals[0] || null;
+  const representative = routeArrivals.find((arrival) => arrival.vehicle_id)
+    || routeArrivals.find((arrival) => arrival.prediction_source === "predicted")
+    || routeArrivals[0]
+    || null;
+  const hasPrediction = routeArrivals.some(
+    (arrival) => arrival.prediction_source === "predicted",
+  );
 
   return {
     availability: vehicleIds.length > 0
       ? "live"
       : representative
-        ? "trip"
+        ? hasPrediction ? "awaiting" : "scheduled"
         : "none",
     vehicleIds,
     tripId: representative?.trip_id || null,
@@ -21,7 +27,8 @@ export function routeAvailability(arrivals, routeNumber) {
 
 export function routeAvailabilityLabel(availability) {
   if (availability === "live") return "Live";
-  if (availability === "trip") return "Trip only";
+  if (availability === "awaiting") return "Awaiting vehicle";
+  if (availability === "scheduled") return "Scheduled";
   return "No upcoming";
 }
 

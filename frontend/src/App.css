@@ -81,6 +81,19 @@ body,
   flex: 0 0 auto;
 }
 
+.portfolio-mountain-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.portfolio-mountain-clock strong {
+  font-size: 12px;
+}
+
 .portfolio-theme-toggle {
   display: inline-flex;
   align-items: center;
@@ -833,6 +846,10 @@ button.list-item {
   .portfolio-brand img {
     width: 36px;
     height: 36px;
+  }
+
+  .portfolio-mountain-clock span {
+    display: none;
   }
 
   .portfolio-nav-desktop {

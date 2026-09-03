@@ -14,6 +14,7 @@ from app.contact.security import (
     keyed_digest,
     new_csrf_token,
     normalize_email,
+    validate_category,
     verify_csrf_token,
 )
 from app.contact.service import (
@@ -84,6 +85,9 @@ class ContactSecurityTests(unittest.TestCase):
         )
         self.assertEqual(clean.name, "Jane Recruiter")
         self.assertEqual(clean.email, "jane@example.com")
+
+    def test_account_privacy_requests_use_the_verified_contact_contract(self):
+        self.assertEqual(validate_category("account-privacy"), "account-privacy")
 
     def test_invalid_email_category_and_short_message_are_rejected(self):
         with self.assertRaises(ContactValidationError):

@@ -39,7 +39,7 @@ export function monotonicPlaybackTime({
   latestDataTimeMs,
   fetchedAtMs,
   nowMs,
-  delaySeconds = 75,
+  delaySeconds = 45,
   liveBufferSeconds = 5,
 }) {
   if (![latestDataTimeMs, fetchedAtMs, nowMs].every(Number.isFinite)) return null;

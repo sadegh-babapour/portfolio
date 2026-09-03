@@ -23,7 +23,7 @@
         "Upsert current entities and retain a bounded vehicle observation history",
         "Enrich trip, route, shape, stop, and alert context in PostgreSQL",
         "Serve parameterized read queries through Express",
-        "Render playback approximately 75 seconds behind source time"
+        "Render playback approximately 45 seconds behind source time"
       ],
       "stack": ["Python", "PostgreSQL", "Express", "React", "Leaflet", "Railway"],
       "outcomes": [
@@ -50,7 +50,7 @@
           {
             "title": "Delayed interpolation",
             "concept": "A small playback buffer can make discrete observations readable without pretending to predict the future.",
-            "implementation": "The browser plays approximately 75 seconds behind the source and interpolates only between two observed positions, while stale and stopped thresholds preserve source honesty.",
+            "implementation": "The browser plays approximately 45 seconds behind the source and interpolates only between two observed positions, while stale and stopped thresholds preserve source honesty.",
             "tradeoff": "The map looks smoother and remains evidence-based, but it is intentionally delayed and cannot claim exact instantaneous vehicle location."
           },
           {

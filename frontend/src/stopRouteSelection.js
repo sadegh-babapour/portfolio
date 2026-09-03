@@ -24,3 +24,22 @@ export function routeAvailabilityLabel(availability) {
   if (availability === "trip") return "Trip only";
   return "No upcoming";
 }
+
+export function isSameTripSelection(current, next) {
+  return Boolean(next?.tripId) && next.tripId === current?.tripId;
+}
+
+export function mergeRefreshedRouteSelection(current, refreshed) {
+  if (!current || current.route !== refreshed?.route) return current;
+  const currentVehicles = current.vehicleIds || [];
+  const refreshedVehicles = refreshed.vehicleIds || [];
+  if (
+    current.tripId === refreshed.tripId
+    && current.availability === refreshed.availability
+    && currentVehicles.length === refreshedVehicles.length
+    && currentVehicles.every((id, index) => id === refreshedVehicles[index])
+  ) {
+    return current;
+  }
+  return refreshed;
+}

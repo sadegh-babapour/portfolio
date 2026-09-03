@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { usableCachedLocation } from "./nearbyLocation";
 
 
 export default function TransitSearch({
@@ -7,6 +8,7 @@ export default function TransitSearch({
   onClearRoute,
   onSelectRoute,
   onSelectStop,
+  userLocation,
   onLocationResolved,
   onNearbyStopsResolved,
   nearbyCount,
@@ -70,8 +72,49 @@ export default function TransitSearch({
     onSelectStop(stop);
   };
 
+  const loadNearby = async (location) => {
+    setLocationLoading(true);
+    setLocationMessage("");
+    try {
+      const response = await fetch(`${apiBase}/stops/nearby`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lat: location[0],
+          lon: location[1],
+          limit: 8,
+          radius_meters: 800,
+        }),
+      });
+      if (!response.ok) throw new Error("Nearby stops unavailable");
+      const rows = await response.json();
+      const nearbyRows = Array.isArray(rows) ? rows : [];
+      setQuery("");
+      setRoutes([]);
+      setStops([]);
+      setOpen(false);
+      onNearbyStopsResolved?.(nearbyRows);
+      setLocationMessage(
+        nearbyRows.length
+          ? `Showing ${nearbyRows.length} stops within 800 m. Tap a stop marker on the map.`
+          : "No Calgary stops were found within 800 m.",
+      );
+    } catch {
+      onNearbyStopsResolved?.([]);
+      setLocationMessage("Nearby stops are unavailable. Search by stop name or number.");
+      setOpen(false);
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
   const findNearby = () => {
     if (disabled) return;
+    const cachedLocation = usableCachedLocation(userLocation);
+    if (cachedLocation) {
+      loadNearby(cachedLocation);
+      return;
+    }
     if (!navigator.geolocation) {
       setLocationMessage("Location is unavailable in this browser. Search for a stop instead.");
       setOpen(false);
@@ -80,40 +123,10 @@ export default function TransitSearch({
     setLocationLoading(true);
     setLocationMessage("");
     navigator.geolocation.getCurrentPosition(
-      async ({ coords }) => {
+      ({ coords }) => {
         const location = [coords.latitude, coords.longitude];
         onLocationResolved?.(location);
-        try {
-          const response = await fetch(`${apiBase}/stops/nearby`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              lat: coords.latitude,
-              lon: coords.longitude,
-              limit: 8,
-              radius_meters: 800,
-            }),
-          });
-          if (!response.ok) throw new Error("Nearby stops unavailable");
-          const rows = await response.json();
-          const nearbyRows = Array.isArray(rows) ? rows : [];
-          setQuery("");
-          setRoutes([]);
-          setStops([]);
-          setOpen(false);
-          onNearbyStopsResolved?.(nearbyRows);
-          setLocationMessage(
-            nearbyRows.length
-              ? `Showing ${nearbyRows.length} stops within 800 m. Tap a stop marker on the map.`
-              : "No Calgary stops were found within 800 m.",
-          );
-        } catch {
-          onNearbyStopsResolved?.([]);
-          setLocationMessage("Nearby stops are unavailable. Search by stop name or number.");
-          setOpen(false);
-        } finally {
-          setLocationLoading(false);
-        }
+        loadNearby(location);
       },
       () => {
         setLocationLoading(false);

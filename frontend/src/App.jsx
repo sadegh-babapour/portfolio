@@ -22,7 +22,12 @@ import TransitSearch from "./TransitSearch";
 import { defaultCorridorStop, upcomingStopById } from "./routeGeometry";
 import { isShortBlankMapTap } from "./mapInteraction";
 import { routeColor } from "./routeStyle";
-import { routeAvailability, routeAvailabilityLabel } from "./stopRouteSelection";
+import {
+  isSameTripSelection,
+  mergeRefreshedRouteSelection,
+  routeAvailability,
+  routeAvailabilityLabel,
+} from "./stopRouteSelection";
 import {
   computePlaybackVehicles,
   monotonicPlaybackTime,
@@ -489,6 +494,7 @@ function StopDrawer({
   stop,
   onClose,
   onSelectRoute,
+  onRefreshRoute,
   onTrackArrival,
   authenticated,
   favorite,
@@ -553,6 +559,20 @@ function StopDrawer({
   const visibleArrivals = selectedRoute === "all"
     ? arrivals
     : arrivals.filter((arrival) => arrival.route_short_name === selectedRoute);
+
+  useEffect(() => {
+    if (selectedRoute === "all") return;
+    const selected = routeOptions.find(
+      (route) => route.route_short_name === selectedRoute,
+    );
+    if (!selected) return;
+    onRefreshRoute({
+      route: selected.route_short_name,
+      vehicleIds: selected.vehicleIds,
+      tripId: selected.tripId,
+      availability: selected.availability,
+    });
+  }, [onRefreshRoute, routeOptions, selectedRoute]);
 
   return (
     <div className="drawer">
@@ -746,6 +766,7 @@ function App() {
   }, []);
 
   const selectStopRoute = useCallback((selection) => {
+    const sameTrip = isSameTripSelection(stopRouteSelection, selection);
     playbackTimeRef.current = null;
     pendingVehicleRef.current = null;
     setFollowing(false);
@@ -753,11 +774,15 @@ function App() {
     setSelectedTargetStop(null);
     setSelectedVehicle(null);
     setTrackedDestinationStop(null);
-    setSelectedTripPath(null);
+    if (!sameTrip) setSelectedTripPath(null);
     setManualViewportTaken(false);
     setStopRouteSelection(selection);
     setActiveRoute(selection?.route || null);
     if (selection) setMode("all");
+  }, [stopRouteSelection]);
+
+  const refreshStopRoute = useCallback((selection) => {
+    setStopRouteSelection((current) => mergeRefreshedRouteSelection(current, selection));
   }, []);
 
   useEffect(() => {
@@ -1100,8 +1125,11 @@ function App() {
     : stopRouteSelection
       ? vehicles.filter((vehicle) => stopRouteVehicleIds.has(vehicle.vehicle_id))
       : vehicles;
-  const visibleRoutePaths = selectedTripPath
-    ? [selectedTripPath]
+  const displayedTripPath = selectedTripPath?.trip_id === stopRouteSelection?.tripId
+    ? selectedTripPath
+    : null;
+  const visibleRoutePaths = displayedTripPath
+    ? [displayedTripPath]
     : stopRouteSelection
       ? []
       : trackingLocked
@@ -1193,6 +1221,7 @@ function App() {
             setSelectedPlaceStop(stop);
             setActiveRoute(null);
           }}
+          userLocation={userLocation}
           onLocationResolved={setUserLocation}
           onNearbyStopsResolved={(stops) => {
             clearSelection();
@@ -1241,7 +1270,7 @@ function App() {
               enabled={!selectedPlaceStop && !selectedVehicle && !trackingRequested && !stopRouteSelection}
             />
             <FitToPath
-              path={selectedTripPath}
+              path={displayedTripPath}
               fitKey={stopRouteSelection?.tripId || ""}
               enabled={!manualViewportTaken}
             />
@@ -1381,8 +1410,14 @@ function App() {
             <StopDrawer
               key={selectedPlaceStop.stop_id}
               stop={selectedPlaceStop}
-              onClose={clearSelection}
+              onClose={() => {
+                playbackTimeRef.current = null;
+                clearSelection();
+                setRoutePaths([]);
+                setActiveRoute(null);
+              }}
               onSelectRoute={selectStopRoute}
+              onRefreshRoute={refreshStopRoute}
               onTrackArrival={(arrival) => {
                 if (!arrival.vehicle_id) {
                   selectStopRoute({

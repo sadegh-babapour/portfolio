@@ -4,6 +4,8 @@ from nicegui import ui
 
 from app.admin.service import build_admin_summary, require_admin
 from app.auth.service import SESSION_COOKIE
+from app.components.admin_nav import admin_navigation
+from app.components.charts import enable_viewport_chart_animations, viewport_chart
 from app.components.navbar import with_layout
 
 
@@ -22,7 +24,7 @@ def _traffic_charts(summary: dict) -> None:
         with ui.card().classes("w-full min-w-0 p-5 gap-3"):
             ui.label("Daily render trend").classes("text-xl font-semibold")
             if daily:
-                ui.echart(
+                viewport_chart(
                     {
                         "tooltip": {"trigger": "axis"},
                         "grid": {"left": 42, "right": 18, "top": 20, "bottom": 45},
@@ -38,8 +40,10 @@ def _traffic_charts(summary: dict) -> None:
                                 "itemStyle": {"color": "#2563eb"},
                             }
                         ],
-                    }
-                ).classes("w-full h-72").props('aria-label="Daily page renders" role="img"')
+                    },
+                    classes="w-full h-72",
+                    aria_label="Daily page renders",
+                )
                 ui.label(
                     f"{sum(row['views'] for row in daily)} page renders across "
                     f"{len(daily)} UTC days with recorded traffic."
@@ -53,7 +57,7 @@ def _traffic_charts(summary: dict) -> None:
             ui.label("Content distribution · 30 days").classes("text-xl font-semibold")
             if paths:
                 ordered = list(reversed(paths))
-                ui.echart(
+                viewport_chart(
                     {
                         "tooltip": {"trigger": "axis"},
                         "grid": {"left": 140, "right": 22, "top": 20, "bottom": 35},
@@ -67,8 +71,10 @@ def _traffic_charts(summary: dict) -> None:
                                 "itemStyle": {"color": "#0f766e"},
                             }
                         ],
-                    }
-                ).classes("w-full h-72").props('aria-label="Top page renders" role="img"')
+                    },
+                    classes="w-full h-72",
+                    aria_label="Top page renders",
+                )
                 ui.label(
                     "Exact allow-listed paths only; counts are page renders, not visitors."
                 ).classes("text-sm text-grey-7")
@@ -90,13 +96,11 @@ def admin():
     transit = summary["transit"]
 
     with ui.column().classes("w-full max-w-6xl mx-auto px-4 py-8 sm:px-8 gap-6"):
+        admin_navigation("/admin")
         ui.label("Operational health").classes("text-4xl")
         ui.label(
             "Owner-only, read-only aggregates. Page renders are not unique visitors."
         ).classes("text-base text-grey-7")
-        ui.link("Open blog publishing →", "/admin/blog").classes(
-            "text-primary font-semibold no-underline hover:underline"
-        )
 
         ui.label("Traffic").classes("text-2xl font-semibold")
         with ui.element("section").classes("grid w-full grid-cols-1 gap-4 sm:grid-cols-3"):
@@ -163,3 +167,4 @@ def admin():
             f"Anonymous page-render records are automatically deleted after "
             f"{summary['analytics_retention_days']} days."
         ).classes("text-sm text-grey-7")
+        enable_viewport_chart_animations()

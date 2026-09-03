@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from nicegui import ui
 
+from app.components.charts import enable_viewport_chart_animations, viewport_chart
 from app.components.navbar import with_layout
 from app.dashboard.service import build_live_transit_analysis, load_cached_analysis
 
@@ -16,9 +17,7 @@ def _metric(title: str, value: object, note: str) -> None:
 def _chart_card(title: str, summary: str, options: dict) -> None:
     with ui.card().classes("w-full min-w-0 p-4 sm:p-5 gap-3"):
         ui.label(title).classes("text-xl font-semibold")
-        ui.echart(options).classes("w-full h-80").props(
-            f'aria-label="{title}" role="img"'
-        )
+        viewport_chart(options, classes="w-full h-80", aria_label=title)
         ui.label(summary).classes("text-sm text-grey-7 leading-relaxed")
 
 
@@ -306,3 +305,4 @@ def dashboard_page():
         _live_dashboard(live)
         ui.separator()
         _cached_dashboard(snapshot)
+        enable_viewport_chart_animations()

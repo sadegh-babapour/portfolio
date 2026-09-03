@@ -25,7 +25,6 @@ export function formatMountainClock(date = new Date()) {
     timeZone: MOUNTAIN_TIME_ZONE,
     hour: "numeric",
     minute: "2-digit",
-    timeZoneName: "short",
   }).format(date);
 }
 

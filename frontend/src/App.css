@@ -1056,8 +1056,8 @@ button.list-item {
   }
 
   .content .leaflet-bottom.leaflet-right {
-    top: 0;
-    bottom: auto;
+    top: auto;
+    bottom: 0;
   }
 
   .transit-search-bar {

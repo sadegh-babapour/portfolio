@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 
 from app.blog.content import BlogValidationError, render_markdown, validate_blog_content
 from app.blog.models import BlogPost, BlogPostRevision
+from app.pages.admin_blog import MARKDOWN_EXAMPLE, _slugify
 
 
 class BlogContentTests(unittest.TestCase):
@@ -55,6 +57,21 @@ class BlogContentTests(unittest.TestCase):
             constraint.name for constraint in BlogPostRevision.__table__.constraints
         }
         self.assertIn("uq_blog_revision_post_version", constraints)
+
+    def test_admin_editor_samples_and_native_handlers_are_present(self) -> None:
+        source = (
+            Path(__file__).resolve().parents[1] / "app" / "pages" / "admin_blog.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertEqual(
+            _slugify("Why Live Transit Maps Need Delayed Playback!"),
+            "why-live-transit-maps-need-delayed-playback",
+        )
+        self.assertIn("## Why this matters", MARKDOWN_EXAMPLE)
+        self.assertIn('new_button.on("click", reset_editor)', source)
+        self.assertIn('preview_button.on("click", preview_article)', source)
+        self.assertIn('draft_button.on("click", partial(persist, "draft"))', source)
+        self.assertNotIn("ui.run_javascript", source)
 
 
 if __name__ == "__main__":

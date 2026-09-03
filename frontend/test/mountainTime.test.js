@@ -27,5 +27,5 @@ test("clock is explicitly formatted in Mountain Time", () => {
   const value = formatMountainClock(new Date("2026-09-02T14:05:06Z"));
   assert.match(value, /8:05/);
   assert.doesNotMatch(value, /:06/);
-  assert.match(value, /MDT/);
+  assert.doesNotMatch(value, /M[DS]T/);
 });

@@ -403,7 +403,6 @@ def navbar():
             clock.dateTime = now.toISOString();
             clock.querySelector('strong').textContent = new Intl.DateTimeFormat('en-CA', {
               timeZone: 'America/Edmonton', hour: 'numeric', minute: '2-digit',
-              timeZoneName: 'short'
             }).format(now);
           }
           const resolved = resolveTheme(now);

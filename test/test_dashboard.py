@@ -1,11 +1,22 @@
 import json
 import tempfile
 import unittest
-from datetime import datetime, timezone
 from pathlib import Path
+from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 from app.dashboard.service import build_live_transit_analysis, load_cached_analysis
+
+
+class DashboardPresentationTests(unittest.TestCase):
+    def test_chart_animation_waits_for_the_viewport(self):
+        source = (
+            Path(__file__).resolve().parents[1] / "app" / "components" / "charts.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('initial_options["animation"] = False', source)
+        self.assertIn("IntersectionObserver", source)
+        self.assertIn("prefers-reduced-motion", source)
 
 
 class CachedDashboardTests(unittest.TestCase):

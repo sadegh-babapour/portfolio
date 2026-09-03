@@ -28,10 +28,13 @@ class WebBoundaryTests(unittest.TestCase):
                 "/projects",
                 "/contact",
                 "/dashboard",
+                "/blog",
+                "/blog/{slug}",
                 "/account",
                 "/privacy",
                 "/terms",
                 "/admin",
+                "/admin/blog",
             }
             <= route_paths
         )
@@ -47,6 +50,11 @@ class WebBoundaryTests(unittest.TestCase):
                 "/api/auth/favorite-stops",
                 "/api/auth/favorite-stops/{stop_id}",
                 "/api/admin/summary",
+                "/api/admin/blog/posts",
+                "/api/admin/blog/posts/{post_id}",
+                "/api/admin/blog/preview",
+                "/sitemap.xml",
+                "/robots.txt",
             }
             <= route_paths
         )

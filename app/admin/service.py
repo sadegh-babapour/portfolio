@@ -25,6 +25,7 @@ TRACKED_PAGE_PATHS = frozenset(
         "/projects",
         "/contact",
         "/dashboard",
+        "/blog",
         "/account",
         "/privacy",
         "/terms",

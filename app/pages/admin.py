@@ -94,6 +94,9 @@ def admin():
         ui.label(
             "Owner-only, read-only aggregates. Page renders are not unique visitors."
         ).classes("text-base text-grey-7")
+        ui.link("Open blog publishing →", "/admin/blog").classes(
+            "text-primary font-semibold no-underline hover:underline"
+        )
 
         ui.label("Traffic").classes("text-2xl font-semibold")
         with ui.element("section").classes("grid w-full grid-cols-1 gap-4 sm:grid-cols-3"):

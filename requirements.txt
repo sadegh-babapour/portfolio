@@ -4,6 +4,8 @@ python-dotenv==1.1.1
 SQLAlchemy==2.0.51
 alembic==1.18.5
 google-auth==2.56.0
+markdown-it-py==4.2.0
+nh3==0.3.7
 
 # GTFS-Realtime worker
 gtfs-realtime-bindings==1.0.0

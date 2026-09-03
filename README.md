@@ -2,9 +2,9 @@
 
 This repository contains Bizqlab, a NiceGUI data-engineering and analytics
 portfolio with public case studies, optional registered-user Project Lab notes,
-and an interactive Calgary Transit demonstration. The transit page uses a
-React/Leaflet frontend, an Express API, a Python GTFS-Realtime poller, and
-PostgreSQL.
+an owner-published blog, and an interactive Calgary Transit demonstration. The
+transit page uses a React/Leaflet frontend, an Express API, a Python
+GTFS-Realtime poller, and PostgreSQL.
 
 The Calgary rider view supports route and stop-number search, delayed trip-safe
 vehicle playback, direction indicators, shape-aligned movement, explicit
@@ -146,8 +146,19 @@ The résumé is read locally from the ignored `static/resume.pdf` by default.
 Production reads it from the Railway volume using
 `RESUME_PDF_PATH=/data/resume.pdf`.
 
-The on-page résumé timeline and project case studies are separate from the PDF
-Application validation rejects malformed content before rendering it.
+The on-page résumé timeline and project case studies are separate from the PDF.
+Edit `content/resume_timeline.json` to update the job/education tree above the
+document and `content/projects.json` to update project case studies. These are
+source-controlled files, so changing either requires validation, commit/push,
+and a web deployment. Application validation rejects malformed content before
+rendering it.
+
+Blog articles use a different workflow. An allowlisted administrator can open
+`/admin/blog`, write Markdown, preview the sanitized result, save drafts, and
+publish. Published articles appear at `/blog` immediately because posts and
+their revision history live in PostgreSQL; adding or editing an article does
+not require rebuilding or redeploying the services. Code or schema changes
+still require the normal deployment and `alembic upgrade head`.
 
 ## Checks
 

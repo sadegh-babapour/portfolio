@@ -13,6 +13,7 @@ NAV_LINKS = [
     ('Projects', '/projects'),
     ('Contact', '/contact'),
     ('Dashboard', '/dashboard'),
+    ('Blog', '/blog'),
     ('Calgary Transit Live', '/calgary-transit-live/'),
 ]
 ACCOUNT_LINK = ('Account', '/account')
@@ -225,10 +226,15 @@ def navbar():
             color: #dbeafe !important;
           }}
           @media (max-width: 1050px) {{
-            .nicegui-portfolio-nav {{ height: 56px; min-height: 56px; padding: 8px 16px; }}
+            .nicegui-portfolio-nav {{
+              gap: 10px; height: 56px; min-height: 56px; padding: 8px 16px;
+            }}
             .nicegui-portfolio-brand {{ font-size: 19px; }}
             .nicegui-portfolio-brand-logo {{ width: 36px; height: 36px; }}
             .portfolio-mountain-clock span {{ display: none; }}
+            .portfolio-mountain-clock strong {{ font-size: 11px; }}
+            .nicegui-nav-actions {{ gap: 8px; }}
+            .portfolio-theme-toggle {{ min-width: 40px; padding-inline: 8px; }}
             .nicegui-portfolio-links {{ display: none; }}
             .nicegui-mobile-menu {{ display: block; }}
             .nicegui-mobile-menu summary {{
@@ -397,7 +403,7 @@ def navbar():
             clock.dateTime = now.toISOString();
             clock.querySelector('strong').textContent = new Intl.DateTimeFormat('en-CA', {
               timeZone: 'America/Edmonton', hour: 'numeric', minute: '2-digit',
-              second: '2-digit', timeZoneName: 'short'
+              timeZoneName: 'short'
             }).format(now);
           }
           const resolved = resolveTheme(now);
@@ -406,7 +412,7 @@ def navbar():
 
         applyTheme(resolveTheme(new Date()));
         updateClockAndAutomaticTheme();
-        window.setInterval(updateClockAndAutomaticTheme, 1000);
+        window.setInterval(updateClockAndAutomaticTheme, 30000);
         button.addEventListener('click', () => {
           mode = nextMode();
           applyTheme(resolveTheme(new Date()));

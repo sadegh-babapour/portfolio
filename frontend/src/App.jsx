@@ -1165,7 +1165,7 @@ function App() {
               ? `Route ${stopRouteSelection.route} at this stop · ${routeAvailabilityLabel(stopRouteSelection.availability)}`
               : activeRoute
               ? `Tracking active route ${activeRoute} · choose a bus or stop`
-              : "Delayed playback ~75s · search a route or stop, or tap a bus"}
+              : "Delayed playback ~45s · search a route or stop, or tap a bus"}
           </div>
         </div>
         <div className="status-group">

@@ -10,6 +10,7 @@ from app.contact.config import ContactSettings
 from app.contact.models import Base, PORTFOLIO_SCHEMA
 import app.auth.models  # noqa: F401,E402
 import app.admin.models  # noqa: F401,E402
+import app.blog.models  # noqa: F401,E402
 
 
 load_dotenv()

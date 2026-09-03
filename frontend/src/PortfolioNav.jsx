@@ -14,6 +14,7 @@ const NAV_LINKS = [
   ["Projects", "/projects"],
   ["Contact", "/contact"],
   ["Dashboard", "/dashboard"],
+  ["Blog", "/blog"],
 ];
 const ACCOUNT_LINK = ["Account", "/account"];
 const TRANSIT_LINK = ["Calgary Transit Live", "/calgary-transit-live/"];
@@ -55,7 +56,7 @@ export default function PortfolioNav() {
   }, [mode, theme]);
 
   useEffect(() => {
-    const interval = window.setInterval(() => setNow(new Date()), 1_000);
+    const interval = window.setInterval(() => setNow(new Date()), 30_000);
     return () => window.clearInterval(interval);
   }, []);
 

@@ -834,6 +834,7 @@ button.list-item {
 
 @media (max-width: 1050px) {
   .portfolio-nav {
+    gap: 10px;
     height: 56px;
     min-height: 56px;
     padding: 8px 16px;
@@ -850,6 +851,19 @@ button.list-item {
 
   .portfolio-mountain-clock span {
     display: none;
+  }
+
+  .portfolio-mountain-clock strong {
+    font-size: 11px;
+  }
+
+  .portfolio-nav-actions {
+    gap: 8px;
+  }
+
+  .portfolio-theme-toggle {
+    min-width: 40px;
+    padding-inline: 8px;
   }
 
   .portfolio-nav-desktop {

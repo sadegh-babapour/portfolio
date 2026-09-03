@@ -733,6 +733,18 @@ button.list-item {
   font-weight: 800;
 }
 
+.stop-route-picker button small {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.stop-route-picker button.active small {
+  color: #dbeafe;
+}
+
 .teletext-note {
   margin-top: 12px;
   padding: 10px 12px;

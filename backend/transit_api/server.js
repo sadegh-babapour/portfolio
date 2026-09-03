@@ -6,6 +6,7 @@ const {
   getTransitHealth,
   getVehicles,
   getRoutePaths,
+  getTripPath,
   getVehicleHistory,
   getVehicleContext,
   getVehicleStops,
@@ -54,6 +55,17 @@ app.get("/api/routes/paths", async (request, response) => {
   } catch (error) {
     console.error(error);
     response.status(500).json({ error: "failed_to_load_route_paths" });
+  }
+});
+
+app.get("/api/trips/:tripId/path", async (request, response) => {
+  try {
+    const path = await getTripPath(pool, request.params.tripId);
+    if (!path) return response.status(404).json({ error: "trip_path_not_found" });
+    return response.json(path);
+  } catch (error) {
+    console.error(error);
+    return response.status(500).json({ error: "failed_to_load_trip_path" });
   }
 });
 

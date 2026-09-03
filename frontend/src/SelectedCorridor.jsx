@@ -12,7 +12,13 @@ import {
 import { routeColor } from "./routeStyle";
 
 
-export default function SelectedCorridor({ context, vehicle, selectedStop, trackingLocked = false }) {
+export default function SelectedCorridor({
+  context,
+  vehicle,
+  selectedStop,
+  trackingLocked = false,
+  fitEnabled = true,
+}) {
   const map = useMap();
   const fittedSelectionRef = useRef("");
   const antPathRef = useRef(null);
@@ -58,7 +64,7 @@ export default function SelectedCorridor({ context, vehicle, selectedStop, track
   }, [corridor, hasCorridor]);
 
   useEffect(() => {
-    if (!map || corridor.length < 2 || !destinationStop) return;
+    if (!fitEnabled || !map || corridor.length < 2 || !destinationStop) return;
     const selectionKey = `${vehicle.vehicle_id}-${vehicle.trip_id}-${destinationStop.stop_id}`;
     if (fittedSelectionRef.current === selectionKey) return;
     fittedSelectionRef.current = selectionKey;
@@ -68,7 +74,7 @@ export default function SelectedCorridor({ context, vehicle, selectedStop, track
       maxZoom: 15,
       padding: [32, 32],
     });
-  }, [corridor, destinationStop, map, vehicle, vehicle.trip_id, vehicle.vehicle_id]);
+  }, [corridor, destinationStop, fitEnabled, map, vehicle, vehicle.trip_id, vehicle.vehicle_id]);
 
   if (!context || !vehicle) return null;
 

@@ -22,6 +22,7 @@ import TransitSearch from "./TransitSearch";
 import { defaultCorridorStop, upcomingStopById } from "./routeGeometry";
 import { isShortBlankMapTap } from "./mapInteraction";
 import { routeColor } from "./routeStyle";
+import { routeAvailability, routeAvailabilityLabel } from "./stopRouteSelection";
 import {
   computePlaybackVehicles,
   monotonicPlaybackTime,
@@ -137,12 +138,16 @@ function createBusIcon(vehicle, selected = false) {
   });
 }
 
-function FitToVehicles({ vehicles, fitKey }) {
+function FitToVehicles({ vehicles, fitKey, enabled = true }) {
   const map = useMap();
-  const hasFittedRef = useRef(false);
+  const fittedKeyRef = useRef("");
 
   useEffect(() => {
-    if (!vehicles.length || hasFittedRef.current) return;
+    if (!enabled) {
+      fittedKeyRef.current = "";
+      return;
+    }
+    if (!vehicles.length || fittedKeyRef.current === fitKey) return;
 
     const bounds = L.latLngBounds(vehicles.map((v) => [v.lat, v.lon]));
     map.fitBounds(bounds, { padding: [30, 30] });
@@ -152,13 +157,36 @@ function FitToVehicles({ vehicles, fitKey }) {
       map.setZoom(Math.min(currentZoom + 1, 15));
     }
 
-    hasFittedRef.current = true;
-  }, [vehicles, map]);
+    fittedKeyRef.current = fitKey;
+  }, [enabled, fitKey, vehicles, map]);
+
+  return null;
+}
+
+function FitToPath({ path, fitKey, enabled = true }) {
+  const map = useMap();
+  const fittedKeyRef = useRef("");
 
   useEffect(() => {
-    hasFittedRef.current = false;
-  }, [fitKey]);
+    if (!path?.positions?.length) {
+      fittedKeyRef.current = "";
+      return;
+    }
+    if (!enabled || fittedKeyRef.current === fitKey) return;
+    fittedKeyRef.current = fitKey;
+    map.fitBounds(L.latLngBounds(path.positions), {
+      animate: true,
+      duration: 0.8,
+      maxZoom: 15,
+      padding: [32, 32],
+    });
+  }, [enabled, fitKey, map, path]);
 
+  return null;
+}
+
+function ManualMapControl({ onDragStart }) {
+  useMapEvents({ dragstart: onDragStart });
   return null;
 }
 
@@ -460,6 +488,7 @@ function VehicleDrawer({
 function StopDrawer({
   stop,
   onClose,
+  onSelectRoute,
   onTrackArrival,
   authenticated,
   favorite,
@@ -509,9 +538,11 @@ function StopDrawer({
     for (const route of [...routes, ...arrivals]) {
       const routeNumber = String(route.route_short_name || "").trim();
       if (routeNumber && !byRoute.has(routeNumber)) {
+        const status = routeAvailability(arrivals, routeNumber);
         byRoute.set(routeNumber, {
           route_short_name: routeNumber,
           route_long_name: route.route_long_name || "",
+          ...status,
         });
       }
     }
@@ -563,7 +594,10 @@ function StopDrawer({
           <button
             type="button"
             className={selectedRoute === "all" ? "active" : ""}
-            onClick={() => setSelectedRoute("all")}
+            onClick={() => {
+              setSelectedRoute("all");
+              onSelectRoute(null);
+            }}
           >
             All
           </button>
@@ -573,9 +607,18 @@ function StopDrawer({
               key={route.route_short_name}
               className={selectedRoute === route.route_short_name ? "active" : ""}
               title={route.route_long_name || undefined}
-              onClick={() => setSelectedRoute(route.route_short_name)}
+              onClick={() => {
+                setSelectedRoute(route.route_short_name);
+                onSelectRoute({
+                  route: route.route_short_name,
+                  vehicleIds: route.vehicleIds,
+                  tripId: route.tripId,
+                  availability: route.availability,
+                });
+              }}
             >
-              {route.route_short_name}
+              <span>{route.route_short_name}</span>
+              <small>{routeAvailabilityLabel(route.availability)}</small>
             </button>
           ))}
         </div>
@@ -594,7 +637,10 @@ function StopDrawer({
             type="button"
             key={`${arrival.trip_id}-${arrival.stop_sequence}`}
             className="list-item arrival-choice"
-            onClick={() => onTrackArrival(arrival)}
+            onClick={() => {
+              setSelectedRoute(arrival.route_short_name);
+              onTrackArrival(arrival);
+            }}
           >
             <span className="arrival-route">{arrival.route_short_name || "Bus"}</span>
             <span>
@@ -605,7 +651,7 @@ function StopDrawer({
               </small>
             </span>
             <span className="arrival-action">
-              {arrival.vehicle_id ? "Track" : "Show route"}
+              {arrival.vehicle_id ? "Track" : "Show trip"}
             </span>
           </button>
         ))}
@@ -663,6 +709,9 @@ function App() {
   const [selectedTargetStop, setSelectedTargetStop] = useState(null);
   const [selectedPlaceStop, setSelectedPlaceStop] = useState(null);
   const [trackedDestinationStop, setTrackedDestinationStop] = useState(null);
+  const [stopRouteSelection, setStopRouteSelection] = useState(null);
+  const [selectedTripPath, setSelectedTripPath] = useState(null);
+  const [manualViewportTaken, setManualViewportTaken] = useState(false);
   const [activeRoute, setActiveRoute] = useState(null);
   const [serviceStatus, setServiceStatus] = useState("loading");
   const [baseMap, setBaseMap] = useState("dark");
@@ -690,7 +739,25 @@ function App() {
     setSelectedTargetStop(null);
     setSelectedPlaceStop(null);
     setTrackedDestinationStop(null);
+    setStopRouteSelection(null);
+    setSelectedTripPath(null);
+    setManualViewportTaken(false);
     setSelectedVehicle(null);
+  }, []);
+
+  const selectStopRoute = useCallback((selection) => {
+    playbackTimeRef.current = null;
+    pendingVehicleRef.current = null;
+    setFollowing(false);
+    setSelectedContext(null);
+    setSelectedTargetStop(null);
+    setSelectedVehicle(null);
+    setTrackedDestinationStop(null);
+    setSelectedTripPath(null);
+    setManualViewportTaken(false);
+    setStopRouteSelection(selection);
+    setActiveRoute(selection?.route || null);
+    if (selection) setMode("all");
   }, []);
 
   useEffect(() => {
@@ -806,6 +873,23 @@ function App() {
     });
   };
 
+
+  useEffect(() => {
+    if (!stopRouteSelection?.tripId) return undefined;
+    const controller = new AbortController();
+    fetch(`${API_BASE}/trips/${encodeURIComponent(stopRouteSelection.tripId)}/path`, {
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Trip path failed with HTTP ${response.status}`);
+        return response.json();
+      })
+      .then(setSelectedTripPath)
+      .catch((error) => {
+        if (error.name !== "AbortError") setSelectedTripPath(null);
+      });
+    return () => controller.abort();
+  }, [stopRouteSelection?.tripId]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -1004,11 +1088,25 @@ function App() {
     if (!selectedPlaceStop) return null;
     return [Number(selectedPlaceStop.stop_lat), Number(selectedPlaceStop.stop_lon)];
   }, [selectedPlaceStop]);
-  const focusPoint = selectedPlacePoint || (nearbyStops.length ? null : userLocation);
-  const visibleVehicles = trackingLocked ? [selectedVehicle] : vehicles;
-  const visibleRoutePaths = trackingLocked
-    ? routePaths.filter((route) => route.route_short_name === selectedVehicle.route_short_name)
-    : routePaths;
+  const focusPoint = stopRouteSelection || trackingRequested
+    ? null
+    : selectedPlacePoint || (nearbyStops.length ? null : userLocation);
+  const stopRouteVehicleIds = useMemo(
+    () => new Set(stopRouteSelection?.vehicleIds || []),
+    [stopRouteSelection?.vehicleIds],
+  );
+  const visibleVehicles = trackingLocked
+    ? [selectedVehicle]
+    : stopRouteSelection
+      ? vehicles.filter((vehicle) => stopRouteVehicleIds.has(vehicle.vehicle_id))
+      : vehicles;
+  const visibleRoutePaths = selectedTripPath
+    ? [selectedTripPath]
+    : stopRouteSelection
+      ? []
+      : trackingLocked
+        ? routePaths.filter((route) => route.route_short_name === selectedVehicle.route_short_name)
+        : routePaths;
   const beaconColor = baseMap === "dark" ? "#f8fafc" : "#111827";
   const favoriteHydrationKey = [...favoriteStops].join(",");
   const favoriteStopDetails = favoriteHydration.key === favoriteHydrationKey
@@ -1033,7 +1131,9 @@ function App() {
         <div className="topbar-text">
           <h1>Calgary Transit Live</h1>
           <div className="subtle">
-            {activeRoute
+            {stopRouteSelection
+              ? `Route ${stopRouteSelection.route} at this stop · ${routeAvailabilityLabel(stopRouteSelection.availability)}`
+              : activeRoute
               ? `Tracking active route ${activeRoute} · choose a bus or stop`
               : "Delayed playback ~75s · search a route or stop, or tap a bus"}
           </div>
@@ -1135,10 +1235,25 @@ function App() {
               url={TILE_CONFIG[baseMap].url}
             />
 
-            <FitToVehicles vehicles={vehicles} fitKey={`${mode}-${activeRoute || "all"}`} />
+            <FitToVehicles
+              vehicles={vehicles}
+              fitKey={`${mode}-${activeRoute || "all"}`}
+              enabled={!selectedPlaceStop && !selectedVehicle && !trackingRequested && !stopRouteSelection}
+            />
+            <FitToPath
+              path={selectedTripPath}
+              fitKey={stopRouteSelection?.tripId || ""}
+              enabled={!manualViewportTaken}
+            />
             <FollowVehicle vehicle={selectedVehicle} enabled={following && !trackingLocked} />
             <FocusPoint point={focusPoint} />
             <FitNearbyStops location={userLocation} stops={trackingRequested ? [] : nearbyStops} />
+            <ManualMapControl
+              onDragStart={() => {
+                setFollowing(false);
+                setManualViewportTaken(true);
+              }}
+            />
             <MapSelectionGesture
               enabled={Boolean(selectedVehicle) && !trackingRequested}
               onClear={clearSelection}
@@ -1230,6 +1345,7 @@ function App() {
                 vehicle={selectedVehicle}
                 selectedStop={selectedTargetStop}
                 trackingLocked={trackingLocked}
+                fitEnabled={!manualViewportTaken}
               />
             )}
 
@@ -1266,23 +1382,31 @@ function App() {
               key={selectedPlaceStop.stop_id}
               stop={selectedPlaceStop}
               onClose={clearSelection}
+              onSelectRoute={selectStopRoute}
               onTrackArrival={(arrival) => {
+                if (!arrival.vehicle_id) {
+                  selectStopRoute({
+                    route: arrival.route_short_name,
+                    vehicleIds: [],
+                    tripId: arrival.trip_id,
+                    availability: "trip",
+                  });
+                  return;
+                }
                 playbackTimeRef.current = null;
                 setSelectedContext(null);
                 setSelectedTargetStop(null);
                 setSelectedVehicle(null);
+                setStopRouteSelection(null);
+                setSelectedTripPath(null);
+                setManualViewportTaken(false);
                 setActiveRoute(arrival.route_short_name);
                 setMode("all");
-                if (arrival.vehicle_id) {
-                  pendingVehicleRef.current = {
-                    vehicle_id: arrival.vehicle_id,
-                    trip_id: arrival.trip_id,
-                  };
-                  setTrackedDestinationStop(selectedPlaceStop);
-                } else {
-                  pendingVehicleRef.current = null;
-                  setTrackedDestinationStop(null);
-                }
+                pendingVehicleRef.current = {
+                  vehicle_id: arrival.vehicle_id,
+                  trip_id: arrival.trip_id,
+                };
+                setTrackedDestinationStop(selectedPlaceStop);
               }}
               authenticated={authenticated}
               favorite={favoriteStops.has(selectedPlaceStop.stop_id)}
@@ -1298,7 +1422,10 @@ function App() {
               onSelectStop={setSelectedTargetStop}
               serviceStatus={serviceStatus}
               following={following}
-              onToggleFollow={() => setFollowing((value) => !value)}
+              onToggleFollow={() => setFollowing((value) => {
+                if (!value) setManualViewportTaken(false);
+                return !value;
+              })}
               trackingLocked={trackingLocked}
               onClose={clearSelection}
             />

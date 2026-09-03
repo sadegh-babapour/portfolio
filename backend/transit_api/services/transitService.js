@@ -180,6 +180,44 @@ async function getRoutePaths(pool, mode, routesParam) {
   return Array.from(grouped.values());
 }
 
+async function getTripPath(pool, tripId) {
+  const result = await pool.query(
+    `
+    select
+      t.trip_id,
+      t.shape_id,
+      r.route_short_name,
+      r.route_long_name,
+      case
+        when coalesce(rc.route_category, '') in ('BRT', 'MAX', 'EXPRESS') then 'brt'
+        else 'bus'
+      end as route_mode,
+      s.shape_pt_sequence,
+      s.shape_pt_lat,
+      s.shape_pt_lon
+    from transit.trips t
+    join transit.routes r on r.route_id = t.route_id
+    left join transit.v_route_catalog_lookup rc
+      on upper(trim(r.route_short_name)) = rc.route_short_name_norm
+    join transit.shapes s on s.shape_id = t.shape_id
+    where t.trip_id = $1
+    order by s.shape_pt_sequence
+    `,
+    [tripId],
+  );
+
+  if (result.rows.length === 0) return null;
+  const first = result.rows[0];
+  return {
+    trip_id: first.trip_id,
+    shape_id: first.shape_id,
+    route_short_name: first.route_short_name,
+    route_long_name: first.route_long_name,
+    route_mode: first.route_mode,
+    positions: result.rows.map((row) => [row.shape_pt_lat, row.shape_pt_lon]),
+  };
+}
+
 async function getVehicleHistory(pool, mode, density, windowMinutes, routesParam) {
   const params = [];
   let where = buildVehicleWhere(mode, params);
@@ -722,6 +760,7 @@ module.exports = {
   getTransitHealth,
   getVehicles,
   getRoutePaths,
+  getTripPath,
   getVehicleHistory,
   getVehicleContext,
   getVehicleStops,

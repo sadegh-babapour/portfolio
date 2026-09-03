@@ -5,6 +5,7 @@ const {
   getTransitHealth,
   getVehicles,
   getRoutePaths,
+  getTripPath,
   getVehicleHistory,
   getVehicleContext,
   getVehicleAlerts,
@@ -127,6 +128,44 @@ test("route paths group ordered shape points by route", async () => {
       positions: [[51.1, -114.1], [51.2, -114.2]],
     },
   ]);
+});
+
+test("trip path returns the exact scheduled trip shape", async () => {
+  const pool = poolReturning([
+    {
+      trip_id: "trip-54",
+      shape_id: "shape-54",
+      route_short_name: "54",
+      route_long_name: "Edgevalley",
+      route_mode: "bus",
+      shape_pt_lat: 51.1,
+      shape_pt_lon: -114.1,
+    },
+    {
+      trip_id: "trip-54",
+      shape_id: "shape-54",
+      route_short_name: "54",
+      route_long_name: "Edgevalley",
+      route_mode: "bus",
+      shape_pt_lat: 51.2,
+      shape_pt_lon: -114.2,
+    },
+  ]);
+
+  assert.deepEqual(await getTripPath(pool, "trip-54"), {
+    trip_id: "trip-54",
+    shape_id: "shape-54",
+    route_short_name: "54",
+    route_long_name: "Edgevalley",
+    route_mode: "bus",
+    positions: [[51.1, -114.1], [51.2, -114.2]],
+  });
+  assert.deepEqual(pool.calls[0].params, ["trip-54"]);
+  assert.match(pool.calls[0].sql, /where t\.trip_id = \$1/);
+});
+
+test("missing trip path returns null", async () => {
+  assert.equal(await getTripPath(poolReturning([]), "missing"), null);
 });
 
 test("vehicle history applies density and window parameters and groups observations", async () => {

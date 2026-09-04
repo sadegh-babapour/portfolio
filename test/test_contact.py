@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 
 from app.contact.config import ContactSettings, normalize_database_url
 from app.contact.models import Base
-from app.contact.mail import deliver_contact_message
+from app.contact.mail import deliver_contact_message, send_verification_email
 from app.contact.security import (
     ContactValidationError,
     clean_message,
@@ -116,6 +116,22 @@ class ContactSecurityTests(unittest.TestCase):
 
 
 class ContactMailTests(unittest.TestCase):
+    @patch("app.contact.mail._send")
+    def test_verification_email_uses_human_copy_and_a_button(self, send):
+        settings = Mock(from_email="portfolio@bizqlab.com")
+        send_verification_email(
+            settings,
+            "jane@example.com",
+            "Jane",
+            "https://www.bizqlab.com/api/contact/verify?token=opaque-value",
+        )
+        message = send.call_args.args[0]
+        plain = message.get_body(preferencelist=("plain",)).get_content()
+        html = message.get_body(preferencelist=("html",)).get_content()
+        self.assertIn("confirm it was you", plain)
+        self.assertIn("Verify and send my message", html)
+        self.assertNotIn("API", plain)
+
     @patch("app.contact.mail.requests.post")
     def test_resend_api_receives_bearer_auth_and_reply_to(self, post):
         response = Mock()

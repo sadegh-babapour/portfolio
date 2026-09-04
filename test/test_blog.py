@@ -71,6 +71,8 @@ class BlogContentTests(unittest.TestCase):
         self.assertIn('new_button.on("click", reset_editor)', source)
         self.assertIn('preview_button.on("click", preview_article)', source)
         self.assertIn('draft_button.on("click", partial(persist, "draft"))', source)
+        self.assertIn('delete_button.on("click", open_delete_dialog)', source)
+        self.assertIn('confirm_delete_button.on("click", confirm_delete)', source)
         self.assertNotIn("ui.run_javascript", source)
 
 

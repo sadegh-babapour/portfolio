@@ -58,6 +58,13 @@ class WebBoundaryTests(unittest.TestCase):
             }
             <= route_paths
         )
+        blog_post_methods = {
+            method
+            for route in nicegui_app.routes
+            if getattr(route, "path", None) == "/api/admin/blog/posts/{post_id}"
+            for method in getattr(route, "methods", set())
+        }
+        self.assertTrue({"GET", "PUT", "DELETE"} <= blog_post_methods)
 
     def test_legacy_transit_routes_are_not_registered(self):
         route_paths = {getattr(route, "path", None) for route in nicegui_app.routes}
@@ -72,14 +79,16 @@ class WebBoundaryTests(unittest.TestCase):
             self.assertEqual(web_main.DEFAULT_RESUME_PDF.name, "resume.pdf")
             self.assertEqual(web_main.DEFAULT_RESUME_PDF.parent.name, "static")
 
-    def test_contact_turnstile_executes_only_after_submit(self):
+    def test_contact_turnstile_is_visible_and_required_before_submit(self):
         source = (
             Path(__file__).resolve().parents[1] / "app" / "pages" / "contact.py"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("execution: 'execute'", source)
-        self.assertIn("appearance: 'interaction-only'", source)
-        self.assertIn("window.turnstile.execute(widgetId)", source)
+        self.assertIn("appearance: 'always'", source)
+        self.assertIn("turnstileToken = token", source)
+        self.assertIn("Please complete the visible security check first.", source)
+        self.assertNotIn("execution: 'execute'", source)
+        self.assertNotIn("window.turnstile.execute(widgetId)", source)
         self.assertNotIn("window.turnstile.getResponse", source)
 
     def test_account_page_uses_reviewed_deletion_requests(self):
@@ -185,8 +194,9 @@ class PortfolioContentTests(unittest.TestCase):
         self.assertIn("https://www.bizqlab.com/", home_source)
         self.assertIn("/static/bizqlab_logo.png", home_source)
         self.assertIn('"logo": "https://www.bizqlab.com/static/bizqlab_logo.png"', home_source)
-        self.assertIn("[*NAV_LINKS, ACCOUNT_LINK]", navbar_source)
-        self.assertIn("[ACCOUNT_LINK, *NAV_LINKS]", navbar_source)
+        self.assertIn("[*NAV_LINKS, account_link]", navbar_source)
+        self.assertIn("[account_link, *NAV_LINKS]", navbar_source)
+        self.assertIn("Account · {compact_name}", navbar_source)
         self.assertIn("portfolio-development-note", projects_source)
         self.assertEqual(
             lab.working_method,

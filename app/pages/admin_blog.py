@@ -11,6 +11,7 @@ from app.admin.service import require_admin
 from app.auth.service import SESSION_COOKIE
 from app.blog.content import BlogValidationError, render_markdown
 from app.blog.service import (
+    delete_post,
     get_admin_post,
     list_admin_posts,
     list_post_revisions,
@@ -113,6 +114,10 @@ def admin_blog():
                     publish_button = ui.button("Publish", icon="publish").props(
                         "unelevated no-caps color=primary"
                     )
+                    delete_button = ui.button("Delete", icon="delete").props(
+                        "outline no-caps color=negative"
+                    )
+                    delete_button.disable()
                 status_label = ui.label("New unsaved article").classes(
                     "min-h-6 text-sm text-grey-7"
                 )
@@ -128,6 +133,19 @@ def admin_blog():
                     "w-full border rounded-lg"
                 ):
                     revisions_container = ui.column().classes("w-full gap-2 p-4")
+
+        with ui.dialog() as delete_dialog, ui.card().classes(
+            "w-full max-w-md p-5 gap-4"
+        ):
+            ui.label("Delete this article?").classes("text-xl font-semibold")
+            delete_description = ui.label(
+                "The article and every saved revision will be permanently deleted."
+            ).classes("text-sm text-grey-7")
+            with ui.row().classes("w-full justify-end gap-2"):
+                ui.button("Cancel", on_click=delete_dialog.close).props("flat no-caps")
+                confirm_delete_button = ui.button(
+                    "Delete permanently", icon="delete"
+                ).props("unelevated no-caps color=negative")
 
     ui.add_css("""
       .blog-preview-output { line-height: 1.7; }
@@ -162,6 +180,7 @@ def admin_blog():
             if post is None:
                 raise BlogValidationError("Blog post was not found")
             selected["id"] = post.id
+            delete_button.enable()
             title.set_value(post.title)
             slug.set_value(post.slug)
             summary.set_value(post.summary)
@@ -198,6 +217,7 @@ def admin_blog():
 
     def reset_editor() -> None:
         selected["id"] = None
+        delete_button.disable()
         title.set_value("")
         slug.set_value("")
         summary.set_value("")
@@ -239,6 +259,7 @@ def admin_blog():
                 status=next_status,
             )
             selected["id"] = post.id
+            delete_button.enable()
             status_label.set_text(f"{post.status.title()} · version {post.version} saved")
             refresh_revisions(post.id)
             refresh_posts()
@@ -254,11 +275,43 @@ def admin_blog():
             status_label.set_text("The article could not be saved. Please try again.")
             ui.notify("The article could not be saved.", type="negative")
 
+    def open_delete_dialog() -> None:
+        if selected["id"] is None:
+            ui.notify("Choose a saved article first.", type="warning")
+            return
+        delete_description.set_text(
+            f'“{str(title.value or "Untitled")}” and every saved revision will be '
+            "permanently deleted."
+        )
+        delete_dialog.open()
+
+    def confirm_delete() -> None:
+        post_id = selected["id"]
+        if post_id is None:
+            delete_dialog.close()
+            return
+        try:
+            current_author()
+            delete_post(post_id)
+            delete_dialog.close()
+            reset_editor()
+            ui.notify("Article permanently deleted.", type="positive")
+        except BlogValidationError as exc:
+            delete_dialog.close()
+            status_label.set_text(str(exc))
+            ui.notify(str(exc), type="warning")
+        except Exception:
+            log.exception("Unable to delete blog post %s", post_id)
+            delete_dialog.close()
+            ui.notify("The article could not be deleted.", type="negative")
+
     new_button.on("click", reset_editor)
     slug_button.on("click", generate_slug)
     preview_button.on("click", preview_article)
     draft_button.on("click", partial(persist, "draft"))
     publish_button.on("click", partial(persist, "published"))
+    delete_button.on("click", open_delete_dialog)
+    confirm_delete_button.on("click", confirm_delete)
 
     refresh_revisions(None)
     refresh_posts()

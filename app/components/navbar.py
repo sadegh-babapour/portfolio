@@ -1,9 +1,14 @@
+import logging
 from functools import wraps
 from html import escape
 
 from nicegui import ui
 
+from app.auth.service import SESSION_COOKIE, current_session
 from .footer import footer
+
+
+log = logging.getLogger(__name__)
 
 
 NAV_LINKS = [
@@ -47,6 +52,15 @@ def navbar():
     ''')
     request = ui.context.client.request
     current_path = request.url.path.rstrip('/') or '/' if request else ''
+    account_link = ACCOUNT_LINK
+    if request:
+        try:
+            session_user = current_session(request.cookies.get(SESSION_COOKIE))
+            if session_user:
+                compact_name = session_user.display_name.strip().split()[0][:24]
+                account_link = (f'Account · {compact_name}', '/account')
+        except Exception:
+            log.exception('Unable to personalize the account navigation label')
 
     def render_links(items):
         return ''.join(
@@ -57,8 +71,8 @@ def navbar():
             for label, path in items
         )
 
-    desktop_links = render_links([*NAV_LINKS, ACCOUNT_LINK])
-    mobile_links = render_links([ACCOUNT_LINK, *NAV_LINKS])
+    desktop_links = render_links([*NAV_LINKS, account_link])
+    mobile_links = render_links([account_link, *NAV_LINKS])
     ui.html(
         f'''
         <style>

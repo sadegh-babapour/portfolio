@@ -16,13 +16,13 @@ const NAV_LINKS = [
   ["Dashboard", "/dashboard"],
   ["Blog", "/blog"],
 ];
-const ACCOUNT_LINK = ["Account", "/account"];
 const TRANSIT_LINK = ["Calgary Transit Live", "/calgary-transit-live/"];
 
-function NavLinks({ className, mobile = false }) {
+function NavLinks({ className, mobile = false, accountLabel = "Account" }) {
+  const accountLink = [accountLabel, "/account"];
   const links = mobile
-    ? [ACCOUNT_LINK, ...NAV_LINKS, TRANSIT_LINK]
-    : [...NAV_LINKS, TRANSIT_LINK, ACCOUNT_LINK];
+    ? [accountLink, ...NAV_LINKS, TRANSIT_LINK]
+    : [...NAV_LINKS, TRANSIT_LINK, accountLink];
 
   return (
     <nav className={className} aria-label="Portfolio navigation">
@@ -46,6 +46,7 @@ export default function PortfolioNav() {
     return ["auto", "light", "dark"].includes(storedMode) ? storedMode : "auto";
   });
   const [now, setNow] = useState(() => new Date());
+  const [accountLabel, setAccountLabel] = useState("Account");
   const theme = resolveTheme(mode, now);
 
   useEffect(() => {
@@ -60,6 +61,19 @@ export default function PortfolioNav() {
     return () => window.clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    fetch("/api/auth/session", { credentials: "same-origin" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((session) => {
+        if (!active || !session?.authenticated || !session?.user?.display_name) return;
+        const firstName = session.user.display_name.trim().split(/\s+/)[0].slice(0, 24);
+        if (firstName) setAccountLabel(`Account · ${firstName}`);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
   const dark = theme === "dark";
   const nextMode = nextThemeMode(mode);
   const modeLabel = mode === "auto" ? "Auto" : mode === "light" ? "Light" : "Dark";
@@ -71,7 +85,7 @@ export default function PortfolioNav() {
         <span>Bizqlab</span>
       </a>
 
-      <NavLinks className="portfolio-nav-desktop" />
+      <NavLinks className="portfolio-nav-desktop" accountLabel={accountLabel} />
 
       <div className="portfolio-nav-actions">
         <time className="portfolio-mountain-clock" dateTime={now.toISOString()}>
@@ -90,7 +104,7 @@ export default function PortfolioNav() {
 
         <details className="portfolio-nav-mobile">
           <summary aria-label="Open portfolio navigation">Menu</summary>
-          <NavLinks className="portfolio-nav-mobile-links" mobile />
+          <NavLinks className="portfolio-nav-mobile-links" mobile accountLabel={accountLabel} />
         </details>
       </div>
     </header>

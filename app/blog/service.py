@@ -46,6 +46,16 @@ def get_admin_post(post_id: uuid.UUID) -> BlogPost | None:
         return database.get(BlogPost, post_id)
 
 
+def delete_post(post_id: uuid.UUID) -> None:
+    """Permanently delete one post and its database-cascaded revisions."""
+    with session_scope() as database:
+        post = database.get(BlogPost, post_id)
+        if post is None:
+            raise BlogValidationError("Blog post was not found")
+        database.delete(post)
+        database.commit()
+
+
 def list_post_revisions(post_id: uuid.UUID) -> list[BlogPostRevision]:
     with session_scope() as database:
         return list(

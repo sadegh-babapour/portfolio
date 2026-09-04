@@ -21,6 +21,7 @@ from app.auth.service import (
 )
 from app.blog.content import BlogValidationError, render_markdown
 from app.blog.service import (
+    delete_post,
     get_admin_post,
     list_admin_posts,
     list_post_revisions,
@@ -135,6 +136,16 @@ def update_blog_post(request: Request, post_id: uuid.UUID, payload: BlogPostPayl
     except BlogValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _post_document(post, include_body=True)
+
+
+@fastapi_app.delete("/api/admin/blog/posts/{post_id}", include_in_schema=False)
+def remove_blog_post(request: Request, post_id: uuid.UUID):
+    _admin_mutation(request)
+    try:
+        delete_post(post_id)
+    except BlogValidationError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"deleted": True, "id": str(post_id)}
 
 
 @fastapi_app.get("/sitemap.xml", include_in_schema=False)

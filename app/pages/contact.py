@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import json
+import logging
 
 from nicegui import ui
 
+from app.auth.service import SESSION_COOKIE, current_session
 from app.components.navbar import with_layout
 from app.contact.config import ContactSettings
+
+
+log = logging.getLogger(__name__)
 
 
 @ui.page("/contact")
@@ -15,6 +20,11 @@ def contact():
     request = ui.context.client.request
     requested_topic = request.query_params.get("topic") if request else None
     account_request = requested_topic == "account-deletion"
+    signed_in_user = None
+    try:
+        signed_in_user = current_session(request.cookies.get(SESSION_COOKIE))
+    except Exception:
+        log.exception("Unable to prefill the contact identity")
     if settings.turnstile_site_key:
         ui.add_head_html(
             '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js'
@@ -87,6 +97,8 @@ def contact():
             ).classes("text-warning text-sm")
 
     site_key = json.dumps(settings.turnstile_site_key)
+    prefill_name = json.dumps(signed_in_user.display_name if signed_in_user else "")
+    prefill_email = json.dumps(signed_in_user.email if signed_in_user else "")
     prefill_account_request = "true" if account_request else "false"
     enabled = "true" if settings.configured else "false"
     ui.add_css("""
@@ -123,24 +135,34 @@ def contact():
         const configured = {enabled};
         const siteKey = {site_key};
         const accountRequest = {prefill_account_request};
+        const prefillName = {prefill_name};
+        const prefillEmail = {prefill_email};
         const form = document.getElementById('portfolio-contact-form');
         const button = document.getElementById('contact-submit');
         const status = document.getElementById('contact-status');
         let widgetId = null;
         let csrfToken = '';
+        let turnstileToken = '';
         if (!form || form.dataset.bound === 'true') return;
         form.dataset.bound = 'true';
+        document.getElementById('contact-name').value = prefillName;
+        document.getElementById('contact-email').value = prefillEmail;
         if (accountRequest) {{
           document.getElementById('contact-category').value = 'account-privacy';
           document.getElementById('contact-subject').value = 'Account deletion request';
           document.getElementById('contact-message').value =
             'Please delete my local Bizqlab account and its saved transit stops. ' +
             'I understand you will verify the request before completing it.';
+          if (prefillEmail) {{
+            document.getElementById('contact-name').readOnly = true;
+            document.getElementById('contact-email').readOnly = true;
+          }}
         }}
         if (!configured) {{ button.disabled = true; return; }}
 
         const resetSubmission = () => {{
           csrfToken = '';
+          turnstileToken = '';
           if (widgetId !== null) window.turnstile.reset(widgetId);
           button.disabled = false;
         }};
@@ -165,6 +187,8 @@ def contact():
             if (!response.ok) throw new Error(result.detail || 'Unable to send the message.');
             status.textContent = result.message;
             form.reset();
+            document.getElementById('contact-name').value = prefillName;
+            document.getElementById('contact-email').value = prefillEmail;
           }} catch (error) {{ status.textContent = error.message; }}
           finally {{ resetSubmission(); }}
         }};
@@ -173,17 +197,20 @@ def contact():
           if (window.turnstile && widgetId === null) {{
             widgetId = window.turnstile.render('#contact-turnstile', {{
               sitekey: siteKey, action: 'contact', theme: 'auto',
-              execution: 'execute', appearance: 'interaction-only',
+              appearance: 'always',
               'response-field': false,
-              callback: (token) => {{ void submitContact(token); }},
+              callback: (token) => {{
+                turnstileToken = token;
+                status.textContent = 'Security check complete. You can send the verification email.';
+              }},
               'error-callback': () => {{
                 status.textContent = 'The security check could not load. Refresh and try again.';
                 resetSubmission();
                 return true;
               }},
               'expired-callback': () => {{
+                turnstileToken = '';
                 status.textContent = 'The security check expired. Please complete it again.';
-                resetSubmission();
               }}
             }});
           }} else if (widgetId === null) {{ setTimeout(renderWidget, 100); }}
@@ -195,15 +222,18 @@ def contact():
           status.textContent = '';
           if (!form.reportValidity()) return;
           if (widgetId === null) {{ status.textContent = 'The security check is still loading.'; return; }}
+          if (!turnstileToken) {{
+            status.textContent = 'Please complete the visible security check first.';
+            return;
+          }}
           button.disabled = true;
-          status.textContent = 'Preparing the security check…';
+          status.textContent = 'Preparing your verification email…';
           try {{
             const csrfResponse = await fetch('/api/contact/csrf', {{credentials:'same-origin'}});
             const csrf = await csrfResponse.json();
             if (!csrfResponse.ok) throw new Error(csrf.detail || 'Contact service is unavailable.');
             csrfToken = csrf.csrf_token;
-            status.textContent = 'Completing the security check…';
-            window.turnstile.execute(widgetId);
+            await submitContact(turnstileToken);
           }} catch (error) {{
             status.textContent = error.message;
             resetSubmission();

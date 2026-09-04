@@ -155,10 +155,19 @@ rendering it.
 
 Blog articles use a different workflow. An allowlisted administrator can open
 `/admin/blog`, write Markdown, preview the sanitized result, save drafts, and
-publish. Published articles appear at `/blog` immediately because posts and
-their revision history live in PostgreSQL; adding or editing an article does
-not require rebuilding or redeploying the services. Code or schema changes
-still require the normal deployment and `alembic upgrade head`.
+publish, or permanently delete a selected article after confirmation. Published
+articles appear at `/blog` immediately because posts and their revision history
+live in PostgreSQL; article deletion cascades to that revision history. Adding,
+editing, publishing, or deleting article content does not require rebuilding or
+redeploying the services. Code or schema changes still require the normal
+deployment and `alembic upgrade head`.
+
+Contact uses a visible managed Cloudflare Turnstile check, same-origin CSRF,
+database throttling, one-time inbox verification, and Resend HTTPS delivery.
+Signed-in name/email are prefilled; account-deletion requests lock that identity
+and enter the reviewed privacy-request workflow rather than immediately deleting
+data. The shared navigation displays the signed-in user's first name, while all
+authorization remains enforced by server-side sessions and roles.
 
 ## Checks
 

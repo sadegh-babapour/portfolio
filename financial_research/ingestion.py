@@ -352,6 +352,9 @@ def persist_extraction_bundle(
     facts_inserted = 0
     facts_seen_again = 0
     facts_mapped = 0
+    pending_mappings: list[
+        tuple[ResearchFactObservation, FactObservation, tuple[Any, Any]]
+    ] = []
     for fact in bundle.facts:
         fingerprint = fact_fingerprint(fact)
         fact_row = existing_facts.get(fingerprint)
@@ -401,29 +404,36 @@ def persist_extraction_bundle(
             context_kind=fact.context_kind,
         )
         if resolved is not None and fact_row.id not in mapped_fact_ids:
-            metric, candidate = resolved
-            scope_cik = candidate.filer_cik or "*"
-            mapping = mapping_catalog[
-                (
-                    metric.key,
-                    fact.taxonomy,
-                    fact.concept,
-                    fact.unit,
-                    fact.context_kind,
-                    scope_cik,
-                )
-            ]
-            database.add(
-                ResearchFactMetricMapping(
-                    fact_id=fact_row.id,
-                    mapping_id=mapping.id,
-                    metric_key=metric.key,
-                    metric_version=CANONICAL_METRIC_VERSION,
-                    quality_state="mapped",
-                )
-            )
+            pending_mappings.append((fact_row, fact, resolved))
             mapped_fact_ids.add(fact_row.id)
-            facts_mapped += 1
+
+    # The mapping rows carry scalar UUID foreign keys rather than ORM
+    # relationships, so SQLAlchemy cannot infer their insert dependency. Flush
+    # new facts first or PostgreSQL may bulk-insert mappings before their facts.
+    database.flush()
+    for fact_row, fact, resolved in pending_mappings:
+        metric, candidate = resolved
+        scope_cik = candidate.filer_cik or "*"
+        mapping = mapping_catalog[
+            (
+                metric.key,
+                fact.taxonomy,
+                fact.concept,
+                fact.unit,
+                fact.context_kind,
+                scope_cik,
+            )
+        ]
+        database.add(
+            ResearchFactMetricMapping(
+                fact_id=fact_row.id,
+                mapping_id=mapping.id,
+                metric_key=metric.key,
+                metric_version=CANONICAL_METRIC_VERSION,
+                quality_state="mapped",
+            )
+        )
+        facts_mapped += 1
 
     for issue in bundle.issues:
         database.add(

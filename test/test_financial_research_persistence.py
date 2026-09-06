@@ -130,6 +130,7 @@ class ResearchPersistenceTests(unittest.TestCase):
     def setUp(self):
         self.engine = create_engine("sqlite+pysqlite:///:memory:")
         self.connection = self.engine.connect()
+        self.connection.exec_driver_sql("PRAGMA foreign_keys=ON")
         self.connection.exec_driver_sql("ATTACH DATABASE ':memory:' AS portfolio")
         ResearchFiler.metadata.create_all(self.connection, tables=RESEARCH_TABLES)
         self.database = Session(bind=self.connection, expire_on_commit=False)

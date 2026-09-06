@@ -13,6 +13,7 @@ from app.auth.models import AuthEvent, AuthSession, User
 from app.auth.service import SessionUser, current_session
 from app.contact.database import session_scope
 from app.contact.models import ContactMessage
+from financial_research.models import ResearchAutomationRun
 
 
 log = logging.getLogger(__name__)
@@ -25,6 +26,8 @@ TRACKED_PAGE_PATHS = frozenset(
         "/projects",
         "/contact",
         "/dashboard",
+        "/research/financials",
+        "/research/financials/paypal",
         "/blog",
         "/account",
         "/privacy",
@@ -116,6 +119,43 @@ def _transit_health(database) -> dict[str, Any]:
     }
 
 
+def _financial_research_health(database) -> dict[str, Any]:
+    try:
+        rows = list(
+            database.scalars(
+                select(ResearchAutomationRun)
+                .order_by(ResearchAutomationRun.started_at.desc())
+                .limit(10)
+            ).all()
+        )
+    except Exception:
+        log.exception("Unable to read financial-research automation status")
+        return {"status": "unavailable", "runs": []}
+    if not rows:
+        return {"status": "not_started", "runs": []}
+    latest = rows[0]
+    return {
+        "status": latest.status,
+        "latest_started_at": latest.started_at,
+        "latest_completed_at": latest.completed_at,
+        "publication_status": latest.publication_status,
+        "runs": [
+            {
+                "id": str(row.id),
+                "trigger": row.trigger_kind,
+                "status": row.status,
+                "targets": row.target_count,
+                "succeeded": row.succeeded_count,
+                "failed": row.failed_count,
+                "publication": row.publication_status,
+                "started_at": row.started_at,
+                "completed_at": row.completed_at,
+            }
+            for row in rows
+        ],
+    }
+
+
 def build_admin_summary() -> dict[str, Any]:
     now = datetime.now(timezone.utc)
     day_ago = now - timedelta(days=1)
@@ -191,6 +231,7 @@ def build_admin_summary() -> dict[str, Any]:
             select(func.count(ContactMessage.id)).where(ContactMessage.created_at >= month_ago)
         ) or 0
         transit = _transit_health(database)
+        financial_research = _financial_research_health(database)
 
     return {
         "generated_at": now,
@@ -200,5 +241,6 @@ def build_admin_summary() -> dict[str, Any]:
         "identity": identity,
         "contact": {"thirty_days": contacts_30d, "statuses": contact_statuses},
         "transit": transit,
+        "financial_research": financial_research,
         "analytics_retention_days": AnalyticsSettings.from_env().retention_days,
     }

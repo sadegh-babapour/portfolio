@@ -26,6 +26,10 @@ class AnonymousAnalyticsBoundaryTests(unittest.TestCase):
     def test_only_exact_deliberate_html_paths_are_tracked(self):
         self.assertEqual(tracked_page_path("/projects"), "/projects")
         self.assertEqual(
+            tracked_page_path("/research/financials/paypal"),
+            "/research/financials/paypal",
+        )
+        self.assertEqual(
             tracked_page_path("/calgary-transit-live/"),
             "/calgary-transit-live/",
         )

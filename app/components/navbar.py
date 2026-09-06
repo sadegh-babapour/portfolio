@@ -18,6 +18,7 @@ NAV_LINKS = [
     ('Projects', '/projects'),
     ('Contact', '/contact'),
     ('Dashboard', '/dashboard'),
+    ('Financial Research', '/research/financials'),
     ('Blog', '/blog'),
     ('Calgary Transit Live', '/calgary-transit-live/'),
 ]

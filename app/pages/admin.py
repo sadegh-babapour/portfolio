@@ -94,6 +94,7 @@ def admin():
     identity = summary["identity"]
     contact = summary["contact"]
     transit = summary["transit"]
+    financial_research = summary["financial_research"]
 
     with ui.column().classes("w-full max-w-6xl mx-auto px-4 py-8 sm:px-8 gap-6"):
         admin_navigation("/admin")
@@ -162,6 +163,35 @@ def admin():
                 ui.label(f"Latest alert feed: {transit['latest_alert_timestamp']}").classes("text-sm text-grey-7")
             else:
                 ui.label("Transit freshness could not be read from PostgreSQL.").classes("text-negative")
+
+        ui.label("SEC research automation").classes("text-2xl font-semibold")
+        with ui.card().classes("w-full p-5 gap-3"):
+            with ui.row().classes("items-center gap-3 flex-wrap"):
+                ui.badge(str(financial_research["status"]).replace("_", " ").title()).props("outline")
+                ui.label("Owner-only run metadata; research publication remains separately gated.").classes(
+                    "text-sm text-grey-7"
+                )
+            if financial_research["runs"]:
+                ui.table(
+                    columns=[
+                        {"name": "started_at", "label": "Started", "field": "started_at", "align": "left"},
+                        {"name": "trigger", "label": "Trigger", "field": "trigger", "align": "left"},
+                        {"name": "status", "label": "Status", "field": "status", "align": "left"},
+                        {"name": "succeeded", "label": "Succeeded", "field": "succeeded", "align": "right"},
+                        {"name": "failed", "label": "Failed", "field": "failed", "align": "right"},
+                        {"name": "publication", "label": "Publication", "field": "publication", "align": "left"},
+                    ],
+                    rows=financial_research["runs"],
+                    row_key="id",
+                ).classes("w-full").props("flat dense")
+            elif financial_research["status"] == "unavailable":
+                ui.label("Research automation status could not be read from PostgreSQL.").classes(
+                    "text-negative"
+                )
+            else:
+                ui.label("No scheduled or administrator refresh has been recorded yet.").classes(
+                    "text-sm text-grey-7"
+                )
 
         ui.label(
             f"Anonymous page-render records are automatically deleted after "

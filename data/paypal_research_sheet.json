@@ -1,0 +1,195 @@
+{
+  "schema_version": "financial-publication-2026-09-06.2",
+  "generated_at": "2026-09-06T05:48:00Z",
+  "companies": [
+    {
+      "slug": "paypal",
+      "company_name": "PayPal Holdings, Inc.",
+      "ticker": "PYPL",
+      "cik": "0001633917",
+      "form": "10-Q",
+      "period_end": "2026-06-30",
+      "filed_on": "2026-07-28",
+      "accession_number": "0001633917-26-000082",
+      "filing_index_url": "https://www.sec.gov/Archives/edgar/data/1633917/0001633917-26-000082-index.html",
+      "primary_document_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391726000082/pypl-20260630.htm",
+      "headline": "Revenue grew, but transaction expense compressed operating margin",
+      "summary": "PayPal reported moderate year-over-year revenue growth and strong cash conversion in Q2 2026, alongside lower operating margin and working capital. The filing supports a mixed operating picture and leaves net liquidity unresolved under the current structured-data mapping.",
+      "metrics": [
+        {
+          "key": "revenue",
+          "label": "Revenue",
+          "display_value": "$8.682B",
+          "change": "+4.75% YoY",
+          "state": "reconciled",
+          "confidence": "high",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391726000082/pypl-20260630.htm"
+        },
+        {
+          "key": "operating_margin",
+          "label": "Operating margin",
+          "display_value": "16.44%",
+          "change": "-1.71pp YoY",
+          "state": "derived",
+          "confidence": "high",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391726000082/pypl-20260630.htm"
+        },
+        {
+          "key": "net_income",
+          "label": "Net income",
+          "display_value": "$1.104B",
+          "change": "Reported quarter",
+          "state": "reconciled",
+          "confidence": "high",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391726000082/pypl-20260630.htm"
+        },
+        {
+          "key": "simplified_free_cash_flow",
+          "label": "Simplified free cash flow",
+          "display_value": "$1.775B",
+          "change": "OCF less capex",
+          "state": "derived",
+          "confidence": "medium",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391726000082/pypl-20260630.htm"
+        },
+        {
+          "key": "working_capital",
+          "label": "Working capital",
+          "display_value": "$13.940B",
+          "change": "-$889M YoY",
+          "state": "derived",
+          "confidence": "high",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391726000082/pypl-20260630.htm"
+        },
+        {
+          "key": "diluted_shares",
+          "label": "Diluted weighted shares",
+          "display_value": "882M",
+          "change": "-9.72% YoY",
+          "state": "reported",
+          "confidence": "high",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391726000082/pypl-20260630.htm"
+        }
+      ],
+      "quarter_history": [
+        {"period": "Q1 '22", "period_end": "2022-03-31", "revenue_billions": 6.483, "operating_margin_percent": 10.97, "net_margin_percent": 7.85, "simplified_free_cash_flow_billions": 1.026, "working_capital_billions": 8.415, "diluted_weighted_shares_millions": 1172.0, "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391723000072/0001633917-23-000072-index.htm"},
+        {"period": "Q2 '22", "period_end": "2022-06-30", "revenue_billions": 6.806, "operating_margin_percent": 11.23, "net_margin_percent": -5.01, "simplified_free_cash_flow_billions": 1.075, "working_capital_billions": 10.157, "diluted_weighted_shares_millions": 1158.0, "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391723000117/0001633917-23-000117-index.htm"},
+        {"period": "Q3 '22", "period_end": "2022-09-30", "revenue_billions": 6.846, "operating_margin_percent": 16.33, "net_margin_percent": 19.43, "simplified_free_cash_flow_billions": 1.573, "working_capital_billions": 11.877, "diluted_weighted_shares_millions": 1157.0, "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391723000156/0001633917-23-000156-index.htm"},
+        {"period": "Q4 '22", "period_end": "2022-12-31", "revenue_billions": 7.383, "operating_margin_percent": 16.85, "net_margin_percent": 12.47, "simplified_free_cash_flow_billions": 1.433, "working_capital_billions": 12.416, "diluted_weighted_shares_millions": 1143.2, "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391725000019/0001633917-25-000019-index.htm"},
+        {"period": "Q1 '23", "period_end": "2023-03-31", "revenue_billions": 7.040, "operating_margin_percent": 14.19, "net_margin_percent": 11.29, "simplified_free_cash_flow_billions": 1.000, "working_capital_billions": 12.651, "diluted_weighted_shares_millions": 1134.0, "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391724000048/0001633917-24-000048-index.htm"},
+        {"period": "Q2 '23", "period_end": "2023-06-30", "revenue_billions": 7.287, "operating_margin_percent": 15.55, "net_margin_percent": 14.12, "simplified_free_cash_flow_billions": -0.350, "working_capital_billions": 12.371, "diluted_weighted_shares_millions": 1114.0, "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391724000098/0001633917-24-000098-index.htm"},
+        {"period": "Q3 '23", "period_end": "2023-09-30", "revenue_billions": 7.418, "operating_margin_percent": 15.75, "net_margin_percent": 13.75, "simplified_free_cash_flow_billions": 1.101, "working_capital_billions": 13.193, "diluted_weighted_shares_millions": 1098.0, "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391724000110/0001633917-24-000110-index.htm"},
+        {"period": "Q4 '23", "period_end": "2023-12-31", "revenue_billions": 8.026, "operating_margin_percent": 21.53, "net_margin_percent": 17.47, "simplified_free_cash_flow_billions": 2.469, "working_capital_billions": 14.103, "diluted_weighted_shares_millions": 1083.3, "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391726000024/0001633917-26-000024-index.htm"},
+        {"period": "Q1 '24", "period_end": "2024-03-31", "revenue_billions": 7.699, "operating_margin_percent": 15.17, "net_margin_percent": 11.53, "simplified_free_cash_flow_billions": 1.763, "working_capital_billions": 13.860, "diluted_weighted_shares_millions": 1072.0, "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391725000064/0001633917-25-000064-index.htm"},
+        {"period": "Q2 '24", "period_end": "2024-06-30", "revenue_billions": 7.885, "operating_margin_percent": 16.80, "net_margin_percent": 14.31, "simplified_free_cash_flow_billions": 1.368, "working_capital_billions": 12.259, "diluted_weighted_shares_millions": 1047.0, "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391725000161/0001633917-25-000161-index.htm"},
+        {"period": "Q3 '24", "period_end": "2024-09-30", "revenue_billions": 7.847, "operating_margin_percent": 17.73, "net_margin_percent": 12.87, "simplified_free_cash_flow_billions": 1.445, "working_capital_billions": 12.405, "diluted_weighted_shares_millions": 1024.0, "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391725000196/0001633917-25-000196-index.htm"},
+        {"period": "Q4 '24", "period_end": "2024-12-31", "revenue_billions": 8.366, "operating_margin_percent": 17.22, "net_margin_percent": 13.40, "simplified_free_cash_flow_billions": 2.191, "working_capital_billions": 12.716, "diluted_weighted_shares_millions": 1012.2, "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391726000024/0001633917-26-000024-index.htm"},
+        {"period": "Q1 '25", "period_end": "2025-03-31", "revenue_billions": 7.791, "operating_margin_percent": 19.64, "net_margin_percent": 16.52, "simplified_free_cash_flow_billions": 0.964, "working_capital_billions": 13.989, "diluted_weighted_shares_millions": 999.0, "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391726000067/0001633917-26-000067-index.htm"},
+        {"period": "Q2 '25", "period_end": "2025-06-30", "revenue_billions": 8.288, "operating_margin_percent": 18.15, "net_margin_percent": 15.21, "simplified_free_cash_flow_billions": 0.692, "working_capital_billions": 14.829, "diluted_weighted_shares_millions": 977.0, "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391726000082/pypl-20260630_htm.xml"},
+        {"period": "Q3 '25", "period_end": "2025-09-30", "revenue_billions": 8.417, "operating_margin_percent": 18.06, "net_margin_percent": 14.83, "simplified_free_cash_flow_billions": 1.718, "working_capital_billions": 15.252, "diluted_weighted_shares_millions": 960.0, "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391725000196/0001633917-25-000196-index.htm"},
+        {"period": "Q4 '25", "period_end": "2025-12-31", "revenue_billions": 8.676, "operating_margin_percent": 17.42, "net_margin_percent": 16.56, "simplified_free_cash_flow_billions": 2.190, "working_capital_billions": 13.316, "diluted_weighted_shares_millions": 938.3, "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391726000024/0001633917-26-000024-index.htm"},
+        {"period": "Q1 '26", "period_end": "2026-03-31", "revenue_billions": 8.353, "operating_margin_percent": 17.81, "net_margin_percent": 13.32, "simplified_free_cash_flow_billions": 0.903, "working_capital_billions": 12.358, "diluted_weighted_shares_millions": 920.0, "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391726000067/0001633917-26-000067-index.htm"},
+        {"period": "Q2 '26", "period_end": "2026-06-30", "revenue_billions": 8.682, "operating_margin_percent": 16.44, "net_margin_percent": 12.72, "simplified_free_cash_flow_billions": 1.775, "working_capital_billions": 13.940, "diluted_weighted_shares_millions": 882.0, "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391726000082/pypl-20260630_htm.xml"}
+      ],
+      "charts": {
+        "cash_bridge": {
+          "labels": ["Operating cash flow", "Capital expenditure", "Simplified free cash flow"],
+          "billions": [1.983, -0.208, 1.775]
+        }
+      },
+      "supporting_evidence": [
+        {
+          "title": "Revenue and volume moved upward",
+          "statement": "Revenue increased 4.75% year over year. Management primarily attributes the increase to 10% total payment volume growth and favorable hedging.",
+          "kind": "reported fact plus management explanation",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391726000082/pypl-20260630.htm"
+        },
+        {
+          "title": "Cash generation exceeded reported profit",
+          "statement": "Quarterly operating cash flow was $1.983B versus $1.104B of net income, producing 1.80x cash conversion before capital expenditure.",
+          "kind": "derived observation",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391726000082/pypl-20260630.htm"
+        },
+        {
+          "title": "Diluted share count declined",
+          "statement": "Diluted weighted-average shares were 9.72% lower than the comparable quarter, which can improve per-share results but does not by itself establish value creation.",
+          "kind": "reported fact plus interpretation",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391726000082/pypl-20260630.htm"
+        }
+      ],
+      "contrary_evidence": [
+        {
+          "title": "Operating margin moved backward",
+          "statement": "Operating margin declined about 1.71 percentage points year over year. Management says transaction expense grew faster, partly offset by lower transaction and credit losses.",
+          "kind": "derived observation plus management explanation",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391726000082/pypl-20260630.htm"
+        },
+        {
+          "title": "Working capital declined",
+          "statement": "Working capital was $889M below the comparable period. This is a research flag, not proof of distress, because the composition and timing of balances matter.",
+          "kind": "derived observation",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391726000082/pypl-20260630.htm"
+        },
+        {
+          "title": "Strategic investments reduced the comparison",
+          "statement": "Management attributes part of the decline in net income to losses and impairments on strategic investments compared with prior-period gains.",
+          "kind": "management explanation",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000163391726000082/pypl-20260630.htm"
+        }
+      ],
+      "unknowns": [
+        {
+          "question": "What is PayPal's comparable net-liquidity position?",
+          "reason": "Short-term debt is not supported by the approved structured mapping, so the calculation remains blocked rather than treating debt as zero."
+        },
+        {
+          "question": "How durable is cash conversion after timing effects?",
+          "reason": "Management identifies receivable, liability, incentive-payment, and other timing changes in the six-month cash-flow comparison."
+        }
+      ],
+      "historical_events": [
+        {
+          "date": "2023-06-20",
+          "title": "European BNPL receivables transaction",
+          "summary": "PayPal announced a multi-year arrangement for KKR-managed funds and accounts to purchase eligible current and future European buy-now-pay-later receivables. The announcement described up to €40B of eligible receivables, a €3B replenishing commitment, and approximately $1.8B of expected initial proceeds; those are different quantities.",
+          "current_relevance": "This is material historical structure and a retained-risk research question. It is shown separately because the current extraction does not establish that the 2023 transaction caused PayPal's Q2 2026 revenue, margin, or cash-flow changes.",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000119312523172688/d466046dex991.htm",
+          "relationships": [
+            {
+              "entity": "PayPal (Europe) S.à r.l. et Cie, S.C.A.",
+              "role": "Seller and receivables manager",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000119312523172688/d466046dex101.htm"
+            },
+            {
+              "entity": "Alps Partners S.à r.l.",
+              "role": "Purchaser",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000119312523172688/d466046dex101.htm"
+            },
+            {
+              "entity": "BNY Mellon Corporate Trustee Services Limited",
+              "role": "Security agent",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000119312523172688/d466046dex101.htm"
+            },
+            {
+              "entity": "Freshfields Bruckhaus Deringer LLP",
+              "role": "Legal adviser to PayPal",
+              "source_url": "https://www.sec.gov/Archives/edgar/data/1633917/000119312523172688/d466046dex991.htm"
+            }
+          ],
+          "open_questions": [
+            "How much receivable balance, gain or loss, and funding capacity was realized by reporting period?",
+            "Which servicing, credit, repurchase, indemnity, and termination risks remain with PayPal?",
+            "Which Alps entities and KKR-managed funds bear each contractual and economic role?"
+          ]
+        }
+      ],
+      "quality_notes": [
+        "18 fiscal quarters are normalized from 2022 Q1 through 2026 Q2.",
+        "The latest quarter uses the filing XBRL instance because SEC Company Facts had not yet incorporated the accession.",
+        "Reported, reconciled, derived, and blocked values remain visibly distinct.",
+        "Management explanations describe management's account; they are not independently verified causes.",
+        "No market price, valuation estimate, expected return, or buy/sell recommendation is included."
+      ]
+    }
+  ]
+}

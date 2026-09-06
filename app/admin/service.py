@@ -28,6 +28,7 @@ TRACKED_PAGE_PATHS = frozenset(
         "/dashboard",
         "/research/financials",
         "/research/financials/paypal",
+        "/research/financials/comparisons/payments",
         "/blog",
         "/account",
         "/privacy",
@@ -39,6 +40,8 @@ TRACKED_PAGE_PATHS = frozenset(
 
 def tracked_page_path(path: str) -> str | None:
     """Return a stable route label only for deliberately tracked HTML entry points."""
+    if path.startswith("/research/financials/company/"):
+        return "/research/financials/company/{ticker}"
     return path if path in TRACKED_PAGE_PATHS else None
 
 

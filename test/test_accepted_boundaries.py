@@ -30,6 +30,8 @@ class WebBoundaryTests(unittest.TestCase):
                 "/dashboard",
                 "/research/financials",
                 "/research/financials/paypal",
+                "/research/financials/company/{ticker}",
+                "/research/financials/comparisons/payments",
                 "/blog",
                 "/blog/{slug}",
                 "/account",

@@ -4,7 +4,13 @@ from nicegui import ui
 
 from app.components.charts import enable_viewport_chart_animations, viewport_chart
 from app.components.navbar import with_layout
-from app.financial_research.service import find_company_research, load_public_research
+from app.financial_research.service import (
+    find_company_research,
+    load_filing_directory,
+    load_filing_profile,
+    load_payments_comparison,
+    load_public_research,
+)
 
 
 def _source_link(label: str, url: str) -> None:
@@ -37,6 +43,18 @@ def _unavailable_state() -> None:
             "publication snapshot fails validation. Direct SEC filing search remains available."
         ).classes("text-sm text-grey-7 leading-relaxed")
         _source_link("Search SEC EDGAR", "https://www.sec.gov/edgar/search/")
+
+
+def _directory_state_unavailable() -> None:
+    with ui.card().classes("w-full p-6 gap-3 border"):
+        ui.icon("sync_problem", size="md").classes("text-warning")
+        ui.label("The 30-company filing directory is temporarily unavailable").classes(
+            "text-xl font-semibold"
+        )
+        ui.label(
+            "The directory fails closed unless every configured company has an exact "
+            "stored SEC filing. The reviewed PayPal sheet remains separate."
+        ).classes("text-sm text-grey-7 leading-relaxed")
 
 
 def _metric_cards(sheet: dict) -> None:
@@ -420,6 +438,7 @@ def financial_research_index():
         '<meta name="description" content="Evidence-backed SEC filing research with transparent calculations, contrary evidence, and unresolved questions.">'
     )
     research = load_public_research()
+    directory = load_filing_directory()
     with ui.column().classes("w-full max-w-7xl mx-auto px-4 py-8 sm:px-8 gap-6"):
         ui.label("Recently reported").classes("text-4xl sm:text-5xl font-bold")
         ui.label(
@@ -428,26 +447,295 @@ def financial_research_index():
         ).classes("text-lg text-grey-7 leading-relaxed max-w-4xl")
         if not research["available"]:
             _unavailable_state()
+        else:
+            for company in research["companies"]:
+                with ui.card().classes("w-full p-5 sm:p-6 gap-3 border"):
+                    with ui.row().classes("w-full items-start justify-between gap-3 flex-wrap"):
+                        with ui.column().classes("gap-1"):
+                            ui.label(
+                                f"{company['company_name']} · {company['ticker']}"
+                            ).classes("text-2xl font-semibold")
+                            ui.label(
+                                f"{company['form']} filed {company['filed_on']} · "
+                                f"period ended {company['period_end']}"
+                            ).classes("text-sm text-grey-7")
+                        ui.badge("reviewed", color="positive").props("outline")
+                    ui.label(company["headline"]).classes("text-lg font-semibold")
+                    ui.label(company["summary"]).classes(
+                        "text-sm text-grey-7 leading-relaxed max-w-5xl"
+                    )
+                    ui.link(
+                        "Open PayPal research sheet →", "/research/financials/paypal"
+                    ).classes("text-primary font-semibold no-underline hover:underline")
+
+        ui.separator().classes("my-3")
+        with ui.row().classes("w-full items-end justify-between gap-4 flex-wrap"):
+            with ui.column().classes("gap-1"):
+                ui.label("SEC filing coverage universe").classes(
+                    "text-3xl font-semibold"
+                )
+                ui.label(
+                    "Exact recent 10-Q and 10-K metadata for the 30-company core universe. "
+                    "Coverage indicates mapped SEC concepts, not investment quality."
+                ).classes("text-sm text-grey-7 leading-relaxed max-w-4xl")
+            ui.link(
+                "Open reviewed payments comparison →",
+                "/research/financials/comparisons/payments",
+            ).classes("text-primary font-semibold no-underline hover:underline")
+        if not directory["available"]:
+            _directory_state_unavailable()
             return
-        for company in research["companies"]:
-            with ui.card().classes("w-full p-5 sm:p-6 gap-3 border"):
+        for industry in directory["industries"]:
+            with ui.card().classes("w-full p-5 sm:p-6 gap-4 border"):
+                ui.label(industry["label"]).classes("text-2xl font-semibold")
+                with ui.element("section").classes(
+                    "grid w-full grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
+                ):
+                    for company in industry["companies"]:
+                        with ui.card().classes("w-full h-full p-4 gap-2 border"):
+                            with ui.row().classes(
+                                "w-full items-start justify-between gap-2 flex-wrap"
+                            ):
+                                ui.label(
+                                    f"{company['ticker']} · {company['company_name']}"
+                                ).classes("font-semibold")
+                                ui.badge(
+                                    f"{company['metric_count']}/{company['metric_total']} mapped",
+                                    color="primary",
+                                ).props("outline")
+                            ui.label(
+                                f"{company['form']} · period {company['period_end']} · "
+                                f"filed {company['filed_on']}"
+                            ).classes("text-xs text-grey-7")
+                            with ui.row().classes("gap-3 flex-wrap"):
+                                _source_link("SEC filing ↗", company["filing_index_url"])
+                                target = (
+                                    "/research/financials/paypal"
+                                    if company["ticker"] == "PYPL"
+                                    else f"/research/financials/company/{company['slug']}"
+                                )
+                                ui.link("Filing profile →", target).classes(
+                                    "text-primary font-semibold no-underline hover:underline"
+                                )
+
+
+@ui.page("/research/financials/company/{ticker}")
+@with_layout
+def company_filing_profile(ticker: str):
+    profile = load_filing_profile(ticker)
+    ui.page_title(f"{ticker.upper()} SEC Filing Profile — Bizqlab")
+    with ui.column().classes("w-full max-w-7xl mx-auto px-4 py-8 sm:px-8 gap-6"):
+        ui.link("← SEC filing universe", "/research/financials").classes(
+            "text-primary font-semibold no-underline hover:underline"
+        )
+        if profile is None:
+            _directory_state_unavailable()
+            return
+        ui.label(f"{profile['company_name']} · {profile['ticker']}").classes(
+            "text-4xl sm:text-5xl font-bold"
+        )
+        ui.label(profile["business_model"]).classes("text-lg text-grey-7")
+        with ui.row().classes("gap-2 flex-wrap"):
+            ui.badge("SEC evidence only", color="primary").props("outline")
+            ui.badge("Filing profile — not a scored recommendation", color="grey").props(
+                "outline"
+            )
+        analyses = profile["analyses"]
+        ui.label("Latest structured-data screen").classes("text-2xl font-semibold mt-2")
+        ui.label(
+            "These are reproducible reported or formula-derived values. They are a "
+            "research screen, not a causal explanation or peer ranking; unavailable "
+            "inputs remain blocked."
+        ).classes("text-sm text-grey-7 leading-relaxed max-w-4xl")
+        if analyses:
+            latest = analyses[0]
+            _metric_cards({"metrics": latest["metrics"]})
+            chronological = list(reversed(analyses))
+
+            def series_value(analysis: dict, key: str, divisor: float = 1.0):
+                metric = next(item for item in analysis["metrics"] if item["key"] == key)
+                return metric["value"] / divisor if metric["value"] is not None else None
+
+            with ui.card().classes("w-full p-5 gap-3 border"):
+                ui.label("Revenue and operating-margin history").classes(
+                    "text-xl font-semibold"
+                )
+                viewport_chart(
+                    {
+                        "tooltip": {"trigger": "axis"},
+                        "legend": {"data": ["Revenue ($B)", "Operating margin (%)"], "bottom": 0},
+                        "grid": {"left": 54, "right": 62, "top": 28, "bottom": 62},
+                        "xAxis": {
+                            "type": "category",
+                            "data": [row["period_end"] for row in chronological],
+                        },
+                        "yAxis": [
+                            {"type": "value", "name": "$B"},
+                            {"type": "value", "name": "%"},
+                        ],
+                        "series": [
+                            {
+                                "name": "Revenue ($B)",
+                                "type": "bar",
+                                "data": [
+                                    series_value(row, "revenue", 1_000_000_000)
+                                    for row in chronological
+                                ],
+                                "itemStyle": {"color": "#2563eb"},
+                            },
+                            {
+                                "name": "Operating margin (%)",
+                                "type": "line",
+                                "yAxisIndex": 1,
+                                "connectNulls": False,
+                                "data": [
+                                    series_value(row, "operating_margin")
+                                    for row in chronological
+                                ],
+                                "itemStyle": {"color": "#d97706"},
+                            },
+                        ],
+                    },
+                    classes="w-full h-80",
+                    aria_label=(
+                        f"{profile['ticker']} reported revenue and derived operating "
+                        "margin across recent filings"
+                    ),
+                )
+        else:
+            ui.label(
+                "No quarter passed the current exact-input normalization contract."
+            ).classes("text-sm text-warning")
+        ui.label("Recent filing coverage").classes("text-2xl font-semibold mt-2")
+        ui.label(
+            "Bars show how many of the 19 deliberately mapped concepts occur in each "
+            "exact filing accession. A missing concept is not treated as zero."
+        ).classes("text-sm text-grey-7 leading-relaxed max-w-4xl")
+        filings = profile["filings"]
+        viewport_chart(
+            {
+                "tooltip": {"trigger": "axis", "axisPointer": {"type": "shadow"}},
+                "grid": {"left": 50, "right": 18, "top": 22, "bottom": 76},
+                "xAxis": {
+                    "type": "category",
+                    "data": [row["period_end"] for row in reversed(filings)],
+                    "axisLabel": {"rotate": 35},
+                },
+                "yAxis": {"type": "value", "min": 0, "max": profile["metric_total"]},
+                "series": [
+                    {
+                        "name": "Mapped concepts",
+                        "type": "bar",
+                        "data": [row["metric_count"] for row in reversed(filings)],
+                        "itemStyle": {"color": "#2563eb"},
+                    }
+                ],
+            },
+            classes="w-full h-80",
+            aria_label=f"{profile['ticker']} mapped SEC concept coverage by filing",
+        )
+        rows = [
+            {
+                "period": row["period_end"],
+                "form": row["form"],
+                "filed": row["filed_on"],
+                "coverage": f"{row['metric_count']}/{profile['metric_total']}",
+                "accession": row["accession_number"],
+            }
+            for row in filings
+        ]
+        ui.table(
+            columns=[
+                {"name": "period", "label": "Period", "field": "period", "align": "left"},
+                {"name": "form", "label": "Form", "field": "form", "align": "left"},
+                {"name": "filed", "label": "Filed", "field": "filed", "align": "left"},
+                {"name": "coverage", "label": "Mapped", "field": "coverage", "align": "right"},
+                {"name": "accession", "label": "Accession", "field": "accession", "align": "left"},
+            ],
+            rows=rows,
+            row_key="accession",
+            pagination={"rowsPerPage": 12},
+        ).classes("w-full").props("flat bordered dense wrap-cells")
+        with ui.expansion("Exact filing links and concept gaps", icon="fact_check").classes(
+            "w-full"
+        ):
+            for row in filings:
+                with ui.card().classes("w-full p-4 gap-2 border"):
+                    ui.label(f"{row['form']} · {row['period_end']}").classes("font-semibold")
+                    _source_link("Open exact SEC filing", row["filing_index_url"])
+                    ui.label(
+                        "Present: " + (", ".join(row["present_metrics"]) or "none")
+                    ).classes("text-sm leading-relaxed")
+                    ui.label(
+                        "Not mapped in this accession: "
+                        + (", ".join(row["missing_metrics"]) or "none")
+                    ).classes("text-sm text-grey-7 leading-relaxed")
+        ui.label(
+            "This page describes filing availability and mapping coverage. It does not "
+            "claim that a company is healthy, comparable, or investable."
+        ).classes("text-sm font-semibold")
+        enable_viewport_chart_animations()
+
+
+@ui.page("/research/financials/comparisons/payments")
+@with_layout
+def payments_comparison_page():
+    comparison = load_payments_comparison()
+    ui.page_title("Q2 2026 Payments Comparison — Bizqlab")
+    with ui.column().classes("w-full max-w-7xl mx-auto px-4 py-8 sm:px-8 gap-6"):
+        ui.link("← SEC filing universe", "/research/financials").classes(
+            "text-primary font-semibold no-underline hover:underline"
+        )
+        ui.label("Payments comparison · Q2 2026").classes(
+            "text-4xl sm:text-5xl font-bold"
+        )
+        ui.label(
+            "A filing-gated comparison of operating direction. It deliberately performs "
+            "no ranking, valuation, or buy/sell classification."
+        ).classes("text-lg text-grey-7 leading-relaxed max-w-4xl")
+        if not comparison["available"]:
+            _directory_state_unavailable()
+            return
+        with ui.row().classes("gap-2 flex-wrap"):
+            ui.badge("Same period", color="positive").props("outline")
+            ui.badge("Exact reviewed accessions", color="positive").props("outline")
+            ui.badge("No ranking", color="grey").props("outline")
+        for company in comparison["companies"]:
+            with ui.card().classes("w-full p-5 gap-4 border"):
                 with ui.row().classes("w-full items-start justify-between gap-3 flex-wrap"):
                     with ui.column().classes("gap-1"):
-                        ui.label(
-                            f"{company['company_name']} · {company['ticker']}"
-                        ).classes("text-2xl font-semibold")
-                        ui.label(
-                            f"{company['form']} filed {company['filed_on']} · "
-                            f"period ended {company['period_end']}"
-                        ).classes("text-sm text-grey-7")
-                    ui.badge("reviewed", color="positive").props("outline")
-                ui.label(company["headline"]).classes("text-lg font-semibold")
-                ui.label(company["summary"]).classes(
-                    "text-sm text-grey-7 leading-relaxed max-w-5xl"
-                )
-                ui.link(
-                    "Open PayPal research sheet →", "/research/financials/paypal"
-                ).classes("text-primary font-semibold no-underline hover:underline")
+                        ui.label(f"{company['ticker']} · {company['company_name']}").classes(
+                            "text-xl font-semibold"
+                        )
+                        ui.label(company["subgroup"].replace("_", " ")).classes(
+                            "text-xs text-grey-7"
+                        )
+                    ui.badge(
+                        "comparison-ready" if company["comparable"] else "gated",
+                        color="positive" if company["comparable"] else "warning",
+                    ).props("outline")
+                with ui.element("section").classes(
+                    "grid w-full grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
+                ):
+                    for lens in company["lenses"]:
+                        with ui.card().classes("w-full h-full p-4 gap-1 border"):
+                            ui.label(lens["label"]).classes("text-sm text-grey-7")
+                            ui.label(lens["display_value"]).classes("text-2xl font-semibold")
+                            ui.badge(lens["gate_status"], color=(
+                                "positive" if lens["gate_status"] == "cleared" else "warning"
+                            )).props("outline")
+                            ui.label(lens["reason"]).classes(
+                                "text-xs text-grey-7 leading-relaxed"
+                            )
+                _source_link("Open exact reviewed SEC filing", company["filing_index_url"])
+        with ui.card().classes("w-full p-5 gap-2 border border-dashed"):
+            ui.label("How to read this comparison").classes("text-xl font-semibold")
+            for note in comparison["comparison_notes"]:
+                ui.label("• " + note).classes("text-sm leading-relaxed")
+            ui.label(
+                "Blocked magnitudes are hidden. Direction-only gates retain up/down "
+                "evidence without pretending the reported percentage is comparable."
+            ).classes("text-sm font-semibold")
 
 
 @ui.page("/research/financials/paypal")

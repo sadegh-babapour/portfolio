@@ -10,6 +10,7 @@ from app.financial_research.service import (
     load_filing_profile,
     load_payments_comparison,
     load_public_research,
+    load_sector_screen,
 )
 
 
@@ -487,7 +488,16 @@ def financial_research_index():
             return
         for industry in directory["industries"]:
             with ui.card().classes("w-full p-5 sm:p-6 gap-4 border"):
-                ui.label(industry["label"]).classes("text-2xl font-semibold")
+                with ui.row().classes("w-full items-center justify-between gap-3 flex-wrap"):
+                    ui.label(industry["label"]).classes("text-2xl font-semibold")
+                    comparison_path = (
+                        "/research/financials/comparisons/payments"
+                        if industry["key"] == "payments"
+                        else f"/research/financials/sectors/{industry['key']}"
+                    )
+                    ui.link("Compare filing screens →", comparison_path).classes(
+                        "text-primary font-semibold no-underline hover:underline"
+                    )
                 with ui.element("section").classes(
                     "grid w-full grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
                 ):
@@ -735,6 +745,77 @@ def payments_comparison_page():
             ui.label(
                 "Blocked magnitudes are hidden. Direction-only gates retain up/down "
                 "evidence without pretending the reported percentage is comparable."
+            ).classes("text-sm font-semibold")
+
+
+@ui.page("/research/financials/sectors/{industry_key}")
+@with_layout
+def sector_screen_page(industry_key: str):
+    screen = load_sector_screen(industry_key)
+    ui.page_title(f"SEC Sector Screen — {industry_key.replace('_', ' ').title()} — Bizqlab")
+    with ui.column().classes("w-full max-w-7xl mx-auto px-4 py-8 sm:px-8 gap-6"):
+        ui.link("← SEC filing universe", "/research/financials").classes(
+            "text-primary font-semibold no-underline hover:underline"
+        )
+        if screen is None:
+            _directory_state_unavailable()
+            return
+        ui.label(screen["industry_label"]).classes("text-4xl sm:text-5xl font-bold")
+        ui.label(
+            "Side-by-side structured SEC calculations for research triage. Values are "
+            "not ranked and no company receives an investment or quality cohort until "
+            "its sector-specific filing-event review is complete."
+        ).classes("text-lg text-grey-7 leading-relaxed max-w-5xl")
+        with ui.row().classes("gap-2 flex-wrap"):
+            ui.badge(
+                "Same period" if screen["same_period"] else "Periods differ",
+                color="positive" if screen["same_period"] else "warning",
+            ).props("outline")
+            ui.badge("Filing review required", color="warning").props("outline")
+            ui.badge("No rankings or cohorts", color="grey").props("outline")
+        with ui.element("section").classes(
+            "grid w-full grid-cols-1 gap-4 lg:grid-cols-2"
+        ):
+            for company in screen["companies"]:
+                with ui.card().classes("w-full h-full p-5 gap-3 border"):
+                    with ui.row().classes(
+                        "w-full items-start justify-between gap-2 flex-wrap"
+                    ):
+                        with ui.column().classes("gap-1"):
+                            ui.label(
+                                f"{company['ticker']} · {company['company_name']}"
+                            ).classes("text-xl font-semibold")
+                            ui.label(
+                                f"{company['period_end']} · "
+                                f"{company['subgroup'].replace('_', ' ')}"
+                            ).classes("text-xs text-grey-7")
+                        ui.badge("screen only", color="warning").props("outline")
+                    ui.table(
+                        columns=[
+                            {"name": "label", "label": "Measure", "field": "label", "align": "left"},
+                            {"name": "display_value", "label": "Value", "field": "display_value", "align": "right"},
+                            {"name": "state", "label": "State", "field": "state", "align": "left"},
+                        ],
+                        rows=company["lenses"],
+                        row_key="key",
+                        pagination={"rowsPerPage": 0},
+                    ).classes("w-full").props("flat bordered dense wrap-cells")
+                    _source_link("Open exact SEC filing", company["filing_index_url"])
+        with ui.expansion("Sector comparison contract", icon="rule").classes("w-full"):
+            for item in screen["metric_contract"]:
+                with ui.card().classes("w-full p-4 gap-1 border"):
+                    ui.label(item["label"]).classes("font-semibold")
+                    ui.label(item["scope"]).classes("text-sm")
+                    ui.label(item["evidence_note"]).classes(
+                        "text-sm text-grey-7 leading-relaxed"
+                    )
+        with ui.card().classes("w-full p-5 gap-2 border border-dashed"):
+            ui.label("Why no ranking appears").classes("text-xl font-semibold")
+            for note in screen["comparison_notes"]:
+                ui.label("• " + note).classes("text-sm leading-relaxed")
+            ui.label(
+                "These screens identify where deeper filing review is needed; they do "
+                "not establish that a larger number is economically better."
             ).classes("text-sm font-semibold")
 
 

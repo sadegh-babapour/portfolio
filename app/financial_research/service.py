@@ -16,6 +16,7 @@ from financial_research.public_views import (
     load_public_filing_directory,
     load_public_filing_profile,
     load_public_payments_comparison,
+    load_public_sector_screen,
 )
 from app.contact.database import session_scope
 
@@ -358,3 +359,18 @@ def _load_payments_comparison_cached(_time_bucket: int) -> dict:
 
 def load_payments_comparison() -> dict:
     return _load_payments_comparison_cached(int(time.time() // 300))
+
+
+@lru_cache(maxsize=24)
+def _load_sector_screen_cached(industry_key: str, _time_bucket: int) -> dict | None:
+    try:
+        with session_scope() as database:
+            _set_public_read_timeout(database)
+            return load_public_sector_screen(database, industry_key)
+    except Exception as exc:
+        log.warning("Unable to load public sector screen for %s: %s", industry_key, exc)
+        return None
+
+
+def load_sector_screen(industry_key: str) -> dict | None:
+    return _load_sector_screen_cached(industry_key, int(time.time() // 300))

@@ -9,6 +9,7 @@ from financial_research.public_views import (
     PUBLIC_DIRECTORY_VERSION,
     REVIEWED_PAYMENT_FILINGS,
     load_public_filing_directory,
+    load_public_sector_screen,
 )
 from financial_research.universe import CORE_RESEARCH_UNIVERSE
 
@@ -103,6 +104,75 @@ class PublicResearchViewTests(unittest.TestCase):
         self.assertTrue(
             all(item.accession_number.startswith("00") for item in REVIEWED_PAYMENT_FILINGS)
         )
+
+    def test_sector_screen_exposes_values_but_never_assigns_rankings_or_cohorts(self):
+        filings = {
+            company.cik: SimpleNamespace(
+                filer_cik=company.cik,
+                base_form="10-Q",
+                report_period_end=date(2026, 6, 30),
+                accession_number=f"{company.ticker}-exact",
+                sec_index_url="https://www.sec.gov/Archives/edgar/data/1/index.htm",
+            )
+            for company in CORE_RESEARCH_UNIVERSE
+            if company.industry_key == "brokerage"
+        }
+
+        def payload(_report, filing):
+            metrics = [
+                {
+                    "key": key,
+                    "label": key.replace("_", " ").title(),
+                    "display_value": "+1.00%",
+                    "state": "derived",
+                    "confidence": "high",
+                    "source_url": "https://www.sec.gov/Archives/edgar/data/1/file.htm",
+                }
+                for key in (
+                    "revenue_growth_yoy",
+                    "operating_margin_change_yoy",
+                    "cash_conversion",
+                    "diluted_share_change_yoy",
+                )
+            ]
+            return {
+                "period_end": "2026-06-30",
+                "accession_number": filing.accession_number,
+                "filing_index_url": filing.sec_index_url,
+                "metrics": metrics,
+            }
+
+        database = MagicMock()
+        database.scalars.return_value.all.return_value = []
+        with (
+            patch(
+                "financial_research.public_views._latest_filings",
+                return_value=filings,
+            ),
+            patch("financial_research.public_views.analyze_company_quarter"),
+            patch(
+                "financial_research.public_views._analysis_payload",
+                side_effect=payload,
+            ),
+        ):
+            result = load_public_sector_screen(database, "brokerage")
+
+        self.assertEqual(len(result["companies"]), 5)
+        self.assertTrue(result["same_period"])
+        self.assertFalse(result["ranking_performed"])
+        self.assertFalse(result["cohorts_assigned"])
+        self.assertTrue(
+            all(company["cohort"] is None for company in result["companies"])
+        )
+        self.assertTrue(
+            all(
+                company["comparison_state"] == "filing_review_required"
+                for company in result["companies"]
+            )
+        )
+
+    def test_payments_do_not_fall_through_to_unreviewed_sector_screen(self):
+        self.assertIsNone(load_public_sector_screen(MagicMock(), "payments"))
 
 
 if __name__ == "__main__":

@@ -28,7 +28,7 @@ from app.blog.service import (
     list_published_posts,
     save_post,
 )
-from financial_research.universe import CORE_RESEARCH_UNIVERSE
+from financial_research.universe import CORE_INDUSTRY_CONTRACTS, CORE_RESEARCH_UNIVERSE
 
 
 log = logging.getLogger(__name__)
@@ -41,6 +41,10 @@ STATIC_SITEMAP_PATHS = (
     f"/research/financials/company/{company.ticker.lower()}"
     for company in CORE_RESEARCH_UNIVERSE
     if company.ticker != "PYPL"
+) + tuple(
+    f"/research/financials/sectors/{industry.key}"
+    for industry in CORE_INDUSTRY_CONTRACTS
+    if industry.key != "payments"
 )
 
 

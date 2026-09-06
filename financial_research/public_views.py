@@ -23,6 +23,7 @@ from .universe import CORE_INDUSTRY_CONTRACTS, CORE_RESEARCH_UNIVERSE
 
 PUBLIC_DIRECTORY_VERSION = "sec-public-directory-2026-09-06.1"
 PAYMENTS_COMPARISON_VERSION = "payments-public-comparison-2026-09-06.1"
+SECTOR_SCREEN_VERSION = "sector-public-screen-2026-09-06.1"
 REVIEWED_PAYMENTS_PERIOD = date(2026, 6, 30)
 
 
@@ -52,13 +53,15 @@ def _require_sec_archive_url(url: str) -> str:
     return url
 
 
-def _latest_core_filings(database: Session) -> dict[str, ResearchFiling]:
+def _latest_filings(
+    database: Session,
+    ciks: Iterable[str],
+) -> dict[str, ResearchFiling]:
+    cik_tuple = tuple(ciks)
     rows = database.scalars(
         select(ResearchFiling)
         .where(
-            ResearchFiling.filer_cik.in_(
-                tuple(company.cik for company in CORE_RESEARCH_UNIVERSE)
-            ),
+            ResearchFiling.filer_cik.in_(cik_tuple),
             ResearchFiling.base_form.in_(("10-Q", "10-K")),
             ResearchFiling.report_period_end.is_not(None),
             ResearchFiling.is_amendment.is_(False),
@@ -74,6 +77,13 @@ def _latest_core_filings(database: Session) -> dict[str, ResearchFiling]:
     for filing in rows:
         latest.setdefault(filing.filer_cik, filing)
     return latest
+
+
+def _latest_core_filings(database: Session) -> dict[str, ResearchFiling]:
+    return _latest_filings(
+        database,
+        (company.cik for company in CORE_RESEARCH_UNIVERSE),
+    )
 
 
 def _coverage_by_accession(
@@ -471,4 +481,109 @@ def load_public_payments_comparison(database: Session) -> dict:
         "ranking_performed": False,
         "companies": companies,
         "comparison_notes": list(payment_contract.comparison_notes),
+    }
+
+
+def load_public_sector_screen(database: Session, industry_key: str) -> dict | None:
+    """Build a no-ranking sector screen; it never asserts economic comparability."""
+    contract = next(
+        (
+            item
+            for item in CORE_INDUSTRY_CONTRACTS
+            if item.key == industry_key and item.key != "payments"
+        ),
+        None,
+    )
+    if contract is None:
+        return None
+    latest_filings = _latest_filings(
+        database,
+        (company.cik for company in contract.companies),
+    )
+    if len(latest_filings) != len(contract.companies):
+        raise ValueError("Sector screen does not have an exact filing for every company")
+    minimum_period = min(
+        filing.report_period_end for filing in latest_filings.values()
+    ) - timedelta(days=370)
+    fact_rows = tuple(
+        database.scalars(
+            select(ResearchFactObservation).where(
+                ResearchFactObservation.filer_cik.in_(tuple(latest_filings)),
+                ResearchFactObservation.period_end >= minimum_period,
+            )
+        ).all()
+    )
+    facts_by_cik: dict[str, list[ResearchFactObservation]] = {
+        company.cik: [] for company in contract.companies
+    }
+    for fact in fact_rows:
+        facts_by_cik[fact.filer_cik].append(fact)
+
+    companies = []
+    periods = set()
+    lens_keys = (
+        "revenue_growth_yoy",
+        "operating_margin_change_yoy",
+        "cash_conversion",
+        "diluted_share_change_yoy",
+    )
+    for company in contract.companies:
+        filing = latest_filings[company.cik]
+        company_fact_rows = facts_by_cik[company.cik]
+        fiscal_quarter = _fiscal_quarter(filing, company_fact_rows)
+        if fiscal_quarter not in {1, 2, 3, 4}:
+            raise ValueError(f"Sector screen cannot resolve a quarter for {company.ticker}")
+        report = analyze_company_quarter(
+            (_fact_contract(row) for row in company_fact_rows),
+            company_name=company.company_name,
+            period_end=filing.report_period_end,
+            fiscal_quarter=fiscal_quarter,
+        )
+        latest = _analysis_payload(report, filing)
+        periods.add(latest["period_end"])
+        by_key = {metric["key"]: metric for metric in latest["metrics"]}
+        lenses = []
+        for key in lens_keys:
+            metric = by_key[key]
+            lenses.append(
+                {
+                    "key": key,
+                    "label": metric["label"],
+                    "display_value": metric["display_value"],
+                    "state": metric["state"],
+                    "confidence": metric["confidence"],
+                    "source_url": metric["source_url"],
+                }
+            )
+        companies.append(
+            {
+                "ticker": company.ticker,
+                "company_name": company.company_name,
+                "subgroup": company.comparison_subgroup,
+                "period_end": latest["period_end"],
+                "accession_number": latest["accession_number"],
+                "filing_index_url": latest["filing_index_url"],
+                "comparison_state": "filing_review_required",
+                "cohort": None,
+                "lenses": lenses,
+            }
+        )
+    return {
+        "available": True,
+        "version": SECTOR_SCREEN_VERSION,
+        "industry_key": contract.key,
+        "industry_label": contract.label,
+        "same_period": len(periods) == 1,
+        "ranking_performed": False,
+        "cohorts_assigned": False,
+        "companies": companies,
+        "comparison_notes": list(contract.comparison_notes),
+        "metric_contract": [
+            {
+                "label": metric.label,
+                "scope": metric.comparison_scope,
+                "evidence_note": metric.evidence_note,
+            }
+            for metric in contract.metrics
+        ],
     }

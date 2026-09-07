@@ -180,17 +180,17 @@ def _sector_comparison_charts(screen: dict) -> None:
         "Cash conversion",
         "Share change",
     ]
-    state_score = {"reported": 2, "reconciled": 2, "derived": 2, "missing": 0, "blocked": 0}
+    gate_score = {"blocked": 0, "direction_only": 1, "cleared": 2}
     heatmap = []
     for company_index, company in enumerate(companies):
         for metric_index, key in enumerate(metric_keys):
             lens = _lens(company, key)
-            score = state_score.get(lens["state"], 1) if lens["value"] is not None else 0
+            score = gate_score[lens["gate_status"]]
             heatmap.append(
                 {
                     "name": f"{company['ticker']} · {lens['label']}",
                     "value": [metric_index, company_index, score],
-                    "state": lens["state"],
+                    "status": lens["gate_status"],
                     "display": lens["display_value"],
                 }
             )
@@ -216,7 +216,7 @@ def _sector_comparison_charts(screen: dict) -> None:
             )
             ui.label(
                 "Growth is percentage change; margin movement is percentage points. "
-                "Bars are filing-review inputs, not scores."
+                "Only filing-cleared magnitudes appear; bars are not scores."
             ).classes("text-sm text-grey-7 leading-relaxed")
         with ui.card().classes("w-full min-w-0 p-5 gap-3 border"):
             ui.label("Growth–margin relationship").classes("text-xl font-semibold")
@@ -254,19 +254,19 @@ def _sector_comparison_charts(screen: dict) -> None:
                     "show": True,
                     "bottom": 0,
                     "pieces": [
-                        {"value": 0, "label": "Unavailable", "color": "#d1d5db"},
-                        {"value": 1, "label": "Review", "color": "#f59e0b"},
-                        {"value": 2, "label": "Available", "color": "#0f766e"},
+                        {"value": 0, "label": "Blocked", "color": "#dc2626"},
+                        {"value": 1, "label": "Direction only", "color": "#f59e0b"},
+                        {"value": 2, "label": "Cleared", "color": "#0f766e"},
                     ],
                 },
                 "series": [{"type": "heatmap", "data": heatmap, "label": {"show": False}}],
             },
             classes="w-full h-96",
-            aria_label=f"{screen['industry_label']} availability map for four SEC-derived comparison measures",
+            aria_label=f"{screen['industry_label']} reviewed gate map for four SEC-derived comparison measures",
         )
         ui.label(
-            "This map makes missing or blocked evidence visible before anyone compares "
-            "magnitudes. Available still means pending sector-specific filing review."
+            "This map shows permission to compare, not company quality. Blocked magnitudes "
+            "are hidden; direction-only evidence remains visible without a numeric claim."
         ).classes("text-sm text-grey-7 leading-relaxed")
 
 
@@ -1036,21 +1036,22 @@ def sector_screen_page(industry_key: str):
             return
         ui.label(screen["industry_label"]).classes("text-4xl sm:text-5xl font-bold")
         ui.label(
-            "Side-by-side structured SEC calculations for research triage. Values are "
-            "not ranked and no company receives an investment or quality cohort until "
-            "its sector-specific filing-event review is complete."
+            "Side-by-side SEC calculations after exact-filing event review. Operating-pattern "
+            "cohorts describe cleared revenue, margin, and cash signals; they are neither "
+            "investment ratings nor rankings."
         ).classes("text-lg text-grey-7 leading-relaxed max-w-5xl")
         with ui.row().classes("gap-2 flex-wrap"):
             ui.badge(
                 "Same period" if screen["same_period"] else "Periods differ",
                 color="positive" if screen["same_period"] else "warning",
             ).props("outline")
-            ui.badge("Filing review required", color="warning").props("outline")
-            ui.badge("No rankings or cohorts", color="grey").props("outline")
+            ui.badge("Exact filings reviewed", color="positive").props("outline")
+            ui.badge("Evidence gates applied", color="positive").props("outline")
+            ui.badge("No ranking", color="grey").props("outline")
         ui.label("Within-sector visual screen").classes("text-2xl font-semibold mt-2")
         ui.label(
-            "These views help spot operating divergence and evidence gaps across the five "
-            "selected companies. They do not resolve business-model or filing-event differences."
+            "These views compare only magnitudes that survived filing-specific gates across "
+            "the five selected companies. Empty positions are intentional, not zeroes."
         ).classes("text-sm text-grey-7 leading-relaxed max-w-5xl")
         _sector_comparison_charts(screen)
         with ui.element("section").classes(
@@ -1069,17 +1070,32 @@ def sector_screen_page(industry_key: str):
                                 f"{company['period_end']} · "
                                 f"{company['subgroup'].replace('_', ' ')}"
                             ).classes("text-xs text-grey-7")
-                        ui.badge("screen only", color="warning").props("outline")
+                        ui.badge(
+                            company["cohort"].replace("_", " "),
+                            color="positive" if company["comparable"] else "warning",
+                        ).props("outline")
                     ui.table(
                         columns=[
                             {"name": "label", "label": "Measure", "field": "label", "align": "left"},
                             {"name": "display_value", "label": "Value", "field": "display_value", "align": "right"},
-                            {"name": "state", "label": "State", "field": "state", "align": "left"},
+                            {"name": "gate_status", "label": "Gate", "field": "gate_status", "align": "left"},
                         ],
                         rows=company["lenses"],
                         row_key="key",
                         pagination={"rowsPerPage": 0},
                     ).classes("w-full").props("flat bordered dense wrap-cells")
+                    for reason in company["reasons"]:
+                        ui.label(reason).classes("text-xs text-grey-7 leading-relaxed")
+                    with ui.expansion("Exact-filing findings", icon="fact_check").classes(
+                        "w-full"
+                    ):
+                        for finding in company["findings"]:
+                            with ui.card().classes("w-full p-3 gap-1 border"):
+                                ui.badge(finding["category"], color="grey").props("outline")
+                                ui.label(finding["statement"]).classes(
+                                    "text-sm leading-relaxed"
+                                )
+                                _source_link("Open supporting SEC document", finding["source_url"])
                     _source_link("Open exact SEC filing", company["filing_index_url"])
         with ui.expansion("Sector comparison contract", icon="rule").classes("w-full"):
             for item in screen["metric_contract"]:
@@ -1094,8 +1110,8 @@ def sector_screen_page(industry_key: str):
             for note in screen["comparison_notes"]:
                 ui.label("• " + note).classes("text-sm leading-relaxed")
             ui.label(
-                "These screens identify where deeper filing review is needed; they do "
-                "not establish that a larger number is economically better."
+                "Cohorts summarize an operating pattern only after required gates clear. "
+                "They do not establish valuation, risk tolerance, or whether a stock should be bought."
             ).classes("text-sm font-semibold")
         enable_viewport_chart_animations()
 

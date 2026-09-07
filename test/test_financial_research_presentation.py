@@ -145,7 +145,9 @@ class FinancialResearchPresentationTests(unittest.TestCase):
         self.assertIn("temporarily unavailable", page_source)
         self.assertIn("Coverage indicates mapped SEC concepts", page_source)
         self.assertIn("Blocked magnitudes are hidden", page_source)
-        self.assertIn("No rankings or cohorts", page_source)
+        self.assertIn("Exact filings reviewed", page_source)
+        self.assertIn("Evidence gates applied", page_source)
+        self.assertIn("Exact-filing findings", page_source)
 
     def test_historical_legal_roles_are_not_presented_as_current_quarter_causes(self):
         paypal = load_public_research()["companies"][0]

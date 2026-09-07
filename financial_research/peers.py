@@ -8,6 +8,7 @@ from .universe import PAYMENTS, ResearchCompany
 
 
 PAYMENTS_PEER_MODEL_VERSION = "payments-peer-2026-09-06.1"
+OPERATING_PATTERN_MODEL_VERSION = "operating-pattern-2026-09-07.1"
 PeerCohort = Literal[
     "improving_with_quality",
     "improving_but_fragile",
@@ -96,7 +97,10 @@ def _lens(value: AnalysisValue | None, key: str, label: str, note: str) -> Compa
     )
 
 
-def _classification(values: dict[str, float]) -> tuple[PeerCohort, tuple[str, ...]]:
+def classify_operating_pattern(
+    values: dict[str, float],
+) -> tuple[PeerCohort, tuple[str, ...]]:
+    """Describe three cleared operating signals without producing a ranking."""
     growth = values["revenue_growth_yoy"]
     margin_change = values["operating_margin_change_yoy"]
     cash_conversion = values["cash_conversion"]
@@ -149,7 +153,7 @@ def assess_peer_quarter(
             lenses=lenses,
         )
     values = {lens.key: lens.value for lens in lenses if lens.value is not None}
-    signal_pattern, reasons = _classification(values)
+    signal_pattern, reasons = classify_operating_pattern(values)
     review_reasons = []
     if candidate is not None and candidate.comparison_status != "reviewed_with_metric_gates":
         review_reasons.append(

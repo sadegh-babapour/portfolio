@@ -11,6 +11,7 @@ from financial_research.public_views import (
     load_public_filing_directory,
     load_public_sector_screen,
 )
+from financial_research.sector_reviews import SECTOR_FILING_SPECS
 from financial_research.universe import CORE_RESEARCH_UNIVERSE
 
 
@@ -105,13 +106,18 @@ class PublicResearchViewTests(unittest.TestCase):
             all(item.accession_number.startswith("00") for item in REVIEWED_PAYMENT_FILINGS)
         )
 
-    def test_sector_screen_exposes_values_but_never_assigns_rankings_or_cohorts(self):
+    def test_sector_screen_applies_review_gates_without_ranking(self):
+        specs = {
+            spec.cik: spec
+            for spec in SECTOR_FILING_SPECS
+            if spec.industry_key == "brokerage"
+        }
         filings = {
             company.cik: SimpleNamespace(
                 filer_cik=company.cik,
                 base_form="10-Q",
                 report_period_end=date(2026, 6, 30),
-                accession_number=f"{company.ticker}-exact",
+                accession_number=specs[company.cik].accession_number,
                 sec_index_url="https://www.sec.gov/Archives/edgar/data/1/index.htm",
             )
             for company in CORE_RESEARCH_UNIVERSE
@@ -162,23 +168,55 @@ class PublicResearchViewTests(unittest.TestCase):
         self.assertEqual(len(result["companies"]), 5)
         self.assertTrue(result["same_period"])
         self.assertFalse(result["ranking_performed"])
-        self.assertFalse(result["cohorts_assigned"])
+        self.assertTrue(result["cohorts_assigned"])
         self.assertTrue(
             all(
-                lens["value"] == 1.0 and lens["unit"] == "%"
+                lens["value"] is None
                 for company in result["companies"]
                 for lens in company["lenses"]
+                if lens["gate_status"] != "cleared"
             )
         )
+        by_ticker = {company["ticker"]: company for company in result["companies"]}
+        self.assertEqual(by_ticker["IBKR"]["cohort"], "improving_with_quality")
+        self.assertTrue(by_ticker["IBKR"]["comparable"])
+        self.assertEqual(by_ticker["COIN"]["cohort"], "not_comparable")
+        self.assertFalse(by_ticker["COIN"]["comparable"])
+        self.assertEqual(
+            by_ticker["COIN"]["lenses"][0]["display_value"], "Up"
+        )
         self.assertTrue(
-            all(company["cohort"] is None for company in result["companies"])
+            all(company["findings"] for company in result["companies"])
         )
         self.assertTrue(
             all(
-                company["comparison_state"] == "filing_review_required"
+                company["comparison_state"] == "reviewed_with_metric_gates"
                 for company in result["companies"]
             )
         )
+
+    def test_sector_screen_fails_closed_when_latest_identity_is_not_reviewed(self):
+        company = next(
+            item for item in CORE_RESEARCH_UNIVERSE if item.industry_key == "brokerage"
+        )
+        filings = {
+            item.cik: SimpleNamespace(
+                filer_cik=item.cik,
+                report_period_end=date(2026, 6, 30),
+                accession_number="changed-accession" if item.cik == company.cik else next(
+                    spec.accession_number
+                    for spec in SECTOR_FILING_SPECS
+                    if spec.cik == item.cik
+                ),
+            )
+            for item in CORE_RESEARCH_UNIVERSE
+            if item.industry_key == "brokerage"
+        }
+        with patch(
+            "financial_research.public_views._latest_filings", return_value=filings
+        ):
+            with self.assertRaisesRegex(ValueError, "identity changed"):
+                load_public_sector_screen(MagicMock(), "brokerage")
 
     def test_payments_do_not_fall_through_to_unreviewed_sector_screen(self):
         self.assertIsNone(load_public_sector_screen(MagicMock(), "payments"))

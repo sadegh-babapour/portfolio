@@ -16,14 +16,22 @@ from .models import (
     ResearchFiling,
 )
 from .peer_reviews import PEER_OUTLIER_SPECS
-from .peers import PAYMENTS_PEER_MODEL_VERSION, assess_payment_cohort
+from .documents import filing_archive_url
+from .peers import (
+    OPERATING_PATTERN_MODEL_VERSION,
+    PAYMENTS_PEER_MODEL_VERSION,
+    REQUIRED_CLASSIFICATION_KEYS,
+    assess_payment_cohort,
+    classify_operating_pattern,
+)
 from .publication import APPROVED_PUBLICATION_INPUTS
+from .sector_reviews import SECTOR_FILING_REVIEW_VERSION, SECTOR_FILING_SPECS
 from .universe import CORE_INDUSTRY_CONTRACTS, CORE_RESEARCH_UNIVERSE
 
 
 PUBLIC_DIRECTORY_VERSION = "sec-public-directory-2026-09-06.1"
 PAYMENTS_COMPARISON_VERSION = "payments-public-comparison-2026-09-06.1"
-SECTOR_SCREEN_VERSION = "sector-public-screen-2026-09-06.2"
+SECTOR_SCREEN_VERSION = "sector-public-screen-2026-09-07.3"
 REVIEWED_PAYMENTS_PERIOD = date(2026, 6, 30)
 
 
@@ -485,7 +493,7 @@ def load_public_payments_comparison(database: Session) -> dict:
 
 
 def load_public_sector_screen(database: Session, industry_key: str) -> dict | None:
-    """Build a no-ranking sector screen; it never asserts economic comparability."""
+    """Build a filing-reviewed, no-ranking sector comparison for one industry."""
     contract = next(
         (
             item
@@ -502,6 +510,24 @@ def load_public_sector_screen(database: Session, industry_key: str) -> dict | No
     )
     if len(latest_filings) != len(contract.companies):
         raise ValueError("Sector screen does not have an exact filing for every company")
+    specs = {
+        spec.cik: spec
+        for spec in SECTOR_FILING_SPECS
+        if spec.industry_key == industry_key
+    }
+    if set(specs) != {company.cik for company in contract.companies}:
+        raise ValueError("Sector screen does not have a review spec for every company")
+    for company in contract.companies:
+        filing = latest_filings[company.cik]
+        spec = specs[company.cik]
+        if (
+            filing.accession_number != spec.accession_number
+            or filing.report_period_end is None
+            or filing.report_period_end.isoformat() != spec.report_period_end
+        ):
+            raise ValueError(
+                f"Reviewed sector filing identity changed for {company.ticker}"
+            )
     minimum_period = min(
         filing.report_period_end for filing in latest_filings.values()
     ) - timedelta(days=370)
@@ -529,6 +555,7 @@ def load_public_sector_screen(database: Session, industry_key: str) -> dict | No
     )
     for company in contract.companies:
         filing = latest_filings[company.cik]
+        spec = specs[company.cik]
         company_fact_rows = facts_by_cik[company.cik]
         fiscal_quarter = _fiscal_quarter(filing, company_fact_rows)
         if fiscal_quarter not in {1, 2, 3, 4}:
@@ -542,32 +569,99 @@ def load_public_sector_screen(database: Session, industry_key: str) -> dict | No
         latest = _analysis_payload(report, filing)
         periods.add(latest["period_end"])
         by_key = {metric["key"]: metric for metric in latest["metrics"]}
+        gate_specs = {gate.metric: gate for gate in spec.gates}
         lenses = []
         for key in lens_keys:
             metric = by_key[key]
+            gate = gate_specs.get(key)
+            usable = metric["value"] is not None and metric["confidence"] != "blocked"
+            gate_status = gate.status if gate is not None and usable else (
+                "cleared" if usable else "blocked"
+            )
+            if gate_status == "blocked":
+                display_value = "Blocked"
+            elif gate_status == "direction_only":
+                display_value = (
+                    "Up" if metric["value"] > 0
+                    else "Down" if metric["value"] < 0
+                    else "Flat"
+                )
+            else:
+                display_value = metric["display_value"]
             lenses.append(
                 {
                     "key": key,
                     "label": metric["label"],
-                    "display_value": metric["display_value"],
-                    "value": metric["value"],
+                    "display_value": display_value,
+                    "value": metric["value"] if gate_status == "cleared" else None,
                     "unit": metric["unit"],
                     "state": metric["state"],
                     "confidence": metric["confidence"],
+                    "gate_status": gate_status,
+                    "reason": (
+                        gate.reason
+                        if gate is not None and usable
+                        else (
+                            "Required mapped inputs are unavailable; no value is inferred."
+                            if not usable
+                            else "The exact filing evidence supports magnitude comparison."
+                        )
+                    ),
                     "source_url": metric["source_url"],
                 }
             )
+        lenses_by_key = {lens["key"]: lens for lens in lenses}
+        classification_blockers = tuple(
+            key
+            for key in REQUIRED_CLASSIFICATION_KEYS
+            if lenses_by_key[key]["gate_status"] != "cleared"
+            or lenses_by_key[key]["value"] is None
+        )
+        if classification_blockers:
+            cohort = "not_comparable"
+            comparable = False
+            reasons = (
+                "Required comparison lenses are gated: "
+                + ", ".join(classification_blockers),
+            )
+        else:
+            cohort, reasons = classify_operating_pattern(
+                {
+                    key: lenses_by_key[key]["value"]
+                    for key in REQUIRED_CLASSIFICATION_KEYS
+                }
+            )
+            comparable = True
+        primary_url = _require_sec_archive_url(
+            filing_archive_url(
+                company.cik, filing.accession_number, spec.primary_document
+            )
+        )
         companies.append(
             {
+                "cik": company.cik,
                 "ticker": company.ticker,
                 "company_name": company.company_name,
                 "subgroup": company.comparison_subgroup,
                 "period_end": latest["period_end"],
                 "accession_number": latest["accession_number"],
                 "filing_index_url": latest["filing_index_url"],
-                "comparison_state": "filing_review_required",
-                "cohort": None,
+                "comparison_state": "reviewed_with_metric_gates",
+                "review_version": SECTOR_FILING_REVIEW_VERSION,
+                "cohort": cohort,
+                "signal_pattern": cohort if comparable else None,
+                "comparable": comparable,
+                "reasons": list(reasons),
                 "lenses": lenses,
+                "findings": [
+                    {
+                        "evidence_id": rule.evidence_id,
+                        "category": rule.category,
+                        "statement": rule.statement,
+                        "source_url": primary_url,
+                    }
+                    for rule in spec.rules
+                ],
             }
         )
     return {
@@ -577,9 +671,15 @@ def load_public_sector_screen(database: Session, industry_key: str) -> dict | No
         "industry_label": contract.label,
         "same_period": len(periods) == 1,
         "ranking_performed": False,
-        "cohorts_assigned": False,
+        "cohorts_assigned": True,
+        "model_version": OPERATING_PATTERN_MODEL_VERSION,
+        "review_version": SECTOR_FILING_REVIEW_VERSION,
         "companies": companies,
-        "comparison_notes": list(contract.comparison_notes),
+        "comparison_notes": [
+            *contract.comparison_notes,
+            "Operating-pattern cohorts summarize three cleared filing signals; they are not investment recommendations or ranks.",
+            "Direction-only and blocked magnitudes are excluded from charts and cohort assignment.",
+        ],
         "metric_contract": [
             {
                 "label": metric.label,

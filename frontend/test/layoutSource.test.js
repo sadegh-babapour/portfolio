@@ -12,3 +12,15 @@ test("mobile map attribution remains at the bottom edge", () => {
   assert.match(mobileAttributionPosition, /top:\s*auto/);
   assert.match(mobileAttributionPosition, /bottom:\s*0/);
 });
+
+test("transit navigation links back to financial research", () => {
+  const navigation = readFileSync(
+    new URL("../src/PortfolioNav.jsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    navigation,
+    /\["Financial Research", "\/research\/financials"\]/,
+  );
+});

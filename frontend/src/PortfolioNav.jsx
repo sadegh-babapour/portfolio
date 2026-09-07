@@ -14,6 +14,7 @@ const NAV_LINKS = [
   ["Projects", "/projects"],
   ["Contact", "/contact"],
   ["Dashboard", "/dashboard"],
+  ["Financial Research", "/research/financials"],
   ["Blog", "/blog"],
 ];
 const TRANSIT_LINK = ["Calgary Transit Live", "/calgary-transit-live/"];

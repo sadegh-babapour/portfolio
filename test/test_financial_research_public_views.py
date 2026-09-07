@@ -124,6 +124,8 @@ class PublicResearchViewTests(unittest.TestCase):
                     "key": key,
                     "label": key.replace("_", " ").title(),
                     "display_value": "+1.00%",
+                    "value": 1.0,
+                    "unit": "%",
                     "state": "derived",
                     "confidence": "high",
                     "source_url": "https://www.sec.gov/Archives/edgar/data/1/file.htm",
@@ -161,6 +163,13 @@ class PublicResearchViewTests(unittest.TestCase):
         self.assertTrue(result["same_period"])
         self.assertFalse(result["ranking_performed"])
         self.assertFalse(result["cohorts_assigned"])
+        self.assertTrue(
+            all(
+                lens["value"] == 1.0 and lens["unit"] == "%"
+                for company in result["companies"]
+                for lens in company["lenses"]
+            )
+        )
         self.assertTrue(
             all(company["cohort"] is None for company in result["companies"])
         )

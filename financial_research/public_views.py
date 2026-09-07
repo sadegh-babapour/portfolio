@@ -23,7 +23,7 @@ from .universe import CORE_INDUSTRY_CONTRACTS, CORE_RESEARCH_UNIVERSE
 
 PUBLIC_DIRECTORY_VERSION = "sec-public-directory-2026-09-06.1"
 PAYMENTS_COMPARISON_VERSION = "payments-public-comparison-2026-09-06.1"
-SECTOR_SCREEN_VERSION = "sector-public-screen-2026-09-06.1"
+SECTOR_SCREEN_VERSION = "sector-public-screen-2026-09-06.2"
 REVIEWED_PAYMENTS_PERIOD = date(2026, 6, 30)
 
 
@@ -550,6 +550,8 @@ def load_public_sector_screen(database: Session, industry_key: str) -> dict | No
                     "key": key,
                     "label": metric["label"],
                     "display_value": metric["display_value"],
+                    "value": metric["value"],
+                    "unit": metric["unit"],
                     "state": metric["state"],
                     "confidence": metric["confidence"],
                     "source_url": metric["source_url"],

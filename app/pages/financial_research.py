@@ -72,6 +72,248 @@ def _metric_cards(sheet: dict) -> None:
                     _source_link("SEC evidence ↗", metric["source_url"])
 
 
+def _seasonal_revenue_charts(points: list[dict], *, company_label: str) -> None:
+    """Compare like quarters and expose partial-year totals without filling gaps."""
+    by_year: dict[str, dict[int, float]] = {}
+    for point in points:
+        value = point.get("revenue_billions")
+        quarter = point.get("fiscal_quarter")
+        if value is None or quarter not in {1, 2, 3, 4}:
+            continue
+        by_year.setdefault(str(point["year"]), {})[quarter] = value
+    if not by_year:
+        return
+    years = sorted(by_year)
+    axis_years = [
+        year if len(by_year[year]) == 4 else f"{year} (partial)" for year in years
+    ]
+    colors = {1: "#2563eb", 2: "#0f766e", 3: "#d97706", 4: "#7c3aed"}
+    grouped_series = [
+        {
+            "name": f"Q{quarter}",
+            "type": "bar",
+            "data": [by_year[year].get(quarter) for year in years],
+            "itemStyle": {"color": colors[quarter]},
+        }
+        for quarter in (1, 2, 3, 4)
+    ]
+    stacked_series = [dict(series, stack="quarters") for series in grouped_series]
+    partial_years = [year for year in years if len(by_year[year]) < 4]
+    with ui.element("section").classes(
+        "grid w-full grid-cols-1 gap-5 xl:grid-cols-2"
+    ):
+        with ui.card().classes("w-full min-w-0 p-5 gap-3 border"):
+            ui.label("Same-quarter seasonality").classes("text-xl font-semibold")
+            viewport_chart(
+                {
+                    "tooltip": {"trigger": "axis", "axisPointer": {"type": "shadow"}},
+                    "legend": {"data": ["Q1", "Q2", "Q3", "Q4"], "bottom": 0},
+                    "grid": {"left": 54, "right": 18, "top": 28, "bottom": 58},
+                    "xAxis": {"type": "category", "data": years},
+                    "yAxis": {"type": "value", "name": "$B", "min": 0},
+                    "series": grouped_series,
+                },
+                classes="w-full h-80",
+                aria_label=(
+                    f"{company_label} quarterly revenue grouped by fiscal quarter "
+                    "across available years"
+                ),
+            )
+            ui.label(
+                "Each color keeps the fiscal quarter fixed, making Q1-to-Q1 and "
+                "Q2-to-Q2 comparisons visible without mixing seasonal periods."
+            ).classes("text-sm text-grey-7 leading-relaxed")
+        with ui.card().classes("w-full min-w-0 p-5 gap-3 border"):
+            ui.label("Quarter contribution by year").classes("text-xl font-semibold")
+            viewport_chart(
+                {
+                    "tooltip": {"trigger": "axis", "axisPointer": {"type": "shadow"}},
+                    "legend": {"data": ["Q1", "Q2", "Q3", "Q4"], "bottom": 0},
+                    "grid": {"left": 54, "right": 18, "top": 28, "bottom": 66},
+                    "xAxis": {
+                        "type": "category",
+                        "data": axis_years,
+                        "axisLabel": {"interval": 0},
+                    },
+                    "yAxis": {"type": "value", "name": "$B", "min": 0},
+                    "series": stacked_series,
+                },
+                classes="w-full h-80",
+                aria_label=(
+                    f"{company_label} annual revenue split into available fiscal quarters"
+                ),
+            )
+            note = (
+                "Partial columns are labeled and must not be compared with full-year totals."
+                if partial_years
+                else "Every displayed year contains all four quarters."
+            )
+            ui.label(note).classes("text-sm text-grey-7 leading-relaxed")
+
+
+def _lens(company: dict, key: str) -> dict:
+    return next(item for item in company["lenses"] if item["key"] == key)
+
+
+def _sector_comparison_charts(screen: dict) -> None:
+    companies = screen["companies"]
+    tickers = [company["ticker"] for company in companies]
+    growth = [_lens(company, "revenue_growth_yoy")["value"] for company in companies]
+    margin = [
+        _lens(company, "operating_margin_change_yoy")["value"]
+        for company in companies
+    ]
+    scatter = [
+        {"name": ticker, "value": [growth_value, margin_value]}
+        for ticker, growth_value, margin_value in zip(tickers, growth, margin, strict=True)
+        if growth_value is not None and margin_value is not None
+    ]
+    metric_keys = [
+        "revenue_growth_yoy",
+        "operating_margin_change_yoy",
+        "cash_conversion",
+        "diluted_share_change_yoy",
+    ]
+    metric_labels = [
+        "Revenue growth",
+        "Margin change",
+        "Cash conversion",
+        "Share change",
+    ]
+    state_score = {"reported": 2, "reconciled": 2, "derived": 2, "missing": 0, "blocked": 0}
+    heatmap = []
+    for company_index, company in enumerate(companies):
+        for metric_index, key in enumerate(metric_keys):
+            lens = _lens(company, key)
+            score = state_score.get(lens["state"], 1) if lens["value"] is not None else 0
+            heatmap.append(
+                {
+                    "name": f"{company['ticker']} · {lens['label']}",
+                    "value": [metric_index, company_index, score],
+                    "state": lens["state"],
+                    "display": lens["display_value"],
+                }
+            )
+    with ui.element("section").classes(
+        "grid w-full grid-cols-1 gap-5 xl:grid-cols-2"
+    ):
+        with ui.card().classes("w-full min-w-0 p-5 gap-3 border"):
+            ui.label("Operating direction").classes("text-xl font-semibold")
+            viewport_chart(
+                {
+                    "tooltip": {"trigger": "axis", "axisPointer": {"type": "shadow"}},
+                    "legend": {"data": ["Revenue growth (%)", "Margin change (pp)"], "bottom": 0},
+                    "grid": {"left": 54, "right": 18, "top": 28, "bottom": 62},
+                    "xAxis": {"type": "category", "data": tickers},
+                    "yAxis": {"type": "value", "name": "% / pp"},
+                    "series": [
+                        {"name": "Revenue growth (%)", "type": "bar", "data": growth, "itemStyle": {"color": "#2563eb"}},
+                        {"name": "Margin change (pp)", "type": "bar", "data": margin, "itemStyle": {"color": "#d97706"}},
+                    ],
+                },
+                classes="w-full h-80",
+                aria_label=f"{screen['industry_label']} revenue growth and operating margin change screening values",
+            )
+            ui.label(
+                "Growth is percentage change; margin movement is percentage points. "
+                "Bars are filing-review inputs, not scores."
+            ).classes("text-sm text-grey-7 leading-relaxed")
+        with ui.card().classes("w-full min-w-0 p-5 gap-3 border"):
+            ui.label("Growth–margin relationship").classes("text-xl font-semibold")
+            viewport_chart(
+                {
+                    "tooltip": {"trigger": "item"},
+                    "grid": {"left": 58, "right": 24, "top": 28, "bottom": 52},
+                    "xAxis": {"type": "value", "name": "Revenue growth %", "nameLocation": "middle", "nameGap": 30},
+                    "yAxis": {"type": "value", "name": "Margin change pp"},
+                    "series": [{
+                        "type": "scatter",
+                        "symbolSize": 20,
+                        "data": scatter,
+                        "label": {"show": True, "formatter": "{b}", "position": "top"},
+                        "itemStyle": {"color": "#0f766e"},
+                    }],
+                },
+                classes="w-full h-80",
+                aria_label=f"{screen['industry_label']} revenue growth versus operating margin change scatter plot",
+            )
+            ui.label(
+                "Position shows two operating directions at once. Missing inputs are "
+                "omitted, and quadrant placement is not an investment ranking."
+            ).classes("text-sm text-grey-7 leading-relaxed")
+    with ui.card().classes("w-full min-w-0 p-5 gap-3 border"):
+        ui.label("Comparison evidence map").classes("text-xl font-semibold")
+        viewport_chart(
+            {
+                "tooltip": {"trigger": "item"},
+                "grid": {"left": 88, "right": 24, "top": 22, "bottom": 72},
+                "xAxis": {"type": "category", "data": metric_labels, "axisLabel": {"rotate": 18}},
+                "yAxis": {"type": "category", "data": tickers},
+                "visualMap": {
+                    "type": "piecewise",
+                    "show": True,
+                    "bottom": 0,
+                    "pieces": [
+                        {"value": 0, "label": "Unavailable", "color": "#d1d5db"},
+                        {"value": 1, "label": "Review", "color": "#f59e0b"},
+                        {"value": 2, "label": "Available", "color": "#0f766e"},
+                    ],
+                },
+                "series": [{"type": "heatmap", "data": heatmap, "label": {"show": False}}],
+            },
+            classes="w-full h-96",
+            aria_label=f"{screen['industry_label']} availability map for four SEC-derived comparison measures",
+        )
+        ui.label(
+            "This map makes missing or blocked evidence visible before anyone compares "
+            "magnitudes. Available still means pending sector-specific filing review."
+        ).classes("text-sm text-grey-7 leading-relaxed")
+
+
+def _payments_gate_chart(comparison: dict) -> None:
+    companies = comparison["companies"]
+    tickers = [company["ticker"] for company in companies]
+    labels = [lens["label"] for lens in companies[0]["lenses"]]
+    scores = {"blocked": 0, "direction_only": 1, "cleared": 2}
+    data = []
+    for company_index, company in enumerate(companies):
+        for lens_index, lens in enumerate(company["lenses"]):
+            data.append(
+                {
+                    "name": f"{company['ticker']} · {lens['label']}",
+                    "value": [lens_index, company_index, scores[lens["gate_status"]]],
+                    "status": lens["gate_status"],
+                    "display": lens["display_value"],
+                }
+            )
+    with ui.card().classes("w-full min-w-0 p-5 gap-3 border"):
+        ui.label("Reviewed comparison gates").classes("text-xl font-semibold")
+        viewport_chart(
+            {
+                "tooltip": {"trigger": "item"},
+                "grid": {"left": 88, "right": 24, "top": 22, "bottom": 92},
+                "xAxis": {"type": "category", "data": labels, "axisLabel": {"rotate": 20}},
+                "yAxis": {"type": "category", "data": tickers},
+                "visualMap": {
+                    "type": "piecewise",
+                    "bottom": 0,
+                    "pieces": [
+                        {"value": 0, "label": "Blocked", "color": "#dc2626"},
+                        {"value": 1, "label": "Direction only", "color": "#f59e0b"},
+                        {"value": 2, "label": "Cleared", "color": "#0f766e"},
+                    ],
+                },
+                "series": [{"type": "heatmap", "data": data}],
+            },
+            classes="w-full h-96",
+            aria_label="Payments comparison gate status by company and metric",
+        )
+        ui.label(
+            "The chart visualizes permission to compare—not company quality. Red cells "
+            "hide magnitudes; amber cells preserve direction only."
+        ).classes("text-sm text-grey-7 leading-relaxed")
+
+
 def _operating_history_chart(sheet: dict) -> None:
     history = sheet["quarter_history"]
     viewport_chart(
@@ -379,6 +621,17 @@ def _research_sheet(sheet: dict) -> None:
                 "text-xl font-semibold"
             )
             _capital_history_chart(sheet)
+    _seasonal_revenue_charts(
+        [
+            {
+                "year": row["period"][-4:],
+                "fiscal_quarter": int(row["period"][1]),
+                "revenue_billions": row["revenue_billions"],
+            }
+            for row in sheet["quarter_history"]
+        ],
+        company_label=sheet["ticker"],
+    )
     _quarter_history_table(sheet)
 
     ui.label("Current-quarter evidence in tension").classes(
@@ -449,6 +702,13 @@ def financial_research_index():
         if not research["available"]:
             _unavailable_state()
         else:
+            ui.label("Company spotlight · PayPal").classes(
+                "text-2xl font-semibold mt-2"
+            )
+            ui.label(
+                "The spotlight is the fully reviewed research sheet; the wider directory "
+                "below remains a structured SEC screening surface."
+            ).classes("text-sm text-grey-7 leading-relaxed max-w-4xl")
             for company in research["companies"]:
                 with ui.card().classes("w-full p-5 sm:p-6 gap-3 border"):
                     with ui.row().classes("w-full items-start justify-between gap-3 flex-wrap"):
@@ -612,6 +872,18 @@ def company_filing_profile(ticker: str):
                         "margin across recent filings"
                     ),
                 )
+            seasonal_points = [
+                {
+                    "year": row["period_end"][:4],
+                    "fiscal_quarter": row["fiscal_quarter"],
+                    "revenue_billions": series_value(row, "revenue", 1_000_000_000),
+                }
+                for row in chronological
+            ]
+            _seasonal_revenue_charts(
+                seasonal_points,
+                company_label=profile["ticker"],
+            )
         else:
             ui.label(
                 "No quarter passed the current exact-input normalization contract."
@@ -710,6 +982,7 @@ def payments_comparison_page():
             ui.badge("Same period", color="positive").props("outline")
             ui.badge("Exact reviewed accessions", color="positive").props("outline")
             ui.badge("No ranking", color="grey").props("outline")
+        _payments_gate_chart(comparison)
         for company in comparison["companies"]:
             with ui.card().classes("w-full p-5 gap-4 border"):
                 with ui.row().classes("w-full items-start justify-between gap-3 flex-wrap"):
@@ -746,6 +1019,7 @@ def payments_comparison_page():
                 "Blocked magnitudes are hidden. Direction-only gates retain up/down "
                 "evidence without pretending the reported percentage is comparable."
             ).classes("text-sm font-semibold")
+        enable_viewport_chart_animations()
 
 
 @ui.page("/research/financials/sectors/{industry_key}")
@@ -773,6 +1047,12 @@ def sector_screen_page(industry_key: str):
             ).props("outline")
             ui.badge("Filing review required", color="warning").props("outline")
             ui.badge("No rankings or cohorts", color="grey").props("outline")
+        ui.label("Within-sector visual screen").classes("text-2xl font-semibold mt-2")
+        ui.label(
+            "These views help spot operating divergence and evidence gaps across the five "
+            "selected companies. They do not resolve business-model or filing-event differences."
+        ).classes("text-sm text-grey-7 leading-relaxed max-w-5xl")
+        _sector_comparison_charts(screen)
         with ui.element("section").classes(
             "grid w-full grid-cols-1 gap-4 lg:grid-cols-2"
         ):
@@ -817,6 +1097,7 @@ def sector_screen_page(industry_key: str):
                 "These screens identify where deeper filing review is needed; they do "
                 "not establish that a larger number is economically better."
             ).classes("text-sm font-semibold")
+        enable_viewport_chart_animations()
 
 
 @ui.page("/research/financials/paypal")

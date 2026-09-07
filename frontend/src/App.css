@@ -832,7 +832,7 @@ button.list-item {
   gap: 6px;
 }
 
-@media (max-width: 1050px) {
+@media (max-width: 1260px) {
   .portfolio-nav {
     gap: 10px;
     height: 56px;

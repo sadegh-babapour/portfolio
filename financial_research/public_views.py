@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from .analysis import AnalysisValue, analyze_company_quarter
 from .contracts import FactObservation
-from .metrics import CANONICAL_METRICS, CANONICAL_METRIC_VERSION
+from .metrics import CANONICAL_METRIC_VERSION
 from .models import (
     ResearchFactMetricMapping,
     ResearchFactObservation,
@@ -24,15 +24,15 @@ from .peers import (
     assess_payment_cohort,
     classify_operating_pattern,
 )
-from .publication import APPROVED_PUBLICATION_INPUTS
 from .sector_reviews import SECTOR_FILING_REVIEW_VERSION, SECTOR_FILING_SPECS
 from .universe import CORE_INDUSTRY_CONTRACTS, CORE_RESEARCH_UNIVERSE
 
 
-PUBLIC_DIRECTORY_VERSION = "sec-public-directory-2026-09-06.1"
-PAYMENTS_COMPARISON_VERSION = "payments-public-comparison-2026-09-06.1"
-SECTOR_SCREEN_VERSION = "sector-public-screen-2026-09-07.3"
+PUBLIC_DIRECTORY_VERSION = "sec-public-directory-2026-09-08.1"
+PAYMENTS_COMPARISON_VERSION = "payments-public-comparison-2026-09-08.1"
+SECTOR_SCREEN_VERSION = "sector-public-screen-2026-09-08.1"
 REVIEWED_PAYMENTS_PERIOD = date(2026, 6, 30)
+PUBLIC_HISTORY_YEARS = 5
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,9 +44,9 @@ class ExactFilingIdentity:
 
 REVIEWED_PAYMENT_FILINGS = (
     ExactFilingIdentity(
-        cik=APPROVED_PUBLICATION_INPUTS[0].cik,
-        accession_number=APPROVED_PUBLICATION_INPUTS[0].accession_number,
-        period_end=APPROVED_PUBLICATION_INPUTS[0].period_end,
+        cik="0001633917",
+        accession_number="0001633917-26-000082",
+        period_end="2026-06-30",
     ),
     *(
         ExactFilingIdentity(spec.cik, spec.accession_number, spec.report_period_end)
@@ -94,31 +94,27 @@ def _latest_core_filings(database: Session) -> dict[str, ResearchFiling]:
     )
 
 
-def _coverage_by_accession(
-    database: Session, accessions: Iterable[str]
-) -> dict[str, set[str]]:
-    accession_tuple = tuple(accessions)
-    if not accession_tuple:
-        return {}
-    rows = database.execute(
-        select(
-            ResearchFactObservation.accession_number,
-            ResearchFactMetricMapping.metric_key,
-        )
-        .join(
-            ResearchFactMetricMapping,
-            ResearchFactMetricMapping.fact_id == ResearchFactObservation.id,
-        )
-        .where(
-            ResearchFactObservation.accession_number.in_(accession_tuple),
-            ResearchFactMetricMapping.metric_version == CANONICAL_METRIC_VERSION,
-        )
-        .distinct()
-    ).all()
-    coverage: dict[str, set[str]] = {}
-    for accession, metric_key in rows:
-        coverage.setdefault(accession, set()).add(metric_key)
-    return coverage
+def _mapped_observations(
+    database: Session,
+    ciks: Iterable[str],
+    minimum_period: date,
+) -> tuple[ResearchFactObservation, ...]:
+    """Load only facts eligible for the current analytical metric contract."""
+    return tuple(
+        database.scalars(
+            select(ResearchFactObservation)
+            .join(
+                ResearchFactMetricMapping,
+                ResearchFactMetricMapping.fact_id == ResearchFactObservation.id,
+            )
+            .where(
+                ResearchFactObservation.filer_cik.in_(tuple(ciks)),
+                ResearchFactObservation.period_end >= minimum_period,
+                ResearchFactMetricMapping.metric_version
+                == CANONICAL_METRIC_VERSION,
+            )
+        ).all()
+    )
 
 
 def load_public_filing_directory(database: Session) -> dict:
@@ -128,15 +124,11 @@ def load_public_filing_directory(database: Session) -> dict:
     if set(latest) != expected_ciks:
         missing = sorted(expected_ciks - set(latest))
         raise ValueError("Core filing directory is incomplete: " + ", ".join(missing))
-    coverage = _coverage_by_accession(
-        database, (filing.accession_number for filing in latest.values())
-    )
     industries = []
     for contract in CORE_INDUSTRY_CONTRACTS:
         companies = []
         for company in contract.companies:
             filing = latest[company.cik]
-            present = coverage.get(filing.accession_number, set())
             companies.append(
                 {
                     "cik": company.cik,
@@ -150,8 +142,6 @@ def load_public_filing_directory(database: Session) -> dict:
                     "filed_on": filing.filed_on.isoformat(),
                     "accession_number": filing.accession_number,
                     "filing_index_url": _require_sec_archive_url(filing.sec_index_url),
-                    "metric_count": len(present),
-                    "metric_total": len(CANONICAL_METRICS),
                     "publication_state": (
                         "reviewed_sheet"
                         if company.publication_status == "published"
@@ -199,18 +189,13 @@ def load_public_filing_profile(database: Session, ticker: str) -> dict | None:
                 ResearchFiling.report_period_end.desc(),
                 ResearchFiling.accepted_at.desc(),
             )
-            .limit(12)
+            .limit(16)
         ).all()
     )
     if not filings:
         raise ValueError("No exact SEC filings are available for this company")
-    coverage = _coverage_by_accession(
-        database, (filing.accession_number for filing in filings)
-    )
-    metric_labels = {metric.key: metric.label for metric in CANONICAL_METRICS}
     filing_rows = []
     for filing in filings:
-        present = coverage.get(filing.accession_number, set())
         filing_rows.append(
             {
                 "form": filing.base_form,
@@ -218,24 +203,10 @@ def load_public_filing_profile(database: Session, ticker: str) -> dict | None:
                 "filed_on": filing.filed_on.isoformat(),
                 "accession_number": filing.accession_number,
                 "filing_index_url": _require_sec_archive_url(filing.sec_index_url),
-                "metric_count": len(present),
-                "present_metrics": [
-                    metric_labels[key] for key in metric_labels if key in present
-                ],
-                "missing_metrics": [
-                    metric_labels[key] for key in metric_labels if key not in present
-                ],
             }
         )
     minimum_period = filings[-1].report_period_end - timedelta(days=370)
-    fact_rows = tuple(
-        database.scalars(
-            select(ResearchFactObservation).where(
-                ResearchFactObservation.filer_cik == company.cik,
-                ResearchFactObservation.period_end >= minimum_period,
-            )
-        ).all()
-    )
+    fact_rows = _mapped_observations(database, (company.cik,), minimum_period)
     fact_contracts = tuple(_fact_contract(row) for row in fact_rows)
     analyses = []
     for filing in filings:
@@ -262,7 +233,6 @@ def load_public_filing_profile(database: Session, ticker: str) -> dict | None:
         "industry_key": company.industry_key,
         "comparison_subgroup": company.comparison_subgroup,
         "publication_state": company.publication_status,
-        "metric_total": len(CANONICAL_METRICS),
         "filings": filing_rows,
         "analyses": analyses,
         "analysis_scope": "screening_only",
@@ -311,6 +281,10 @@ def _format_analysis_value(value: AnalysisValue) -> str:
     numeric = float(value.value)
     if value.unit == "USD":
         return f"${numeric / 1_000_000_000:.3f}B"
+    if value.unit == "shares":
+        return f"{numeric / 1_000_000:.1f}M"
+    if value.unit == "USD/shares":
+        return f"${numeric:.2f}"
     return _format_lens(numeric, value.unit)
 
 
@@ -340,11 +314,16 @@ def _analysis_payload(report, filing: ResearchFiling) -> dict:
     keys = (
         "revenue",
         "revenue_growth_yoy",
+        "operating_income",
         "operating_margin",
         "operating_margin_change_yoy",
+        "net_income",
+        "net_margin",
+        "operating_cash_flow",
         "cash_conversion",
         "simplified_free_cash_flow",
         "working_capital",
+        "diluted_weighted_average_shares",
         "diluted_share_change_yoy",
     )
     metrics = []
@@ -378,6 +357,75 @@ def _analysis_payload(report, filing: ResearchFiling) -> dict:
     }
 
 
+def _load_company_histories(
+    database: Session,
+    companies,
+    latest_filings: dict[str, ResearchFiling],
+) -> dict[str, list[dict]]:
+    """Return comparable quarterly series without exposing mapping diagnostics."""
+    ciks = tuple(company.cik for company in companies)
+    if not ciks:
+        return {}
+    earliest_latest = min(
+        filing.report_period_end for filing in latest_filings.values()
+    )
+    filing_cutoff = earliest_latest - timedelta(days=PUBLIC_HISTORY_YEARS * 366)
+    filings = tuple(
+        database.scalars(
+            select(ResearchFiling)
+            .where(
+                ResearchFiling.filer_cik.in_(ciks),
+                ResearchFiling.base_form.in_(("10-Q", "10-K")),
+                ResearchFiling.report_period_end.is_not(None),
+                ResearchFiling.report_period_end >= filing_cutoff,
+                ResearchFiling.is_amendment.is_(False),
+            )
+            .order_by(
+                ResearchFiling.filer_cik,
+                ResearchFiling.report_period_end.desc(),
+                ResearchFiling.accepted_at.desc(),
+            )
+        ).all()
+    )
+    facts = _mapped_observations(
+        database,
+        ciks,
+        filing_cutoff - timedelta(days=370),
+    )
+    facts_by_cik: dict[str, list[ResearchFactObservation]] = {cik: [] for cik in ciks}
+    for fact in facts:
+        facts_by_cik[fact.filer_cik].append(fact)
+    filings_by_cik: dict[str, list[ResearchFiling]] = {cik: [] for cik in ciks}
+    seen_periods: set[tuple[str, date]] = set()
+    for filing in filings:
+        identity = (filing.filer_cik, filing.report_period_end)
+        if identity in seen_periods:
+            continue
+        seen_periods.add(identity)
+        filings_by_cik[filing.filer_cik].append(filing)
+
+    company_names = {company.cik: company.company_name for company in companies}
+    histories: dict[str, list[dict]] = {cik: [] for cik in ciks}
+    for cik in ciks:
+        company_facts = facts_by_cik[cik]
+        fact_contracts = tuple(_fact_contract(row) for row in company_facts)
+        for filing in reversed(filings_by_cik[cik]):
+            fiscal_quarter = _fiscal_quarter(filing, company_facts)
+            if fiscal_quarter not in {1, 2, 3, 4}:
+                continue
+            try:
+                report = analyze_company_quarter(
+                    fact_contracts,
+                    company_name=company_names[cik],
+                    period_end=filing.report_period_end,
+                    fiscal_quarter=fiscal_quarter,
+                )
+            except (ValueError, TypeError, ArithmeticError):
+                continue
+            histories[cik].append(_analysis_payload(report, filing))
+    return histories
+
+
 def load_public_payments_comparison(database: Session) -> dict:
     """Render only the exact Q2 payment cohort whose structural gates were reviewed."""
     exact_by_cik = {item.cik: item for item in REVIEWED_PAYMENT_FILINGS}
@@ -403,14 +451,7 @@ def load_public_payments_comparison(database: Session) -> dict:
         ):
             raise ValueError("A reviewed payment filing identity changed")
 
-    facts = tuple(
-        database.scalars(
-            select(ResearchFactObservation).where(
-                ResearchFactObservation.filer_cik.in_(tuple(exact_by_cik)),
-                ResearchFactObservation.period_end >= date(2025, 1, 1),
-            )
-        ).all()
-    )
+    facts = _mapped_observations(database, tuple(exact_by_cik), date(2025, 1, 1))
     by_cik: dict[str, list[FactObservation]] = {cik: [] for cik in exact_by_cik}
     for row in facts:
         by_cik[row.filer_cik].append(_fact_contract(row))
@@ -425,6 +466,7 @@ def load_public_payments_comparison(database: Session) -> dict:
         )
         for company in payment_contract.companies
     )
+    histories = _load_company_histories(database, payment_contract.companies, filings)
     assessments = assess_payment_cohort(reports)
     gate_specs = {
         spec.cik: {gate.metric: gate for gate in spec.gates}
@@ -479,6 +521,7 @@ def load_public_payments_comparison(database: Session) -> dict:
                 "signal_pattern": assessment.signal_pattern,
                 "comparable": assessment.comparable and not gates,
                 "lenses": lenses,
+                "history": histories.get(company.cik, []),
             }
         )
     return {
@@ -531,19 +574,14 @@ def load_public_sector_screen(database: Session, industry_key: str) -> dict | No
     minimum_period = min(
         filing.report_period_end for filing in latest_filings.values()
     ) - timedelta(days=370)
-    fact_rows = tuple(
-        database.scalars(
-            select(ResearchFactObservation).where(
-                ResearchFactObservation.filer_cik.in_(tuple(latest_filings)),
-                ResearchFactObservation.period_end >= minimum_period,
-            )
-        ).all()
-    )
+    fact_rows = _mapped_observations(database, tuple(latest_filings), minimum_period)
     facts_by_cik: dict[str, list[ResearchFactObservation]] = {
         company.cik: [] for company in contract.companies
     }
     for fact in fact_rows:
         facts_by_cik[fact.filer_cik].append(fact)
+
+    histories = _load_company_histories(database, contract.companies, latest_filings)
 
     companies = []
     periods = set()
@@ -662,6 +700,7 @@ def load_public_sector_screen(database: Session, industry_key: str) -> dict | No
                     }
                     for rule in spec.rules
                 ],
+                "history": histories.get(company.cik, []),
             }
         )
     return {

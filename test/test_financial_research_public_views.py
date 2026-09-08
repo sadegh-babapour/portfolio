@@ -34,19 +34,9 @@ class PublicResearchViewTests(unittest.TestCase):
 
     def test_directory_requires_and_groups_all_thirty_exact_filers(self):
         filings = self._filings()
-        coverage = {
-            filing.accession_number: {"revenue", "net_income"}
-            for filing in filings.values()
-        }
-        with (
-            patch(
-                "financial_research.public_views._latest_core_filings",
-                return_value=filings,
-            ),
-            patch(
-                "financial_research.public_views._coverage_by_accession",
-                return_value=coverage,
-            ),
+        with patch(
+            "financial_research.public_views._latest_core_filings",
+            return_value=filings,
         ):
             result = load_public_filing_directory(MagicMock())
 
@@ -59,7 +49,8 @@ class PublicResearchViewTests(unittest.TestCase):
             for company in industry["companies"]
         ]
         self.assertEqual(len(companies), 30)
-        self.assertTrue(all(company["metric_count"] == 2 for company in companies))
+        self.assertTrue(all("metric_count" not in company for company in companies))
+        self.assertTrue(all("metric_total" not in company for company in companies))
         self.assertTrue(
             all(
                 company["filing_index_url"].startswith(
@@ -82,15 +73,9 @@ class PublicResearchViewTests(unittest.TestCase):
     def test_directory_rejects_a_non_sec_filing_link(self):
         filings = self._filings()
         filings[CORE_RESEARCH_UNIVERSE[0].cik].sec_index_url = "https://example.com/file"
-        with (
-            patch(
-                "financial_research.public_views._latest_core_filings",
-                return_value=filings,
-            ),
-            patch(
-                "financial_research.public_views._coverage_by_accession",
-                return_value={},
-            ),
+        with patch(
+            "financial_research.public_views._latest_core_filings",
+            return_value=filings,
         ):
             with self.assertRaisesRegex(ValueError, "SEC Archives"):
                 load_public_filing_directory(MagicMock())
@@ -159,6 +144,10 @@ class PublicResearchViewTests(unittest.TestCase):
             ),
             patch("financial_research.public_views.analyze_company_quarter"),
             patch(
+                "financial_research.public_views._load_company_histories",
+                return_value={company.cik: [] for company in CORE_RESEARCH_UNIVERSE},
+            ),
+            patch(
                 "financial_research.public_views._analysis_payload",
                 side_effect=payload,
             ),
@@ -188,6 +177,7 @@ class PublicResearchViewTests(unittest.TestCase):
         self.assertTrue(
             all(company["findings"] for company in result["companies"])
         )
+        self.assertTrue(all("history" in company for company in result["companies"]))
         self.assertTrue(
             all(
                 company["comparison_state"] == "reviewed_with_metric_gates"

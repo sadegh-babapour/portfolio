@@ -369,8 +369,10 @@ function VehicleDrawer({
   if (!vehicle) {
     const emptyMessage = serviceStatus === "outside_operating_hours"
       ? "Live playback is offline outside Calgary polling hours (08:00–21:00 America/Edmonton). Please return during service hours."
+      : serviceStatus === "no_vehicle_positions"
+        ? "No current bus positions have reached this map. Routes and stop arrivals remain available; live bus tracking will return when positions resume."
       : serviceStatus === "degraded" || serviceStatus === "unavailable"
-        ? "Live vehicle data is temporarily unavailable. The service is being checked."
+        ? "Live vehicle data is temporarily unavailable. Please try again shortly."
         : "Select a bus to highlight its route and see upcoming stops and alerts.";
     return (
       <div className="drawer empty">
@@ -934,9 +936,9 @@ function App() {
     let cancelled = false;
 
     const load = async () => {
-      const fetchJson = async (url) => {
+      const fetchJson = async (url, allowDegraded = false) => {
         const response = await fetch(url);
-        if (!response.ok) {
+        if (!response.ok && !(allowDegraded && response.status === 503)) {
           throw new Error(`Transit request failed with HTTP ${response.status}`);
         }
         return response.json();
@@ -957,7 +959,7 @@ function App() {
               ? `${API_BASE}/routes/paths?mode=all&routes=${encodeURIComponent(activeRoute)}`
               : `${API_BASE}/routes/paths?mode=${mode}`
         ),
-        fetchJson(`${API_BASE}/health`),
+        fetchJson(`${API_BASE}/health`, true),
       ]);
 
       if (cancelled) return;
@@ -997,6 +999,9 @@ function App() {
         setServiceStatus("unavailable");
       } else if (!hasFreshPaths || healthResult.status === "rejected") {
         setServiceStatus("degraded");
+      } else if (healthResult.value?.recent_vehicle_count === 0
+        && healthResult.value?.status === "degraded") {
+        setServiceStatus("no_vehicle_positions");
       } else {
         setServiceStatus(healthResult.value?.status || "healthy");
       }
@@ -1147,11 +1152,15 @@ function App() {
   const hasVehicleData = vehicles.length > 0;
   const countLabel = serviceStatus === "outside_operating_hours"
     ? "Outside live hours"
+    : serviceStatus === "no_vehicle_positions" && !hasVehicleData
+      ? "No live bus positions"
     : (serviceStatus === "degraded" || serviceStatus === "unavailable") && !hasVehicleData
       ? "Live data unavailable"
       : `${vehicles.length} active buses${serviceStatus === "healthy" ? "" : " · degraded"}`;
   const refreshLabel = serviceStatus === "outside_operating_hours"
     ? "Live polling runs 08:00–21:00 Calgary time"
+    : serviceStatus === "no_vehicle_positions"
+      ? "Checking Calgary positions every 30s"
     : `Last refresh ${refreshAgeSeconds}s ago`;
 
   return (

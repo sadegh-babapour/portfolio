@@ -42,7 +42,7 @@ def contact():
         with ui.element("div").classes(
             "grid w-full grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]"
         ):
-            with ui.card().classes("w-full p-5 sm:p-8 gap-5"):
+            with ui.card().classes("w-full min-w-0 p-5 sm:p-8 gap-5"):
                 ui.label("Send a message").classes("text-2xl font-semibold")
                 ui.label(
                     "You’ll receive a verification link first. Your message is delivered "
@@ -72,7 +72,7 @@ def contact():
                   <button id="contact-submit" type="submit">Send verification email</button>
                 </form>
                 """
-                ui.html(form_html).classes("w-full")
+                ui.html(form_html).classes("w-full min-w-0")
 
             with ui.column().classes("gap-4"):
                 with ui.card().classes("w-full p-5 gap-3"):
@@ -102,9 +102,10 @@ def contact():
     prefill_account_request = "true" if account_request else "false"
     enabled = "true" if settings.configured else "false"
     ui.add_css("""
-      .contact-native-form { display:grid; gap:1rem; }
+      .contact-native-form { display:grid; gap:1rem; width:100%; min-width:0; }
       .contact-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
-      .contact-native-form label { display:grid; gap:.4rem; font-weight:600; }
+      .contact-native-form label { display:grid; min-width:0; gap:.4rem; font-weight:600; }
+      .contact-native-form > *, .contact-grid > * { min-width:0; max-width:100%; }
       .contact-native-form input,.contact-native-form select,.contact-native-form textarea {
         box-sizing:border-box; width:100%; border:1px solid #94a3b8; border-radius:.6rem;
         padding:.72rem .85rem; color:#111827; background:#fff;
@@ -197,6 +198,7 @@ def contact():
           if (window.turnstile && widgetId === null) {{
             widgetId = window.turnstile.render('#contact-turnstile', {{
               sitekey: siteKey, action: 'contact', theme: 'auto',
+              size: window.matchMedia('(max-width: 400px)').matches ? 'compact' : 'flexible',
               appearance: 'always',
               'response-field': false,
               callback: (token) => {{

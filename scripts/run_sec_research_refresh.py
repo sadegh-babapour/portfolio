@@ -5,7 +5,6 @@ import uuid
 from datetime import date, datetime, timezone
 
 from app.contact.database import session_scope
-from app.runtime_state import bootstrap_entry_point
 from financial_research.automation import (
     DEFAULT_COHORT_KEY,
     RetryPolicy,
@@ -37,9 +36,6 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    if args.write:
-        # The runtime gate runs before any network or database access.
-        bootstrap_entry_point("sec-refresh")
     policy = RetryPolicy(max_attempts=args.max_attempts)
     automation_run_id: uuid.UUID | None = None
 

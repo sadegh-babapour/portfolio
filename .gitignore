@@ -71,17 +71,7 @@ static/resume.pdf
 # Historical chat is retained locally and may contain copied credentials
 docs/CHAT_HISTORY_RAW.md
 
-# Operational handoff and agent Markdown is private/local-only. The only tracked
-# Markdown is the root README plus the file-specific OpenSpec exceptions below.
+# Operational handoff and agent Markdown is private/local-only. Keep the public
+# repository's root README as its sole tracked Markdown document.
 *.md
 !/README.md
-# Published OpenSpec change: proposal, design, tasks and spec only. Its QA
-# contract (verification.md) and all agent notes stay private.
-!/openspec/changes/local-db-isolation/proposal.md
-!/openspec/changes/local-db-isolation/design.md
-!/openspec/changes/local-db-isolation/tasks.md
-!/openspec/changes/local-db-isolation/specs/local-db-isolation/spec.md
-
-# Railway build attestation markers (generated during the Railway build; never committed)
-/.bizqlab-build-attestation.json
-/backend/transit_api/.bizqlab-build-attestation.json

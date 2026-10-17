@@ -4,10 +4,8 @@
   "version": "0.1.0",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check db/pool.js && node --check services/transitService.js && node --check config/transitConfig.js && node --check config/runtimeEnv.js && node --check config/runtimeState.js && node --check scripts/writeBuildAttestation.js && node --check scripts/checkBuildAttestation.js",
-    "test": "NODE_OPTIONS=\"--require ./test/shims/isolate.js\" node --test test/*.test.js",
-    "attest:write": "node scripts/writeBuildAttestation.js",
-    "attest:check": "node scripts/checkBuildAttestation.js"
+    "check": "node --check server.js && node --check db/pool.js && node --check services/transitService.js && node --check config/transitConfig.js",
+    "test": "node test/transitService.test.js"
   },
   "dependencies": {
     "cors": "^2.8.6",

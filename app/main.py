@@ -1,13 +1,3 @@
-# Entry point (and the NiceGUI reload worker): resolve the runtime before any app
-# import or configuration read. A refusal exits before serving or connecting. No
-# dotenv discovery: development settings come only from the strict root profile.
-# Imported without this block (tests, a bare ASGI import), database access raises
-# runtime_not_bootstrapped.
-if __name__ in {"__main__", "__mp_main__"}:
-    from app.runtime_state import bootstrap_entry_point
-
-    bootstrap_entry_point("web")
-
 from fastapi import HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -16,6 +6,10 @@ from nicegui import ui
 import logging
 import os
 from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 import app.contact.api  # noqa: F401,E402
 import app.auth.api  # noqa: F401,E402

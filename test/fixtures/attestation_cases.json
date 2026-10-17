@@ -1,0 +1,1111 @@
+{
+ "description": "design.md §3.4 runtime validation. 'doc' applies set/delete to base_doc and is serialized compactly; 'content' is literal byte segments. 'file' selects how the test materializes it under <tmp>/build (the build root), where the marker is <tmp>/build/.bizqlab-build-attestation.json. The legacy_* kinds place a valid document at the retired .bizqlab/build-attestation.json path (directly, or through a .bizqlab symlink to <tmp>/outside); no fallback reads it.",
+ "base_doc": {
+  "schema": 1,
+  "kind": "bizqlab-railway-build",
+  "build_root": ".",
+  "railway_service_id": "svc-1",
+  "railway_environment_id": "env-1",
+  "git_commit": null,
+  "generated_at": "2026-10-16T12:00:00Z"
+ },
+ "cases": [
+  {
+   "name": "valid, null commit",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "valid",
+   "doc": {
+    "set": {},
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "valid, null commit ignores runtime commit",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "valid",
+   "doc": {
+    "set": {},
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1",
+    "RAILWAY_GIT_COMMIT_SHA": "ffffffffffffffffffffffffffffffffffffffff"
+   }
+  },
+  {
+   "name": "valid, bound commit matches",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "valid",
+   "doc": {
+    "set": {
+     "git_commit": "0123456789abcdef0123456789abcdef01234567"
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1",
+    "RAILWAY_GIT_COMMIT_SHA": "0123456789abcdef0123456789abcdef01234567"
+   }
+  },
+  {
+   "name": "commit bound, runtime commit absent",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:commit_missing",
+   "doc": {
+    "set": {
+     "git_commit": "0123456789abcdef0123456789abcdef01234567"
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "commit bound, runtime commit empty",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:commit_missing",
+   "doc": {
+    "set": {
+     "git_commit": "0123456789abcdef0123456789abcdef01234567"
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1",
+    "RAILWAY_GIT_COMMIT_SHA": ""
+   }
+  },
+  {
+   "name": "commit bound, stale artifact",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:commit_mismatch",
+   "doc": {
+    "set": {
+     "git_commit": "0123456789abcdef0123456789abcdef01234567"
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1",
+    "RAILWAY_GIT_COMMIT_SHA": "ffffffffffffffffffffffffffffffffffffffff"
+   }
+  },
+  {
+   "name": "commit uppercase",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:commit_format",
+   "doc": {
+    "set": {
+     "git_commit": "0123456789ABCDEF0123456789ABCDEF01234567"
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1",
+    "RAILWAY_GIT_COMMIT_SHA": "0123456789ABCDEF0123456789ABCDEF01234567"
+   }
+  },
+  {
+   "name": "commit short",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:commit_format",
+   "doc": {
+    "set": {
+     "git_commit": "abc123"
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "commit integer",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:commit_type",
+   "doc": {
+    "set": {
+     "git_commit": 12
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "commit false",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:commit_type",
+   "doc": {
+    "set": {
+     "git_commit": false
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "commit object",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:commit_type",
+   "doc": {
+    "set": {
+     "git_commit": {}
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "service id null",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:service_id_type",
+   "doc": {
+    "set": {
+     "railway_service_id": null
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "service id missing",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:missing_key",
+   "doc": {
+    "set": {},
+    "delete": [
+     "railway_service_id"
+    ]
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "service id integer",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:service_id_type",
+   "doc": {
+    "set": {
+     "railway_service_id": 7
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "service id empty",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:service_id_format",
+   "doc": {
+    "set": {
+     "railway_service_id": ""
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "service id with space",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:service_id_format",
+   "doc": {
+    "set": {
+     "railway_service_id": "svc 1"
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "service id 65 chars",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:service_id_format",
+   "doc": {
+    "set": {
+     "railway_service_id": "sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss"
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "cross-service artifact",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:service_mismatch",
+   "doc": {
+    "set": {
+     "railway_service_id": "svc-2"
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "runtime service id absent",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:service_mismatch",
+   "doc": {
+    "set": {},
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1"
+   }
+  },
+  {
+   "name": "environment id null",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:environment_id_type",
+   "doc": {
+    "set": {
+     "railway_environment_id": null
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "environment id missing",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:missing_key",
+   "doc": {
+    "set": {},
+    "delete": [
+     "railway_environment_id"
+    ]
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "environment id list",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:environment_id_type",
+   "doc": {
+    "set": {
+     "railway_environment_id": [
+      "env-1"
+     ]
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "environment id malformed",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:environment_id_format",
+   "doc": {
+    "set": {
+     "railway_environment_id": "env/1"
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "cross-environment artifact",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:environment_mismatch",
+   "doc": {
+    "set": {
+     "railway_environment_id": "env-2"
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "runtime environment id absent",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:environment_mismatch",
+   "doc": {
+    "set": {},
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "schema 2",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:schema",
+   "doc": {
+    "set": {
+     "schema": 2
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "schema string",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:schema",
+   "doc": {
+    "set": {
+     "schema": "1"
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "schema true",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:schema",
+   "doc": {
+    "set": {
+     "schema": true
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "schema 1.0",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:schema",
+   "content": [
+    {
+     "text": "{\"schema\":1.0,\"kind\":\"bizqlab-railway-build\",\"build_root\":\".\",\"railway_service_id\":\"svc-1\",\"railway_environment_id\":\"env-1\",\"git_commit\":null,\"generated_at\":\"2026-10-16T12:00:00Z\"}"
+    }
+   ],
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "schema 1e0",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:schema",
+   "content": [
+    {
+     "text": "{\"schema\":1e0,\"kind\":\"bizqlab-railway-build\",\"build_root\":\".\",\"railway_service_id\":\"svc-1\",\"railway_environment_id\":\"env-1\",\"git_commit\":null,\"generated_at\":\"2026-10-16T12:00:00Z\"}"
+    }
+   ],
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "wrong kind",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:kind",
+   "doc": {
+    "set": {
+     "kind": "bizqlab-other"
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "kind null",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:kind",
+   "doc": {
+    "set": {
+     "kind": null
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "python consumer rejects node build_root",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:build_root",
+   "doc": {
+    "set": {
+     "build_root": "backend/transit_api"
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "node consumer rejects '.' build_root",
+   "build_root": "backend/transit_api",
+   "file": "regular",
+   "expected": "invalid:build_root",
+   "doc": {
+    "set": {},
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "node consumer accepts its own build_root",
+   "build_root": "backend/transit_api",
+   "file": "regular",
+   "expected": "valid",
+   "doc": {
+    "set": {
+     "build_root": "backend/transit_api"
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "build_root null",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:build_root",
+   "doc": {
+    "set": {
+     "build_root": null
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "unknown key",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:unknown_key",
+   "doc": {
+    "set": {
+     "extra": "x"
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "generated_at missing",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:missing_key",
+   "doc": {
+    "set": {},
+    "delete": [
+     "generated_at"
+    ]
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "generated_at fractional",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:generated_at",
+   "doc": {
+    "set": {
+     "generated_at": "2026-10-16T12:00:00.5Z"
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "generated_at offset",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:generated_at",
+   "doc": {
+    "set": {
+     "generated_at": "2026-10-16T12:00:00+00:00"
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "generated_at integer",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:generated_at",
+   "doc": {
+    "set": {
+     "generated_at": 1760000000
+    },
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "not JSON",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:malformed",
+   "content": [
+    {
+     "text": "schema=1"
+    }
+   ],
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "trailing comma",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:malformed",
+   "content": [
+    {
+     "text": "{\"schema\":1,\"kind\":\"bizqlab-railway-build\",\"build_root\":\".\",\"railway_service_id\":\"svc-1\",\"railway_environment_id\":\"env-1\",\"git_commit\":null,\"generated_at\":\"2026-10-16T12:00:00Z\",}"
+    }
+   ],
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "duplicate key",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:malformed",
+   "content": [
+    {
+     "text": "{\"schema\":1,\"kind\":\"bizqlab-railway-build\",\"build_root\":\".\",\"railway_service_id\":\"svc-1\",\"railway_environment_id\":\"env-1\",\"git_commit\":null,\"generated_at\":\"2026-10-16T12:00:00Z\",\"schema\":1}"
+    }
+   ],
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "NaN",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:malformed",
+   "content": [
+    {
+     "text": "{\"schema\":NaN,\"kind\":\"bizqlab-railway-build\",\"build_root\":\".\",\"railway_service_id\":\"svc-1\",\"railway_environment_id\":\"env-1\",\"git_commit\":null,\"generated_at\":\"2026-10-16T12:00:00Z\"}"
+    }
+   ],
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "invalid UTF-8",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:malformed",
+   "content": [
+    {
+     "text": "{\"schema\":1,\"kind\":\"bizqlab-railway-build\",\"build_root\":\".\",\"railway_service_id\":\"svc-1\",\"railway_environment_id\":\"env-1\",\"git_commit\":null,\"generated_at\":\"2026-10-16T12:00:00Z"
+    },
+    {
+     "hex": "ff"
+    },
+    {
+     "text": "\"}"
+    }
+   ],
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "UTF-8 BOM",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:malformed",
+   "content": [
+    {
+     "hex": "efbbbf"
+    },
+    {
+     "text": "{\"schema\":1,\"kind\":\"bizqlab-railway-build\",\"build_root\":\".\",\"railway_service_id\":\"svc-1\",\"railway_environment_id\":\"env-1\",\"git_commit\":null,\"generated_at\":\"2026-10-16T12:00:00Z\"}"
+    }
+   ],
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "trailing garbage",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:malformed",
+   "content": [
+    {
+     "text": "{\"schema\":1,\"kind\":\"bizqlab-railway-build\",\"build_root\":\".\",\"railway_service_id\":\"svc-1\",\"railway_environment_id\":\"env-1\",\"git_commit\":null,\"generated_at\":\"2026-10-16T12:00:00Z\"}x"
+    }
+   ],
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "integer over 15 digits",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:malformed",
+   "content": [
+    {
+     "text": "{\"schema\":1000000000000000,\"kind\":\"bizqlab-railway-build\",\"build_root\":\".\",\"railway_service_id\":\"svc-1\",\"railway_environment_id\":\"env-1\",\"git_commit\":null,\"generated_at\":\"2026-10-16T12:00:00Z\"}"
+    }
+   ],
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "15-digit integer is parseable but wrong",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:schema",
+   "content": [
+    {
+     "text": "{\"schema\":100000000000000,\"kind\":\"bizqlab-railway-build\",\"build_root\":\".\",\"railway_service_id\":\"svc-1\",\"railway_environment_id\":\"env-1\",\"git_commit\":null,\"generated_at\":\"2026-10-16T12:00:00Z\"}"
+    }
+   ],
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "top-level array",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:not_object",
+   "content": [
+    {
+     "text": "[1,2,3]"
+    }
+   ],
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "top-level null",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:not_object",
+   "content": [
+    {
+     "text": "null"
+    }
+   ],
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "nesting deeper than 16",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:malformed",
+   "content": [
+    {
+     "text": "[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]"
+    }
+   ],
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "nesting of 16 is parseable",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:not_object",
+   "content": [
+    {
+     "text": "[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]"
+    }
+   ],
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "whitespace padded to exactly 1024 bytes",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "valid",
+   "content": [
+    {
+     "text": "{\"schema\":1,\"kind\":\"bizqlab-railway-build\",\"build_root\":\".\",\"railway_service_id\":\"svc-1\",\"railway_environment_id\":\"env-1\",\"git_commit\":null,\"generated_at\":\"2026-10-16T12:00:00Z\"}"
+    },
+    {
+     "repeat": " ",
+     "count": 846
+    }
+   ],
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "1025 bytes",
+   "build_root": ".",
+   "file": "regular",
+   "expected": "invalid:too_large",
+   "content": [
+    {
+     "text": "{\"schema\":1,\"kind\":\"bizqlab-railway-build\",\"build_root\":\".\",\"railway_service_id\":\"svc-1\",\"railway_environment_id\":\"env-1\",\"git_commit\":null,\"generated_at\":\"2026-10-16T12:00:00Z\"}"
+    },
+    {
+     "repeat": " ",
+     "count": 847
+    }
+   ],
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "symlink",
+   "build_root": ".",
+   "file": "symlink",
+   "expected": "invalid:symlink",
+   "doc": {
+    "set": {},
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "directory",
+   "build_root": ".",
+   "file": "directory",
+   "expected": "invalid:not_regular",
+   "doc": {
+    "set": {},
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "fifo",
+   "build_root": ".",
+   "file": "fifo",
+   "expected": "invalid:not_regular",
+   "doc": {
+    "set": {},
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "absent",
+   "build_root": ".",
+   "file": "absent",
+   "expected": "absent",
+   "doc": {
+    "set": {},
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "build root itself absent",
+   "build_root": ".",
+   "file": "root_absent",
+   "expected": "absent",
+   "doc": {
+    "set": {},
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "B1 regression: retired .bizqlab/ is a symlink to an outside directory holding a valid document",
+   "build_root": ".",
+   "file": "legacy_parent_symlink_outside",
+   "expected": "absent",
+   "doc": {
+    "set": {},
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "retired .bizqlab/build-attestation.json inside the root is not a fallback",
+   "build_root": ".",
+   "file": "legacy_regular",
+   "expected": "absent",
+   "doc": {
+    "set": {},
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "marker is a symlink to a valid document outside the build root",
+   "build_root": ".",
+   "file": "symlink_outside",
+   "expected": "invalid:symlink",
+   "doc": {
+    "set": {},
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "marker is a dangling symlink",
+   "build_root": ".",
+   "file": "dangling_symlink",
+   "expected": "invalid:symlink",
+   "doc": {
+    "set": {},
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  },
+  {
+   "name": "build root is a regular file",
+   "build_root": ".",
+   "file": "root_file",
+   "expected": "absent",
+   "doc": {
+    "set": {},
+    "delete": []
+   },
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   }
+  }
+ ]
+}

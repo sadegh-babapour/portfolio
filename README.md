@@ -37,8 +37,29 @@ runbooks are maintained privately and are excluded from Git.
 - Node.js and npm
 - PostgreSQL 16 or another currently supported PostgreSQL release
 
-Do not commit `.env` files or database credentials. Copy `.env.example` into a
-local, ignored environment file and replace its placeholder values.
+Do not commit `.env` files or database credentials. Copy `.env.example` to the
+ignored root `.env.local` and replace its placeholder values.
+
+### Local database isolation
+
+Every command that opens a database resolves its target itself, before any
+connection, from two inputs:
+
+- the root `.env.local` profile, read with a strict `KEY=value` grammar (no
+  `export`, no interpolation, no `DATABASE_URL`); its `PGHOST`, `PGPORT`,
+  `PGDATABASE`, `PGUSER`, `PGPASSWORD` and `PGSSLMODE` name the development
+  database;
+- a root-owned approval policy at
+  `/Library/Application Support/Bizqlab/db-policy.json` (Linux:
+  `/etc/bizqlab/db-policy.json`) that names the same host, port, database and
+  role, plus the address and port the server reports. It holds no password;
+  `ops/db-policy.example.json` shows its shape.
+
+Do not export database variables or `source` environment files. An inherited
+`DATABASE_URL` or `PG*` value, or a command-line database flag, that differs from
+the approved target is refused rather than silently replaced, and every new
+connection checks the server's database, role, address and port before running
+anything else. Railway context variables on a workstation are refused too.
 
 ## Install
 
@@ -59,8 +80,12 @@ npm ci --prefix backend/transit_api
 
 ## Bootstrap PostgreSQL
 
-Export either `DATABASE_URL` or the `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`,
-and `PGPASSWORD` variables from `.env.example`.
+Check the approved target first (read-only: it opens one connection and runs only
+the identity query):
+
+```bash
+python ops/dev.py check --expected-db portfolio_dev
+```
 
 Apply the `transit` schema migrations and download/load Calgary's current
 static GTFS data:
@@ -77,8 +102,14 @@ it from Calgary's downloadable GTFS ZIP.
 
 ## Run locally
 
-Run each long-lived component in a separate terminal with the same database
-environment variables.
+Run each long-lived component in a separate terminal. Each command resolves the
+approved target on its own, so no environment exports are needed. Optionally start
+one through the launcher, which checks the target first and refuses on any
+mismatch:
+
+```bash
+python ops/dev.py run --expected-db portfolio_dev -- python -m app.main
+```
 
 Current-state GTFS-Realtime poller:
 
@@ -118,13 +149,23 @@ npm run dev --prefix frontend
 
 Set `VITE_TRANSIT_API_BASE_URL=http://localhost:4000/api` in
 `frontend/.env.development.local` for local React development. Do not use
-`frontend/.env.local`; Vite also loads that file during production builds.
-When no override is supplied, the bundle uses the deployed public transit API;
-it never falls back to NiceGUI's unrelated same-origin `/api` namespace.
-Build the production bundle with:
+`frontend/.env.local`; Vite also loads that file during builds. The API target is
+always explicit: the dev server and every build refuse to start without a valid
+one, and nothing falls back to the deployed API or to NiceGUI's unrelated
+same-origin `/api` namespace. Each build records its target in
+`dist/transit-api-target.json`.
+
+Build the production bundle (it targets the deployed transit API explicitly):
 
 ```bash
 npm run build --prefix frontend
+```
+
+Build a bundle for an isolated preview API instead, and check it before serving:
+
+```bash
+VITE_TRANSIT_API_BASE_URL=https://<preview-api-domain>/api npm run build:preview --prefix frontend
+python ops/check_frontend_bundle.py --expect-api https://<preview-api-domain>/api
 ```
 
 NiceGUI portfolio and production React mount:
@@ -173,12 +214,18 @@ authorization remains enforced by server-side sessions and roles.
 
 ```bash
 npm run lint --prefix frontend
-npm run build --prefix frontend
+npm test --prefix frontend
 npm run check --prefix backend/transit_api
 npm test --prefix backend/transit_api
-python -m unittest discover -s test -v
-python -m compileall -q app poller scripts test
+python test/run_isolated.py
+python -m compileall -q app poller scripts test migrations ops
 ```
+
+`test/run_isolated.py` runs the Python suite with database connections, network
+sockets, dotenv discovery and reads of the real profile and policy blocked; the
+transit API tests run behind the equivalent Node shim. To check a build without
+touching the tracked `frontend/dist`, add `-- --outDir <temporary directory>`.
+The same checks run in `.github/workflows/checks.yml`.
 
 ## Railway deployment
 
@@ -190,9 +237,15 @@ Railway PostgreSQL database:
    generated Railway domain.
 3. Poller worker: run `python -m poller.poll_calgary_gtfs_rt_current`.
 
-Set `VITE_TRANSIT_API_BASE_URL` to the public API domain plus `/api` during the
-web build. Configure the database through Railway reference variables; never
-put production values in this repository.
+The React bundle served by the web service is built with `npm run build`, which
+targets the public API domain plus `/api` explicitly. Configure the database
+through Railway reference variables; never put production values in this
+repository. Deployed processes reach the database only in the attested production
+mode: `BIZQLAB_RUNTIME=production`, Railway's service identifiers, and a build
+attestation generated during that service's Railway build
+(`ops/write_build_attestation.py` for the repository root,
+`npm run attest:write` for `backend/transit_api`). Without them a process refuses
+to start before connecting.
 
 The web, API, poller worker, and database-backed transit page are deployed and
 have passed the current production smoke checks. The superseded NiceGUI transit

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import io
 import os
+import sys
 from contextlib import contextmanager
 from pathlib import Path
 from urllib.parse import urlparse
@@ -13,6 +14,13 @@ from zipfile import ZipFile
 
 import psycopg2
 import requests
+
+if __name__ == "__main__":
+    # `python scripts/bootstrap_transit_db.py` puts scripts/ first on sys.path; the
+    # runtime gate lives in the repository's app package.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from app import runtime_db, runtime_state  # noqa: E402
 
 
 DEFAULT_GTFS_URL = (
@@ -37,6 +45,10 @@ REQUIRED_GTFS_FILES = (
 
 
 def connect():
+    state = runtime_state.assert_usable()
+    if state.mode == "development":
+        return runtime_db.connect_verified()
+    # Attested production: today's connection parameters, unchanged.
     database_url = os.getenv("DATABASE_URL")
     if database_url:
         return psycopg2.connect(database_url)
@@ -244,6 +256,7 @@ def print_counts(conn) -> None:
 
 
 def main() -> int:
+    runtime_state.bootstrap_entry_point("transit-bootstrap")
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--load-static",

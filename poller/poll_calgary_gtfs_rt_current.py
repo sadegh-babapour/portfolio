@@ -12,6 +12,8 @@ import psycopg2
 import requests
 from google.transit import gtfs_realtime_pb2
 
+from app import runtime_db, runtime_state
+from app.runtime_env import CLI_DB_FLAGS
 from poller.static_gtfs_sync import sync_static_gtfs
 from scripts.bootstrap_transit_db import apply_migrations
 
@@ -417,7 +419,19 @@ def run_once(conn) -> None:
         raise RuntimeError("all Calgary realtime feeds failed")
 
 
+def cli_db_flags(argv: list[str]) -> dict[str, str | None]:
+    """The database flags given explicitly on the command line, for the runtime conflict check."""
+    pre = argparse.ArgumentParser(add_help=False)
+    for flag in CLI_DB_FLAGS:
+        pre.add_argument(flag)
+    known, _rest = pre.parse_known_args(argv)
+    return {flag: getattr(known, flag[2:].replace("-", "_")) for flag in CLI_DB_FLAGS}
+
+
 def main() -> int:
+    # The runtime gate runs before the parser reads defaults from the environment. In
+    # development, any database flag on the command line must equal the approved target.
+    state = runtime_state.bootstrap_entry_point("poller", cli=cli_db_flags(sys.argv[1:]))
     parser = argparse.ArgumentParser()
     parser.add_argument("--database-url", default=os.getenv("DATABASE_URL"))
     parser.add_argument("--host", default=os.getenv("PGHOST", "localhost"))
@@ -447,7 +461,9 @@ def main() -> int:
     parser.add_argument("--once", action="store_true")
     args = parser.parse_args()
 
-    if args.database_url:
+    if state.mode == "development":
+        conn = runtime_db.connect_verified()
+    elif args.database_url:
         conn = psycopg2.connect(args.database_url)
     else:
         missing = [
@@ -486,6 +502,8 @@ def main() -> int:
         )
 
         while True:
+            # A revoked development state ends the process instead of looping on errors.
+            runtime_state.assert_usable()
             polling_enabled = env_bool("POLL_ENABLED", True)
             kill_switch = env_bool("ADMIN_KILL_SWITCH", False)
 

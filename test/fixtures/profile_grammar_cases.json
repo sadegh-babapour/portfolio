@@ -1,0 +1,1222 @@
+{
+ "description": "design.md §4.1 grammar. bytes is a list of segments: text (UTF-8), hex, or repeat/count. Errors report code, key (only when known) and 1-based line.",
+ "cases": [
+  {
+   "name": "basic assignments",
+   "bytes": [
+    {
+     "text": "A_KEY=value\nPG_1=x\n"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "A_KEY": "value",
+     "PG_1": "x"
+    }
+   }
+  },
+  {
+   "name": "no trailing newline",
+   "bytes": [
+    {
+     "text": "A=1"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "A": "1"
+    }
+   }
+  },
+  {
+   "name": "CRLF normalized",
+   "bytes": [
+    {
+     "text": "A=1\r\nB=2\r\n"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "A": "1",
+     "B": "2"
+    }
+   }
+  },
+  {
+   "name": "lone CR mid-line",
+   "bytes": [
+    {
+     "text": "A=1\rB=2\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_lone_cr",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "trailing CR without LF",
+   "bytes": [
+    {
+     "text": "A=1\nB=2\r"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_lone_cr",
+     "key": null,
+     "line": 2
+    }
+   }
+  },
+  {
+   "name": "CR CR LF",
+   "bytes": [
+    {
+     "text": "A=1\r\r\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_lone_cr",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "blank, whitespace and comment lines",
+   "bytes": [
+    {
+     "text": "\n \t\n# c\n  # indented\n\t#tab\nA=1\n\n"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "A": "1"
+    }
+   }
+  },
+  {
+   "name": "only comments",
+   "bytes": [
+    {
+     "text": "# nothing\n"
+    }
+   ],
+   "expected": {
+    "ok": {}
+   }
+  },
+  {
+   "name": "empty file",
+   "bytes": [],
+   "expected": {
+    "error": {
+     "code": "profile_empty",
+     "key": null,
+     "line": null
+    }
+   }
+  },
+  {
+   "name": "BOM",
+   "bytes": [
+    {
+     "hex": "efbbbf"
+    },
+    {
+     "text": "A=1\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_bom",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "export prefix",
+   "bytes": [
+    {
+     "text": "A=1\nexport B=2\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_export",
+     "key": null,
+     "line": 2
+    }
+   }
+  },
+  {
+   "name": "export with tab",
+   "bytes": [
+    {
+     "text": "export\tB=2\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_export",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "lowercase export key is just an invalid key",
+   "bytes": [
+    {
+     "text": "export=1\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_invalid_key",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "uppercase EXPORT is a normal key",
+   "bytes": [
+    {
+     "text": "EXPORT=1\n"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "EXPORT": "1"
+    }
+   }
+  },
+  {
+   "name": "space before equals",
+   "bytes": [
+    {
+     "text": "A =1\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_space_around_equals",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "space after equals",
+   "bytes": [
+    {
+     "text": "A= 1\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_space_around_equals",
+     "key": "A",
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "tab after equals",
+   "bytes": [
+    {
+     "text": "A=\t1\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_space_around_equals",
+     "key": "A",
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "spaces both sides",
+   "bytes": [
+    {
+     "text": "A = 1\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_space_around_equals",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "lowercase key",
+   "bytes": [
+    {
+     "text": "a=1\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_invalid_key",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "leading digit key",
+   "bytes": [
+    {
+     "text": "1A=1\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_invalid_key",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "dash in key",
+   "bytes": [
+    {
+     "text": "A-B=1\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_invalid_key",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "empty key",
+   "bytes": [
+    {
+     "text": "=1\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_invalid_key",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "leading whitespace",
+   "bytes": [
+    {
+     "text": " A=1\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_leading_whitespace",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "missing equals",
+   "bytes": [
+    {
+     "text": "A\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_missing_equals",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "double-quoted value may contain space-hash",
+   "bytes": [
+    {
+     "text": "A=\"x #y\"\n"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "A": "x #y"
+    }
+   }
+  },
+  {
+   "name": "single-quoted value may contain space-hash",
+   "bytes": [
+    {
+     "text": "A='x #y'\n"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "A": "x #y"
+    }
+   }
+  },
+  {
+   "name": "unquoted space-hash rejected",
+   "bytes": [
+    {
+     "text": "A=x #y\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_unquoted_hash",
+     "key": "A",
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "unquoted tab-hash permitted (only space-hash is ambiguous)",
+   "bytes": [
+    {
+     "text": "A=x\t#y\n"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "A": "x\t#y"
+    }
+   }
+  },
+  {
+   "name": "Sol B3 input: PGPASSWORD tab-hash",
+   "bytes": [
+    {
+     "text": "PGPASSWORD=x\t#y\n"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "PGPASSWORD": "x\t#y"
+    }
+   }
+  },
+  {
+   "name": "tab-hash then space-hash is still rejected",
+   "bytes": [
+    {
+     "text": "A=x\t#y #z\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_unquoted_hash",
+     "key": "A",
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "tab then space-hash is rejected",
+   "bytes": [
+    {
+     "text": "A=x\t #y\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_unquoted_hash",
+     "key": "A",
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "leading tab-hash is whitespace after equals",
+   "bytes": [
+    {
+     "text": "A=\t#y\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_space_around_equals",
+     "key": "A",
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "unquoted hash without whitespace",
+   "bytes": [
+    {
+     "text": "A=x#y\nB=#z\n"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "A": "x#y",
+     "B": "#z"
+    }
+   }
+  },
+  {
+   "name": "empty double-quoted",
+   "bytes": [
+    {
+     "text": "A=\"\"\n"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "A": ""
+    }
+   }
+  },
+  {
+   "name": "empty single-quoted",
+   "bytes": [
+    {
+     "text": "A=''\n"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "A": ""
+    }
+   }
+  },
+  {
+   "name": "empty unquoted",
+   "bytes": [
+    {
+     "text": "A=\n"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "A": ""
+    }
+   }
+  },
+  {
+   "name": "mixed quotes: apostrophe in double",
+   "bytes": [
+    {
+     "text": "A=\"it's\"\n"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "A": "it's"
+    }
+   }
+  },
+  {
+   "name": "mixed quotes: double in single",
+   "bytes": [
+    {
+     "text": "A='say \"hi\"'\n"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "A": "say \"hi\""
+    }
+   }
+  },
+  {
+   "name": "mismatched quote pair",
+   "bytes": [
+    {
+     "text": "A=\"x'\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_mismatched_quotes",
+     "key": "A",
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "unterminated double",
+   "bytes": [
+    {
+     "text": "A=\"abc\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_mismatched_quotes",
+     "key": "A",
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "single quote character only",
+   "bytes": [
+    {
+     "text": "A=\"\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_mismatched_quotes",
+     "key": "A",
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "unquoted ending in quote",
+   "bytes": [
+    {
+     "text": "A=abc\"\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_mismatched_quotes",
+     "key": "A",
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "inner quote of the same kind",
+   "bytes": [
+    {
+     "text": "A=\"a\"b\"\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_mismatched_quotes",
+     "key": "A",
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "text after closing quote",
+   "bytes": [
+    {
+     "text": "A=\"abc\" \n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_mismatched_quotes",
+     "key": "A",
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "unquoted trailing space",
+   "bytes": [
+    {
+     "text": "A=abc \n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_trailing_whitespace",
+     "key": "A",
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "unquoted trailing tab",
+   "bytes": [
+    {
+     "text": "A=abc\t\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_trailing_whitespace",
+     "key": "A",
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "interpolation unquoted",
+   "bytes": [
+    {
+     "text": "A=${HOME}\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_interpolation",
+     "key": "A",
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "interpolation double-quoted",
+   "bytes": [
+    {
+     "text": "A=\"x${Y}\"\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_interpolation",
+     "key": "A",
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "interpolation single-quoted",
+   "bytes": [
+    {
+     "text": "A='${Y}'\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_interpolation",
+     "key": "A",
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "bare dollar is literal",
+   "bytes": [
+    {
+     "text": "A=$HOME\nB=a$\n"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "A": "$HOME",
+     "B": "a$"
+    }
+   }
+  },
+  {
+   "name": "equals inside value",
+   "bytes": [
+    {
+     "text": "A=b=c\n"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "A": "b=c"
+    }
+   }
+  },
+  {
+   "name": "tab inside value allowed",
+   "bytes": [
+    {
+     "text": "A=a\tb\n"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "A": "a\tb"
+    }
+   }
+  },
+  {
+   "name": "SOH control char",
+   "bytes": [
+    {
+     "text": "A=1\nB=a"
+    },
+    {
+     "hex": "01"
+    },
+    {
+     "text": "b\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_control_char",
+     "key": null,
+     "line": 2
+    }
+   }
+  },
+  {
+   "name": "NUL",
+   "bytes": [
+    {
+     "text": "A=a"
+    },
+    {
+     "hex": "00"
+    },
+    {
+     "text": "\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_control_char",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "DEL",
+   "bytes": [
+    {
+     "text": "A=a"
+    },
+    {
+     "hex": "7f"
+    },
+    {
+     "text": "\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_control_char",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "C1 NEL",
+   "bytes": [
+    {
+     "text": "A=a"
+    },
+    {
+     "hex": "c285"
+    },
+    {
+     "text": "\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_control_char",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "control char in comment",
+   "bytes": [
+    {
+     "text": "# a"
+    },
+    {
+     "hex": "1b"
+    },
+    {
+     "text": "\nA=1\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_control_char",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "U+2028 is not a line break",
+   "bytes": [
+    {
+     "text": "A=a b\n"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "A": "a b"
+    }
+   }
+  },
+  {
+   "name": "valid multibyte",
+   "bytes": [
+    {
+     "text": "A=é😀\n"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "A": "é😀"
+    }
+   }
+  },
+  {
+   "name": "duplicate key",
+   "bytes": [
+    {
+     "text": "A=1\nA=2\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_duplicate_key",
+     "key": "A",
+     "line": 2
+    }
+   }
+  },
+  {
+   "name": "lone continuation byte",
+   "bytes": [
+    {
+     "text": "A=1\nB="
+    },
+    {
+     "hex": "80"
+    },
+    {
+     "text": "\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_invalid_utf8",
+     "key": null,
+     "line": 2
+    }
+   }
+  },
+  {
+   "name": "overlong encoding",
+   "bytes": [
+    {
+     "text": "A="
+    },
+    {
+     "hex": "c0af"
+    },
+    {
+     "text": "\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_invalid_utf8",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "encoded surrogate",
+   "bytes": [
+    {
+     "text": "A="
+    },
+    {
+     "hex": "eda080"
+    },
+    {
+     "text": "\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_invalid_utf8",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "truncated sequence",
+   "bytes": [
+    {
+     "text": "A="
+    },
+    {
+     "hex": "e282"
+    },
+    {
+     "text": "\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_invalid_utf8",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "F5 lead byte",
+   "bytes": [
+    {
+     "text": "A="
+    },
+    {
+     "hex": "f5808080"
+    },
+    {
+     "text": "\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_invalid_utf8",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "above U+10FFFF",
+   "bytes": [
+    {
+     "text": "A="
+    },
+    {
+     "hex": "f4908080"
+    },
+    {
+     "text": "\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_invalid_utf8",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "BOM bytes mid-file are kept as U+FEFF",
+   "bytes": [
+    {
+     "text": "A=x"
+    },
+    {
+     "hex": "efbbbf"
+    },
+    {
+     "text": "\n"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "A": "x﻿"
+    }
+   }
+  },
+  {
+   "name": "line of exactly 4096 bytes",
+   "bytes": [
+    {
+     "text": "A="
+    },
+    {
+     "repeat": "x",
+     "count": 4094
+    },
+    {
+     "text": "\n"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "A": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    }
+   }
+  },
+  {
+   "name": "line of 4097 bytes",
+   "bytes": [
+    {
+     "text": "A="
+    },
+    {
+     "repeat": "x",
+     "count": 4095
+    },
+    {
+     "text": "\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_line_too_long",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "4096 bytes plus CRLF",
+   "bytes": [
+    {
+     "text": "A="
+    },
+    {
+     "repeat": "x",
+     "count": 4094
+    },
+    {
+     "text": "\r\n"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "A": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    }
+   }
+  },
+  {
+   "name": "4096 bytes of multibyte",
+   "bytes": [
+    {
+     "text": "A="
+    },
+    {
+     "repeat": "é",
+     "count": 2047
+    },
+    {
+     "text": "\n"
+    }
+   ],
+   "expected": {
+    "ok": {
+     "A": "ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+    }
+   }
+  },
+  {
+   "name": "4097 bytes of multibyte",
+   "bytes": [
+    {
+     "text": "AB="
+    },
+    {
+     "repeat": "é",
+     "count": 2047
+    },
+    {
+     "text": "\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_line_too_long",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "over-long comment line",
+   "bytes": [
+    {
+     "text": "#"
+    },
+    {
+     "repeat": "c",
+     "count": 4096
+    },
+    {
+     "text": "\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_line_too_long",
+     "key": null,
+     "line": 1
+    }
+   }
+  },
+  {
+   "name": "first error wins",
+   "bytes": [
+    {
+     "text": "A=1\nB=2\nc=3\nD= 4\n"
+    }
+   ],
+   "expected": {
+    "error": {
+     "code": "profile_invalid_key",
+     "key": null,
+     "line": 3
+    }
+   }
+  }
+ ],
+ "file_cases": [
+  {
+   "name": "missing",
+   "setup": "missing",
+   "expected": "profile_missing"
+  },
+  {
+   "name": "symlink to valid profile",
+   "setup": "symlink",
+   "expected": "profile_symlink"
+  },
+  {
+   "name": "directory",
+   "setup": "directory",
+   "expected": "profile_not_regular"
+  },
+  {
+   "name": "fifo",
+   "setup": "fifo",
+   "expected": "profile_not_regular"
+  },
+  {
+   "name": "empty",
+   "setup": "empty",
+   "expected": "profile_empty"
+  },
+  {
+   "name": "over 64 KiB",
+   "setup": "oversized",
+   "expected": "profile_too_large"
+  },
+  {
+   "name": "exactly 64 KiB",
+   "setup": "exact_limit",
+   "expected": "ok"
+  },
+  {
+   "name": "unreadable (mode 000)",
+   "setup": "unreadable",
+   "expected": "profile_unreadable"
+  }
+ ]
+}

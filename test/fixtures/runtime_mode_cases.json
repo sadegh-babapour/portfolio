@@ -1,0 +1,525 @@
+{
+ "description": "design.md §3.2 decision table: every row plus every named context. attestation is the classifier status; policy_present/profile_present are the W indicators.",
+ "cases": [
+  {
+   "name": "invalid mode 'Production'",
+   "env": {
+    "BIZQLAB_RUNTIME": "Production"
+   },
+   "attestation": "absent",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 1,
+   "outcome": "invalid_mode"
+  },
+  {
+   "name": "invalid mode 'PRODUCTION'",
+   "env": {
+    "BIZQLAB_RUNTIME": "PRODUCTION"
+   },
+   "attestation": "absent",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 1,
+   "outcome": "invalid_mode"
+  },
+  {
+   "name": "invalid mode ' production'",
+   "env": {
+    "BIZQLAB_RUNTIME": " production"
+   },
+   "attestation": "absent",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 1,
+   "outcome": "invalid_mode"
+  },
+  {
+   "name": "invalid mode 'production '",
+   "env": {
+    "BIZQLAB_RUNTIME": "production "
+   },
+   "attestation": "absent",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 1,
+   "outcome": "invalid_mode"
+  },
+  {
+   "name": "invalid mode ''",
+   "env": {
+    "BIZQLAB_RUNTIME": ""
+   },
+   "attestation": "absent",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 1,
+   "outcome": "invalid_mode"
+  },
+  {
+   "name": "invalid mode 'dev'",
+   "env": {
+    "BIZQLAB_RUNTIME": "dev"
+   },
+   "attestation": "absent",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 1,
+   "outcome": "invalid_mode"
+  },
+  {
+   "name": "invalid mode 'development\\n'",
+   "env": {
+    "BIZQLAB_RUNTIME": "development\n"
+   },
+   "attestation": "absent",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 1,
+   "outcome": "invalid_mode"
+  },
+  {
+   "name": "invalid mode 'prod'",
+   "env": {
+    "BIZQLAB_RUNTIME": "prod"
+   },
+   "attestation": "absent",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 1,
+   "outcome": "invalid_mode"
+  },
+  {
+   "name": "invalid mode beats complete markers and valid attestation",
+   "env": {
+    "BIZQLAB_RUNTIME": "Production",
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   },
+   "attestation": "valid",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 1,
+   "outcome": "invalid_mode"
+  },
+  {
+   "name": "one marker",
+   "env": {
+    "RAILWAY_SERVICE_ID": "svc-1"
+   },
+   "attestation": "absent",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 2,
+   "outcome": "incomplete_railway_context"
+  },
+  {
+   "name": "two markers, production, valid attestation",
+   "env": {
+    "BIZQLAB_RUNTIME": "production",
+    "RAILWAY_PROJECT_ID": "p",
+    "RAILWAY_SERVICE_ID": "s"
+   },
+   "attestation": "valid",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 2,
+   "outcome": "incomplete_railway_context"
+  },
+  {
+   "name": "three markers, one empty",
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   },
+   "attestation": "absent",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 2,
+   "outcome": "incomplete_railway_context"
+  },
+  {
+   "name": "three markers all empty",
+   "env": {
+    "RAILWAY_PROJECT_ID": "",
+    "RAILWAY_ENVIRONMENT_ID": "",
+    "RAILWAY_SERVICE_ID": ""
+   },
+   "attestation": "absent",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 2,
+   "outcome": "incomplete_railway_context"
+  },
+  {
+   "name": "partial markers in development",
+   "env": {
+    "BIZQLAB_RUNTIME": "development",
+    "RAILWAY_PROJECT_ID": "p"
+   },
+   "attestation": "absent",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 2,
+   "outcome": "incomplete_railway_context"
+  },
+  {
+   "name": "markers + policy, mode unset",
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   },
+   "attestation": "absent",
+   "policy_present": true,
+   "profile_present": false,
+   "row": 3,
+   "outcome": "railway_context_on_workstation"
+  },
+  {
+   "name": "markers + profile, development",
+   "env": {
+    "BIZQLAB_RUNTIME": "development",
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   },
+   "attestation": "absent",
+   "policy_present": false,
+   "profile_present": true,
+   "row": 3,
+   "outcome": "railway_context_on_workstation"
+  },
+  {
+   "name": "markers + both, production, valid (forged) attestation",
+   "env": {
+    "BIZQLAB_RUNTIME": "production",
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   },
+   "attestation": "valid",
+   "policy_present": true,
+   "profile_present": true,
+   "row": 3,
+   "outcome": "railway_context_on_workstation"
+  },
+  {
+   "name": "markers + profile only, production, valid attestation",
+   "env": {
+    "BIZQLAB_RUNTIME": "production",
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   },
+   "attestation": "valid",
+   "policy_present": false,
+   "profile_present": true,
+   "row": 3,
+   "outcome": "railway_context_on_workstation"
+  },
+  {
+   "name": "attested production",
+   "env": {
+    "BIZQLAB_RUNTIME": "production",
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   },
+   "attestation": "valid",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 4,
+   "outcome": "production"
+  },
+  {
+   "name": "attested production with commit marker",
+   "env": {
+    "BIZQLAB_RUNTIME": "production",
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1",
+    "RAILWAY_GIT_COMMIT_SHA": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+   },
+   "attestation": "valid",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 4,
+   "outcome": "production"
+  },
+  {
+   "name": "production, markers, attestation absent",
+   "env": {
+    "BIZQLAB_RUNTIME": "production",
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   },
+   "attestation": "absent",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 5,
+   "outcome": "production_not_attested"
+  },
+  {
+   "name": "production, markers, attestation invalid",
+   "env": {
+    "BIZQLAB_RUNTIME": "production",
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   },
+   "attestation": "invalid:service_mismatch",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 5,
+   "outcome": "production_not_attested"
+  },
+  {
+   "name": "production, no markers",
+   "env": {
+    "BIZQLAB_RUNTIME": "production"
+   },
+   "attestation": "absent",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 5,
+   "outcome": "production_not_attested"
+  },
+  {
+   "name": "production, no markers, valid attestation",
+   "env": {
+    "BIZQLAB_RUNTIME": "production"
+   },
+   "attestation": "valid",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 5,
+   "outcome": "production_not_attested"
+  },
+  {
+   "name": "production, no markers, workstation",
+   "env": {
+    "BIZQLAB_RUNTIME": "production"
+   },
+   "attestation": "valid",
+   "policy_present": true,
+   "profile_present": true,
+   "row": 5,
+   "outcome": "production_not_attested"
+  },
+  {
+   "name": "markers, mode unset",
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   },
+   "attestation": "absent",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 6,
+   "outcome": "railway_context_without_production_mode"
+  },
+  {
+   "name": "markers, development, valid attestation",
+   "env": {
+    "BIZQLAB_RUNTIME": "development",
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   },
+   "attestation": "valid",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 6,
+   "outcome": "railway_context_without_production_mode"
+  },
+  {
+   "name": "plain local, unset",
+   "env": {},
+   "attestation": "absent",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 7,
+   "outcome": "development"
+  },
+  {
+   "name": "plain local, development",
+   "env": {
+    "BIZQLAB_RUNTIME": "development"
+   },
+   "attestation": "absent",
+   "policy_present": true,
+   "profile_present": true,
+   "row": 7,
+   "outcome": "development"
+  },
+  {
+   "name": "plain local, valid attestation ignored",
+   "env": {},
+   "attestation": "valid",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 7,
+   "outcome": "development"
+  },
+  {
+   "name": "plain local, unrelated env",
+   "env": {
+    "HOME": "/tmp/x",
+    "RAILWAY_GIT_COMMIT_SHA": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "attestation": "absent",
+   "policy_present": false,
+   "profile_present": true,
+   "row": 7,
+   "outcome": "development"
+  }
+ ],
+ "named_contexts": [
+  {
+   "name": "Plain local run, no markers",
+   "env": {},
+   "attestation": "absent",
+   "policy_present": true,
+   "profile_present": true,
+   "row": 7,
+   "outcome": "development",
+   "context": "plain-local"
+  },
+  {
+   "name": "railway run on this Mac, mode unset",
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   },
+   "attestation": "absent",
+   "policy_present": true,
+   "profile_present": true,
+   "row": 3,
+   "outcome": "railway_context_on_workstation",
+   "context": "railway-run-this-mac"
+  },
+  {
+   "name": "railway run on this Mac, production",
+   "env": {
+    "BIZQLAB_RUNTIME": "production",
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   },
+   "attestation": "valid",
+   "policy_present": true,
+   "profile_present": false,
+   "row": 3,
+   "outcome": "railway_context_on_workstation",
+   "context": "railway-run-this-mac"
+  },
+  {
+   "name": "railway run on this Mac, development",
+   "env": {
+    "BIZQLAB_RUNTIME": "development",
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   },
+   "attestation": "absent",
+   "policy_present": false,
+   "profile_present": true,
+   "row": 3,
+   "outcome": "railway_context_on_workstation",
+   "context": "railway-run-this-mac"
+  },
+  {
+   "name": "railway run on a fresh machine, mode unset",
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   },
+   "attestation": "absent",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 6,
+   "outcome": "railway_context_without_production_mode",
+   "context": "railway-run-fresh-unset"
+  },
+  {
+   "name": "railway run on a fresh machine, production, no attestation",
+   "env": {
+    "BIZQLAB_RUNTIME": "production",
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   },
+   "attestation": "absent",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 5,
+   "outcome": "production_not_attested",
+   "context": "railway-run-fresh-production"
+  },
+  {
+   "name": "railway run on a fresh machine, production, forged attestation (R-F)",
+   "env": {
+    "BIZQLAB_RUNTIME": "production",
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   },
+   "attestation": "valid",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 4,
+   "outcome": "production",
+   "context": "railway-run-fresh-forged"
+  },
+  {
+   "name": "Railway service before rollout",
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   },
+   "attestation": "valid",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 6,
+   "outcome": "railway_context_without_production_mode",
+   "context": "service-before-rollout"
+  },
+  {
+   "name": "Railway service after S3, attestation valid",
+   "env": {
+    "BIZQLAB_RUNTIME": "production",
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   },
+   "attestation": "valid",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 4,
+   "outcome": "production",
+   "context": "service-after-s3"
+  },
+  {
+   "name": "Railway service with mode removed after enforcement",
+   "env": {
+    "RAILWAY_PROJECT_ID": "proj-1",
+    "RAILWAY_ENVIRONMENT_ID": "env-1",
+    "RAILWAY_SERVICE_ID": "svc-1"
+   },
+   "attestation": "valid",
+   "policy_present": false,
+   "profile_present": false,
+   "row": 6,
+   "outcome": "railway_context_without_production_mode",
+   "context": "service-mode-removed"
+  }
+ ]
+}

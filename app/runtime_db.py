@@ -99,12 +99,16 @@ class _ConnectionGuard:
     """Guarded cursors only; commit and other server-side calls check the state first."""
 
     _bizqlab_cursor_class: type
+    _bizqlab_base_cursor: type
 
     def cursor(self, name=None, cursor_factory=None, withhold=False, scrollable=None):
         if name is not None:
             raise rt.RuntimeConfigError("named_cursor_unsupported")
         factory = cursor_factory if cursor_factory is not None else getattr(self, "cursor_factory", None)
-        if factory is None:
+        # The driver's exact base cursor (which psycopg2.extras helpers such as
+        # HstoreAdapter.get_oids request explicitly, called by SQLAlchemy's dialect on
+        # connect) becomes the guarded cursor. Its unguarded subclasses stay refused.
+        if factory is None or factory is self._bizqlab_base_cursor:
             factory = self._bizqlab_cursor_class
         elif not (isinstance(factory, type) and issubclass(factory, _CursorGuard)):
             raise rt.RuntimeConfigError("unguarded_cursor_factory")
@@ -155,7 +159,8 @@ def guarded_classes(driver=None) -> tuple[type, type]:
     if key not in _GUARDED_CLASSES:
         cursor_class = type("GuardedCursor", (_CursorGuard, driver.extensions.cursor), {})
         connection_class = type("GuardedConnection", (_ConnectionGuard, driver.extensions.connection),
-                                {"_bizqlab_cursor_class": cursor_class})
+                                {"_bizqlab_cursor_class": cursor_class,
+                                 "_bizqlab_base_cursor": driver.extensions.cursor})
         _GUARDED_CLASSES[key] = (connection_class, cursor_class)
     return _GUARDED_CLASSES[key]
 

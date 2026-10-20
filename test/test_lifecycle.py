@@ -767,12 +767,14 @@ class RawDriverTests(RuntimeCase):
         self.bootstrap()
         conn = runtime_db.connect_verified()
         plain = self.driver.extensions.cursor
+        unguarded = type("DictLikeCursor", (plain,), {})
         with self.assertRaises(rt.RuntimeConfigError) as ctx:
-            conn.cursor(cursor_factory=plain)
+            conn.cursor(cursor_factory=unguarded)
         self.assertEqual(ctx.exception.code, "unguarded_cursor_factory")
-        conn.cursor_factory = plain
-        with self.assertRaises(rt.RuntimeConfigError):
+        conn.cursor_factory = unguarded
+        with self.assertRaises(rt.RuntimeConfigError) as ctx:
             conn.cursor()
+        self.assertEqual(ctx.exception.code, "unguarded_cursor_factory")
         conn.cursor_factory = None
         guarded = runtime_db.guarded_cursor_factory(plain)
         cur = conn.cursor(cursor_factory=guarded)
@@ -785,6 +787,26 @@ class RawDriverTests(RuntimeCase):
             self.assertEqual(ctx.exception.code, code)
         self.revoke_now()
         self.assert_revoked(lambda: cur.execute("SELECT 1"))
+
+    def test_exact_base_cursor_is_normalized_to_the_guarded_cursor(self):
+        # psycopg2.extras helpers request the driver's exact base cursor explicitly.
+        self.bootstrap()
+        conn = runtime_db.connect_verified()
+        plain = self.driver.extensions.cursor
+        explicit = conn.cursor(cursor_factory=plain)
+        conn.cursor_factory = plain
+        default = conn.cursor()
+        conn.cursor_factory = None
+        for cur in (explicit, default):
+            self.assertIs(type(cur), conn._bizqlab_cursor_class)
+            self.assertIsInstance(cur, runtime_db._CursorGuard)
+        explicit.execute("SELECT 1")
+        self.assertEqual(self.server.statements(1)[-1], "SELECT 1")
+        logged = len(self.server.log)
+        self.revoke_now()
+        for cur in (explicit, default):
+            self.assert_revoked(lambda: cur.execute("SELECT 1"))
+        self.assertEqual(len(self.server.log), logged)
 
 
 # ------------------------------------------------------------- SQLAlchemy
@@ -801,6 +823,36 @@ class EngineTests(RuntimeCase):
             self.assertEqual(conn.execute(text("select 1")).scalar(), 1)
         statements = self.server.statements(1)
         self.assertEqual(statements[:2], [runtime_db.IDENTITY_SQL, "ROLLBACK"])
+        self.assertIn("select pg_catalog.version()", statements[2:])
+        self.assertEqual(sum(1 for s in statements if s == runtime_db.IDENTITY_SQL), 1)
+
+    def test_dialect_hstore_probe_uses_the_guarded_cursor_after_identity(self):
+        # Like psycopg2.extras.HstoreAdapter.get_oids, which SQLAlchemy's dialect calls
+        # on connect: an explicit request for the driver's exact base cursor.
+        hstore_sql = ("SELECT t.oid, typarray FROM pg_type t JOIN pg_namespace ns "
+                      "ON typnamespace = ns.oid WHERE typname = 'hstore';")
+        probe_cursors = []
+
+        def get_oids(conn):
+            curs = conn.cursor(cursor_factory=self.driver.extensions.cursor)
+            probe_cursors.append(curs)
+            curs.execute(hstore_sql)
+            curs.fetchall()
+            conn.rollback()
+            return (), ()
+
+        extras = SimpleNamespace(**vars(FAKE_EXTRAS))
+        extras.HstoreAdapter = SimpleNamespace(get_oids=get_oids)
+        with patch.object(PGDialect_psycopg2, "_psycopg2_extras", extras):
+            engine = runtime_db.create_development_engine()
+            with engine.connect() as conn:
+                self.assertEqual(conn.execute(text("select 1")).scalar(), 1)
+            engine.dispose()
+        self.assertEqual(len(probe_cursors), 1)
+        self.assertIsInstance(probe_cursors[0], runtime_db._CursorGuard)
+        statements = self.server.statements(1)
+        self.assertEqual(statements[:2], [runtime_db.IDENTITY_SQL, "ROLLBACK"])
+        self.assertIn(hstore_sql, statements[2:])
         self.assertIn("select pg_catalog.version()", statements[2:])
         self.assertEqual(sum(1 for s in statements if s == runtime_db.IDENTITY_SQL), 1)
 

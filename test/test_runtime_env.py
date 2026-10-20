@@ -545,7 +545,9 @@ class PolicyTests(unittest.TestCase):
             os.chmod(path, 0o444)
             with self.assertRaises(rt.RuntimeConfigError) as ctx:
                 rt.load_policy(path)
-            self.assertEqual(ctx.exception.code, "policy_not_root_owned")
+            # The walk refuses at the first untrusted ancestor: a user-owned temp dir
+            # (macOS $TMPDIR) or a root-owned, world-writable one (Linux /tmp, 1777).
+            self.assertIn(ctx.exception.code, {"policy_not_root_owned", "policy_writable_mode"})
 
     def test_real_provider_rejects_symlinked_component(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -554,8 +556,9 @@ class PolicyTests(unittest.TestCase):
             os.symlink(real, os.path.join(real, "link"))
             with self.assertRaises(rt.RuntimeConfigError) as ctx:
                 rt.load_policy(os.path.join(real, "link", "p.json"))
-            # The walk fails at the first non-root-owned or symlinked component.
-            self.assertIn(ctx.exception.code, {"policy_not_root_owned", "policy_symlink"})
+            # The walk fails at the first non-root-owned, world-writable (Linux /tmp)
+            # or symlinked component.
+            self.assertIn(ctx.exception.code, {"policy_not_root_owned", "policy_writable_mode", "policy_symlink"})
 
     def test_relative_or_dotdot_path_rejected(self):
         fs = FakeFs({}, "/Library/Application Support/Bizqlab/db-policy.json", {})

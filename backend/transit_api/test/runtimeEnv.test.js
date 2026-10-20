@@ -469,7 +469,10 @@ test("real provider rejects a user-owned temporary policy", () => {
     const p = path.join(dir, "db-policy.json");
     fs.writeFileSync(p, JSON.stringify(loadFixture("policy_cases.json").base_policy));
     fs.chmodSync(p, 0o444);
-    assert.throws(() => rt.loadPolicy(p), { code: "policy_not_root_owned" });
+    // The walk refuses at the first untrusted ancestor: a user-owned temp dir
+    // (macOS $TMPDIR) or a root-owned, world-writable one (Linux /tmp, 1777).
+    assert.throws(() => rt.loadPolicy(p), (error) =>
+      ["policy_not_root_owned", "policy_writable_mode"].includes(error.code));
   });
 });
 

@@ -1,0 +1,11 @@
+{
+  "environment_id": "<preview Railway environment ID>",
+  "production_environment_id": "<production Railway environment ID>",
+  "database": {
+    "host": "<preview Postgres host>",
+    "port": "<preview Postgres port>",
+    "name": "<preview database name>",
+    "role": "<preview database role>"
+  },
+  "api_base": "https://<preview transit-api domain>/api"
+}

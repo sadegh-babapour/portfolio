@@ -36,3 +36,15 @@ test("the transit header takes its links from the shared navigation file", () =>
   assert.doesNotMatch(source, /\["Home", "\/"\]/, "no second copy of the links");
   assert.deepEqual(navigation.links.at(-1), ["Calgary Transit Live", "/calgary-transit-live/"]);
 });
+
+test("the transit header uses the shared header stylesheet", () => {
+  const source = readFileSync(new URL("../src/PortfolioNav.jsx", import.meta.url), "utf8");
+  const appCss = readFileSync(new URL("../src/App.css", import.meta.url), "utf8");
+  const shared = readFileSync(new URL("../../static/portfolio-nav.css", import.meta.url), "utf8");
+
+  assert.match(source, /import "\.\.\/\.\.\/static\/portfolio-nav\.css";/);
+  assert.doesNotMatch(appCss, /\.portfolio-/, "no second copy of the header styles");
+  for (const className of source.matchAll(/className="(portfolio-[a-z-]+)"/g)) {
+    assert.match(shared, new RegExp(`\\.${className[1]}\\b`), className[1]);
+  }
+});

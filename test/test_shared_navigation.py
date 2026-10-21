@@ -49,3 +49,37 @@ class SharedNavigationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SharedHeaderStyleTests(unittest.TestCase):
+    """Both headers use static/portfolio-nav.css and the same class names."""
+
+    STYLESHEET = (ROOT / "static" / "portfolio-nav.css").read_text(encoding="utf-8")
+    CLASSES = (
+        "portfolio-nav", "portfolio-brand", "portfolio-nav-desktop", "portfolio-nav-actions",
+        "portfolio-mountain-clock", "portfolio-theme-toggle", "portfolio-nav-mobile",
+        "portfolio-nav-mobile-links", "portfolio-account-link",
+    )
+
+    def test_navbar_links_the_versioned_stylesheet(self):
+        self.assertRegex(navbar.NAV_STYLESHEET_URL, r"^/static/portfolio-nav\.css\?v=[0-9a-f]{12}$")
+        source = (ROOT / "app" / "components" / "navbar.py").read_text(encoding="utf-8")
+        self.assertIn('<link rel="stylesheet" href="__NAV_STYLESHEET_URL__">', source)
+
+    def test_both_headers_use_the_shared_class_names(self):
+        python_source = (ROOT / "app" / "components" / "navbar.py").read_text(encoding="utf-8")
+        react_source = (ROOT / "frontend" / "src" / "PortfolioNav.jsx").read_text(encoding="utf-8")
+        self.assertIn('import "../../static/portfolio-nav.css";', react_source)
+        for name in self.CLASSES:
+            self.assertIn(f".{name}", self.STYLESHEET, name)
+            self.assertIn(name, python_source, name)
+            self.assertIn(name, react_source, name)
+
+    def test_no_second_copy_of_the_header_styles(self):
+        python_source = (ROOT / "app" / "components" / "navbar.py").read_text(encoding="utf-8")
+        app_css = (ROOT / "frontend" / "src" / "App.css").read_text(encoding="utf-8")
+        self.assertNotIn("nicegui-portfolio", python_source)
+        self.assertNotIn("nicegui-mobile", python_source)
+        for name in self.CLASSES:
+            self.assertNotIn(f".{name} {{{{", python_source, name)
+            self.assertNotIn(f".{name}", app_css, name)

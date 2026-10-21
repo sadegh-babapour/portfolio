@@ -7,6 +7,8 @@ import {
   THEME_MODE_STORAGE_KEY,
 } from "./mountainTime.js";
 import navigation from "../../content/navigation.json" with { type: "json" };
+// Header styles are shared with the NiceGUI pages too.
+import "../../static/portfolio-nav.css";
 
 // Shared with the NiceGUI header (app/components/navbar.py) via content/navigation.json.
 const NAV_LINKS = navigation.links;

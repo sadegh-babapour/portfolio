@@ -30,7 +30,7 @@ import {
 } from "./stopRouteSelection";
 import {
   computePlaybackVehicles,
-  monotonicPlaybackTime,
+  createPlaybackClock,
   toMillis,
 } from "./transitPlayback";
 
@@ -60,7 +60,9 @@ const TILE_CONFIG = {
   },
 };
 
-const PLAYBACK_DELAY_SECONDS = 45;
+// Steady margin behind the slowest recent feed batch; replays of live data put the map
+// about two minutes behind live with almost no frozen buses.
+const PLAYBACK_MARGIN_SECONDS = 45;
 const HISTORY_WINDOW_MINUTES = 4;
 
 function cookieValue(name) {
@@ -82,6 +84,9 @@ function routeBadgeClass(vehicle) {
   return "badge bus";
 }
 
+// Leaflet rebuilds a marker's DOM whenever it gets a new icon object, so reuse one per look.
+const busIconCache = new Map();
+
 function createBusIcon(vehicle, selected = false) {
   const bg = vehicle.isStale
     ? "#4b5563"
@@ -100,7 +105,10 @@ function createBusIcon(vehicle, selected = false) {
   const markerLabel = String(vehicle.route_short_name || "Bus")
     .replace(/[^a-z0-9-]/gi, "")
     .slice(0, 6) || "Bus";
-  return L.divIcon({
+  const cacheKey = [bg, selected, opacity, statusText, markerLabel].join("|");
+  const cached = busIconCache.get(cacheKey);
+  if (cached) return cached;
+  const icon = L.divIcon({
     className: "",
     html: `
       <div style="display:flex;flex-direction:column;align-items:center;">
@@ -141,6 +149,8 @@ function createBusIcon(vehicle, selected = false) {
     iconSize: [selected ? 40 : 34, selected ? 58 : 52],
     iconAnchor: [selected ? 20 : 17, selected ? 42 : 38],
   });
+  busIconCache.set(cacheKey, icon);
+  return icon;
 }
 
 function FitToVehicles({ vehicles, fitKey, enabled = true }) {
@@ -404,7 +414,7 @@ function VehicleDrawer({
         </div>
         <div>
           <div className="meta-label">Playback</div>
-          <div>About {PLAYBACK_DELAY_SECONDS} seconds delayed</div>
+          <div>About 2 minutes behind live</div>
         </div>
         <div>
           <div className="meta-label">Playback status</div>
@@ -726,7 +736,6 @@ function App() {
   const [lastHistoryFetchMs, setLastHistoryFetchMs] = useState(null);
   const [refreshAgeSeconds, setRefreshAgeSeconds] = useState(0);
   const [latestDataTimestampMs, setLatestDataTimestampMs] = useState(null);
-  const [historyFetchedAtMs, setHistoryFetchedAtMs] = useState(null);
   const [selectedContext, setSelectedContext] = useState(null);
   const [selectedTargetStop, setSelectedTargetStop] = useState(null);
   const [selectedPlaceStop, setSelectedPlaceStop] = useState(null);
@@ -749,7 +758,10 @@ function App() {
     stops: [],
     failed: false,
   });
-  const playbackTimeRef = useRef(null);
+  const playbackClockRef = useRef(null);
+  if (playbackClockRef.current === null) {
+    playbackClockRef.current = createPlaybackClock({ marginSeconds: PLAYBACK_MARGIN_SECONDS });
+  }
   const pendingVehicleRef = useRef(null);
   const drawerRef = useRef(null);
   const trackingRequested = Boolean(trackedDestinationStop);
@@ -771,7 +783,7 @@ function App() {
 
   const selectStopRoute = useCallback((selection) => {
     const sameTrip = isSameTripSelection(stopRouteSelection, selection);
-    playbackTimeRef.current = null;
+    playbackClockRef.current.reset();
     pendingVehicleRef.current = null;
     setFollowing(false);
     setSelectedContext(null);
@@ -987,7 +999,7 @@ function App() {
         setVehicleHistory(historyData);
         setLastHistoryFetchMs(Date.now());
         setLatestDataTimestampMs(latestMs);
-        setHistoryFetchedAtMs(Date.now());
+        playbackClockRef.current.observe({ latestDataTimeMs: latestMs, fetchedAtMs: Date.now() });
         setRefreshAgeSeconds(0);
       }
 
@@ -1059,21 +1071,14 @@ function App() {
 
   useEffect(() => {
     const tick = () => {
-      if (!vehicleHistory.length || !latestDataTimestampMs || !historyFetchedAtMs) {
+      if (!vehicleHistory.length || !latestDataTimestampMs) {
         setVehicles([]);
         setSelectedVehicle((current) => (current && trackedDestinationStop ? current : null));
         return;
       }
 
-      const playbackTimeMs = monotonicPlaybackTime({
-        previousTimeMs: playbackTimeRef.current,
-        latestDataTimeMs: latestDataTimestampMs,
-        fetchedAtMs: historyFetchedAtMs,
-        nowMs: Date.now(),
-        delaySeconds: PLAYBACK_DELAY_SECONDS,
-      });
+      const playbackTimeMs = playbackClockRef.current.tick(Date.now());
       if (!Number.isFinite(playbackTimeMs)) return;
-      playbackTimeRef.current = playbackTimeMs;
 
       const playbackVehicles = computePlaybackVehicles(vehicleHistory, playbackTimeMs);
       setVehicles(playbackVehicles);
@@ -1111,7 +1116,6 @@ function App() {
   }, [
     vehicleHistory,
     latestDataTimestampMs,
-    historyFetchedAtMs,
     trackedDestinationStop,
   ]);
 
@@ -1174,7 +1178,7 @@ function App() {
               ? `Route ${stopRouteSelection.route} at this stop · ${routeAvailabilityLabel(stopRouteSelection.availability)}`
               : activeRoute
               ? `Tracking active route ${activeRoute} · choose a bus or stop`
-              : "Delayed playback ~45s · search a route or stop, or tap a bus"}
+              : "Delayed playback ~2 min · search a route or stop, or tap a bus"}
           </div>
         </div>
         <div className="status-group">
@@ -1188,7 +1192,7 @@ function App() {
           mode={mode}
           disabled={trackingRequested}
           setMode={(nextMode) => {
-            playbackTimeRef.current = null;
+            playbackClockRef.current.reset();
             clearSelection();
             setActiveRoute(null);
             setNearbyStops([]);
@@ -1217,12 +1221,12 @@ function App() {
           disabled={trackingRequested}
           activeRoute={activeRoute}
           onClearRoute={() => {
-            playbackTimeRef.current = null;
+            playbackClockRef.current.reset();
             clearSelection();
             setActiveRoute(null);
           }}
           onSelectRoute={(route) => {
-            playbackTimeRef.current = null;
+            playbackClockRef.current.reset();
             clearSelection();
             setActiveRoute(route.route_short_name);
             setMode("all");
@@ -1422,7 +1426,7 @@ function App() {
               key={selectedPlaceStop.stop_id}
               stop={selectedPlaceStop}
               onClose={() => {
-                playbackTimeRef.current = null;
+                playbackClockRef.current.reset();
                 clearSelection();
                 setRoutePaths([]);
                 setActiveRoute(null);
@@ -1441,7 +1445,7 @@ function App() {
                   });
                   return;
                 }
-                playbackTimeRef.current = null;
+                playbackClockRef.current.reset();
                 setSelectedContext(null);
                 setSelectedTargetStop(null);
                 setSelectedVehicle(null);

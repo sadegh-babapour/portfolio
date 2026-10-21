@@ -34,20 +34,60 @@ export function bearingDegrees(lat1, lon1, lat2, lon2) {
 }
 
 
-export function monotonicPlaybackTime({
-  previousTimeMs,
-  latestDataTimeMs,
-  fetchedAtMs,
-  nowMs,
-  delaySeconds = 45,
+// A playback clock that runs at wall-clock speed instead of restarting on every refresh.
+// The feed publishes in batches (about every 60 s here) while the page refreshes every
+// 30 s, so "time since the last fetch" resets without new data and froze the map, then
+// jumped it. This clock stays a steady distance behind the slowest recent batch and
+// steers gently (at most `maxRateAdjust`) toward it rather than freezing or jumping.
+export function createPlaybackClock({
+  marginSeconds = 45,
   liveBufferSeconds = 5,
-}) {
-  if (![latestDataTimeMs, fetchedAtMs, nowMs].every(Number.isFinite)) return null;
-  const elapsedSinceFetchMs = Math.max(0, nowMs - fetchedAtMs);
-  const delayedTimeMs = latestDataTimeMs - delaySeconds * 1000 + elapsedSinceFetchMs;
-  const latestSafeTimeMs = latestDataTimeMs - liveBufferSeconds * 1000;
-  const candidate = Math.min(delayedTimeMs, latestSafeTimeMs);
-  return Number.isFinite(previousTimeMs) ? Math.max(previousTimeMs, candidate) : candidate;
+  lagWindowSeconds = 300,
+  firstLagPaddingSeconds = 30,
+  maxRateAdjust = 0.1,
+  steerSeconds = 30,
+  snapSeconds = 60,
+} = {}) {
+  let lagSamples = [];
+  let latestDataTimeMs = null;
+  let timeMs = null;
+  let lastNowMs = null;
+
+  return {
+    observe({ latestDataTimeMs: latest, fetchedAtMs }) {
+      if (!Number.isFinite(latest) || !Number.isFinite(fetchedAtMs)) return;
+      latestDataTimeMs = latest;
+      lagSamples.push({ atMs: fetchedAtMs, lagMs: fetchedAtMs - latest });
+      lagSamples = lagSamples.filter((sample) => sample.atMs > fetchedAtMs - lagWindowSeconds * 1000);
+    },
+
+    // Snap to the target on the next tick (for example after the route filter changes).
+    reset() {
+      timeMs = null;
+      lastNowMs = null;
+    },
+
+    tick(nowMs) {
+      if (!Number.isFinite(nowMs) || latestDataTimeMs === null || lagSamples.length === 0) return null;
+      // One sample cannot show the batch cycle yet, so pad it.
+      const lagMs = Math.max(...lagSamples.map((sample) => sample.lagMs))
+        + (lagSamples.length === 1 ? firstLagPaddingSeconds * 1000 : 0);
+      const ceilingMs = latestDataTimeMs - liveBufferSeconds * 1000;
+      const targetMs = Math.min(nowMs - lagMs - marginSeconds * 1000, ceilingMs);
+
+      if (timeMs === null || Math.abs(targetMs - timeMs) > snapSeconds * 1000) {
+        timeMs = targetMs;
+      } else {
+        const elapsedMs = Math.max(0, nowMs - lastNowMs);
+        const steer = (targetMs - timeMs) / (steerSeconds * 1000);
+        const rate = 1 + Math.max(-maxRateAdjust, Math.min(maxRateAdjust, steer));
+        // Never run past the newest data, and never move backwards.
+        timeMs = Math.min(timeMs + elapsedMs * rate, Math.max(timeMs, ceilingMs));
+      }
+      lastNowMs = nowMs;
+      return timeMs;
+    },
+  };
 }
 
 

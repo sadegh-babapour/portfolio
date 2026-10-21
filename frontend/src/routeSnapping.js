@@ -2,10 +2,11 @@
 // line, so they stay on the road at corners. Reports are about 45 s apart, and a
 // straight line between them cuts across blocks.
 //
-// The page loads one shape per route (the direction a recent bus was on). Buses going
-// the other way usually share the same streets, so snapping still works; where the
-// directions split (one-way pairs, loops, terminals) a report lies off the shape and
-// the bus falls back to the straight line.
+// Each bus is matched to its own trip's shape when the page has loaded it (`tripShapes`,
+// by shape_id from vehicle history). Otherwise it uses the one shape the page draws per
+// route (the direction a recent bus was on): buses going the other way usually share
+// the same streets, and where the directions split a report lies off that shape and
+// the bus keeps the straight line.
 
 const METERS_PER_DEGREE_LAT = 111_132;
 const CALGARY_LATITUDE = 51.05;
@@ -86,9 +87,13 @@ function pointAt(shape, distance) {
 
 
 export function createRouteSnapper(routePaths, {
+  tripShapes = [],
   maxOffsetMeters = 35,
   maxDetourRatio = 2.5,
   detourSlackMeters = 120,
+  // Faster than any Calgary bus: a road distance needing more than this between two
+  // reports means the wrong pass of a loop, so that pass is skipped.
+  maxSpeedMetersPerSecond = 30,
   cacheLimit = 5000,
 } = {}) {
   const shapesByRoute = new Map();
@@ -98,17 +103,26 @@ export function createRouteSnapper(routePaths, {
     const name = String(route.route_short_name);
     shapesByRoute.set(name, [...(shapesByRoute.get(name) || []), shape]);
   }
+  const shapesById = new Map();
+  for (const tripShape of Array.isArray(tripShapes) ? tripShapes : []) {
+    const shape = buildShape({ route_short_name: "trip", ...tripShape });
+    if (shape) shapesById.set(String(tripShape.shape_id), shape);
+  }
   // A pair of reports always maps to the same stretch of road, so remember it.
   const pairs = new Map();
 
-  function snapPair(routeName, previous, next) {
-    const shapes = shapesByRoute.get(String(routeName));
+  function snapPair(shapes, previous, next) {
     if (!shapes) return null;
     const ax = previous.lon * METERS_PER_DEGREE_LON;
     const ay = previous.lat * METERS_PER_DEGREE_LAT;
     const bx = next.lon * METERS_PER_DEGREE_LON;
     const by = next.lat * METERS_PER_DEGREE_LAT;
     const straight = Math.hypot(bx - ax, by - ay);
+    const seconds = (Date.parse(next.vehicle_timestamp) - Date.parse(previous.vehicle_timestamp)) / 1000;
+    const maxGap = Math.min(
+      straight * maxDetourRatio + detourSlackMeters,
+      Number.isFinite(seconds) && seconds > 0 ? Math.max(straight, maxSpeedMetersPerSecond * seconds) : Infinity,
+    );
     let best = null;
     for (const shape of shapes) {
       const fromCandidates = nearbyProjections(shape, ax, ay, maxOffsetMeters);
@@ -118,7 +132,7 @@ export function createRouteSnapper(routePaths, {
       for (const from of fromCandidates) {
         for (const to of toCandidates) {
           const gap = Math.abs(to.along - from.along);
-          if (gap > straight * maxDetourRatio + detourSlackMeters) continue;
+          if (gap > maxGap) continue;
           const score = gap + from.offset + to.offset;
           if (!best || score < best.score) best = { shape, from: from.along, to: to.along, score };
         }
@@ -132,13 +146,15 @@ export function createRouteSnapper(routePaths, {
     // when the reports do not fit the route's shape (use the straight line then).
     position(vehicle, previous, next, ratio) {
       const key = [
-        vehicle.route_short_name, vehicle.vehicle_id, vehicle.trip_id,
+        vehicle.route_short_name, vehicle.shape_id, vehicle.vehicle_id, vehicle.trip_id,
         previous.vehicle_timestamp, previous.lat, previous.lon,
         next.vehicle_timestamp, next.lat, next.lon,
       ].join("|");
       let pair = pairs.get(key);
       if (pair === undefined) {
-        pair = snapPair(vehicle.route_short_name, previous, next);
+        const ownShape = vehicle.shape_id ? shapesById.get(String(vehicle.shape_id)) : null;
+        pair = (ownShape && snapPair([ownShape], previous, next))
+          || snapPair(shapesByRoute.get(String(vehicle.route_short_name)), previous, next);
         if (pairs.size >= cacheLimit) pairs.clear();
         pairs.set(key, pair);
       }

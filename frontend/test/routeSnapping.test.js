@@ -100,3 +100,38 @@ test("playback uses the road position for moving buses only", () => {
   assert.equal(stopped.isStopped, true);
   assert.ok(metresFrom(stopped, 202.5, 0) < 0.5, "a stopped bus keeps the plain interpolation");
 });
+
+test("a bus on the other direction's street follows its own trip shape", () => {
+  // The drawn route goes north on one street; this bus's trip comes south on a
+  // parallel one-way street 100 m east, which the route shape does not cover.
+  const northbound = { route_short_name: "3", shape_id: "north", positions: [at(0, 0), at(0, 800)] };
+  const southbound = { shape_id: "south", positions: [at(100, 800), at(100, 400), at(100, 0)] };
+  const southBus = { vehicle_id: "v3", trip_id: "t3", route_short_name: "3", shape_id: "south" };
+  const from = report(103, 600, 0);
+  const to = report(97, 200, 40);
+
+  assert.equal(createRouteSnapper([northbound]).position(southBus, from, to, 0.5), null);
+  const point = createRouteSnapper([northbound], { tripShapes: [southbound] }).position(southBus, from, to, 0.5);
+  assert.ok(metresFrom(point, 100, 400) < 1);
+  assert.ok(Math.abs(point.heading - 180) < 1);
+});
+
+test("when the trip shape does not fit, the route shape is still tried", () => {
+  const wrongTripShape = { shape_id: "far", positions: [at(1000, 0), at(1000, 800)] };
+  const snapper = createRouteSnapper([corner], { tripShapes: [wrongTripShape] });
+  const point = snapper.position({ ...bus, shape_id: "far" }, report(100, 0, 0), report(300, 0, 20), 0.5);
+
+  assert.ok(metresFrom(point, 200, 0) < 1);
+});
+
+test("a road route that would need an impossible speed is not used", () => {
+  // A U-shaped trip: north 300 m, east 400 m, south 300 m. Its two ends are 400 m apart
+  // in a straight line but 1,000 m by road.
+  const uTurn = { shape_id: "u", positions: [at(0, 0), at(0, 300), at(400, 300), at(400, 0)] };
+  const snapper = createRouteSnapper([], { tripShapes: [uTurn] });
+  const uBus = { vehicle_id: "v4", trip_id: "t4", route_short_name: "4", shape_id: "u" };
+
+  assert.equal(snapper.position(uBus, report(0, 0, 0), report(400, 0, 20), 0.5), null, "1 km in 20 s is 50 m/s");
+  const plausible = snapper.position(uBus, report(0, 0, 0), report(400, 0, 60), 0.5);
+  assert.ok(metresFrom(plausible, 200, 300) < 1, "1 km in 60 s follows the road");
+});

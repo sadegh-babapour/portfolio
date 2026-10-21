@@ -1,4 +1,5 @@
 const { FEATURED_ROUTES } = require("../config/transitConfig");
+const { simplifyPath } = require("./shapeGeometry");
 
 async function getTransitHealth(pool) {
   const sql = `
@@ -177,7 +178,7 @@ async function getRoutePaths(pool, mode, routesParam) {
     grouped.get(key).positions.push([row.shape_pt_lat, row.shape_pt_lon]);
   }
 
-  return Array.from(grouped.values());
+  return Array.from(grouped.values(), (route) => ({ ...route, positions: simplifyPath(route.positions) }));
 }
 
 async function getTripPath(pool, tripId) {
@@ -214,8 +215,40 @@ async function getTripPath(pool, tripId) {
     route_short_name: first.route_short_name,
     route_long_name: first.route_long_name,
     route_mode: first.route_mode,
-    positions: result.rows.map((row) => [row.shape_pt_lat, row.shape_pt_lon]),
+    positions: simplifyPath(result.rows.map((row) => [row.shape_pt_lat, row.shape_pt_lon])),
   };
+}
+
+const MAX_SHAPE_IDS = 50;
+
+// Exact trip shapes by id, for keeping each bus on its own road (the map otherwise has
+// one shape per route). Ids come from vehicle history.
+async function getShapes(pool, idsParam) {
+  const ids = typeof idsParam === "string"
+    ? [...new Set(idsParam.split(",").map((id) => id.trim()).filter((id) => id && id.length <= 64))]
+      .slice(0, MAX_SHAPE_IDS)
+    : [];
+  if (ids.length === 0) return [];
+
+  const result = await pool.query(
+    `
+    select shape_id, shape_pt_lat, shape_pt_lon
+    from transit.shapes
+    where shape_id = any($1)
+    order by shape_id, shape_pt_sequence
+    `,
+    [ids],
+  );
+
+  const grouped = new Map();
+  for (const row of result.rows) {
+    if (!grouped.has(row.shape_id)) grouped.set(row.shape_id, []);
+    grouped.get(row.shape_id).push([row.shape_pt_lat, row.shape_pt_lon]);
+  }
+  return Array.from(grouped, ([shapeId, positions]) => ({
+    shape_id: shapeId,
+    positions: simplifyPath(positions),
+  }));
 }
 
 async function getVehicleHistory(pool, mode, density, windowMinutes, routesParam) {
@@ -243,7 +276,8 @@ async function getVehicleHistory(pool, mode, density, windowMinutes, routesParam
         route_long_name,
         route_category,
         trip_headsign,
-        route_mode
+        route_mode,
+        shape_id
       from transit.v_vehicle_dashboard
       ${where}
     )
@@ -260,7 +294,8 @@ async function getVehicleHistory(pool, mode, density, windowMinutes, routesParam
           route_long_name,
           route_category,
           trip_headsign,
-          route_mode
+          route_mode,
+          shape_id
         from (
           select
             vehicle_id,
@@ -270,6 +305,7 @@ async function getVehicleHistory(pool, mode, density, windowMinutes, routesParam
             route_category,
             trip_headsign,
             route_mode,
+            shape_id,
             row_number() over (
               partition by route_short_name
               order by vehicle_timestamp desc, vehicle_id
@@ -308,6 +344,7 @@ async function getVehicleHistory(pool, mode, density, windowMinutes, routesParam
       ev.route_category,
       ev.trip_headsign,
       ev.route_mode,
+      ev.shape_id,
       rp.vehicle_timestamp,
       rp.lat,
       rp.lon
@@ -332,6 +369,7 @@ async function getVehicleHistory(pool, mode, density, windowMinutes, routesParam
         route_category: row.route_category,
         trip_headsign: row.trip_headsign,
         route_mode: row.route_mode,
+        shape_id: row.shape_id ?? null,
         observations: [],
       });
     }
@@ -761,6 +799,7 @@ module.exports = {
   getVehicles,
   getRoutePaths,
   getTripPath,
+  getShapes,
   getVehicleHistory,
   getVehicleContext,
   getVehicleStops,

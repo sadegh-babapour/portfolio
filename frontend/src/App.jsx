@@ -69,6 +69,8 @@ const TILE_CONFIG = {
 const PLAYBACK_MARGIN_SECONDS = 45;
 const HISTORY_WINDOW_MINUTES = 4;
 const ROUTE_PATHS_MAX_AGE_MS = 30 * 60 * 1000;
+// The API returns at most this many shapes per request (backend getShapes).
+const SHAPES_PER_REQUEST = 50;
 
 function cookieValue(name) {
   const prefix = `${encodeURIComponent(name)}=`;
@@ -776,7 +778,13 @@ function App() {
   // Every route shape loaded so far, by route, so buses stay on the road even when the
   // drawn lines are narrowed to one route (routeSnapping.js).
   const [routeShapes, setRouteShapes] = useState(() => new Map());
-  const snapper = useMemo(() => createRouteSnapper([...routeShapes.values()]), [routeShapes]);
+  // Each bus's own trip shape, by shape_id, fetched once per session as buses appear.
+  const [tripShapes, setTripShapes] = useState(() => new Map());
+  const requestedShapeIdsRef = useRef(new Set());
+  const snapper = useMemo(
+    () => createRouteSnapper([...routeShapes.values()], { tripShapes: [...tripShapes.values()] }),
+    [routeShapes, tripShapes],
+  );
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [lastHistoryFetchMs, setLastHistoryFetchMs] = useState(null);
   const [refreshAgeSeconds, setRefreshAgeSeconds] = useState(0);
@@ -1045,6 +1053,7 @@ function App() {
         }
 
         setVehicleHistory(historyData);
+        loadTripShapes(historyData);
         setLastHistoryFetchMs(Date.now());
         setLatestDataTimestampMs(latestMs);
         playbackClockRef.current.observe({ latestDataTimeMs: latestMs, fetchedAtMs: Date.now() });
@@ -1072,6 +1081,32 @@ function App() {
         setServiceStatus("no_vehicle_positions");
       } else {
         setServiceStatus(healthResult.value?.status || "healthy");
+      }
+    };
+
+    // Shapes not seen before are fetched in batches; a failed batch is retried on the
+    // next refresh. Older APIs send no shape_id, and buses keep the route shapes.
+    const loadTripShapes = (historyData) => {
+      const requested = requestedShapeIdsRef.current;
+      const missing = [...new Set(historyData.map((vehicle) => vehicle.shape_id).filter(Boolean))]
+        .filter((shapeId) => !requested.has(shapeId));
+      for (let start = 0; start < missing.length; start += SHAPES_PER_REQUEST) {
+        const batch = missing.slice(start, start + SHAPES_PER_REQUEST);
+        batch.forEach((shapeId) => requested.add(shapeId));
+        fetch(`${API_BASE}/shapes?ids=${encodeURIComponent(batch.join(","))}`)
+          .then((response) => {
+            if (!response.ok) throw new Error(`Shapes request failed with HTTP ${response.status}`);
+            return response.json();
+          })
+          .then((shapes) => {
+            if (!Array.isArray(shapes) || shapes.length === 0) return;
+            setTripShapes((current) => {
+              const next = new Map(current);
+              for (const shape of shapes) next.set(String(shape.shape_id), shape);
+              return next;
+            });
+          })
+          .catch(() => batch.forEach((shapeId) => requested.delete(shapeId)));
       }
     };
 

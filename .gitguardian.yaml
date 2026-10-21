@@ -1,0 +1,8 @@
+# ggshield settings for the local pre-commit/pre-push hooks.
+version: 2
+secret:
+  # Synthetic connection strings used by the runtime-gate validation tests.
+  # Only test data belongs here; never ignore application paths.
+  ignored_paths:
+    - test/fixtures/validation_cases.json
+    - test/test_preview_env.py

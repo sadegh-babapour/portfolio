@@ -85,3 +85,6 @@ docs/CHAT_HISTORY_RAW.md
 # Railway build attestation markers (generated during the Railway build; never committed)
 /.bizqlab-build-attestation.json
 /backend/transit_api/.bizqlab-build-attestation.json
+
+# Added by ggshield
+.cache_ggshield

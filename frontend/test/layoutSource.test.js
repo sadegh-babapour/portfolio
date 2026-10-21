@@ -14,13 +14,25 @@ test("mobile map attribution remains at the bottom edge", () => {
 });
 
 test("transit navigation links back to financial research", () => {
-  const navigation = readFileSync(
-    new URL("../src/PortfolioNav.jsx", import.meta.url),
+  const navigation = JSON.parse(readFileSync(
+    new URL("../../content/navigation.json", import.meta.url),
     "utf8",
-  );
+  ));
 
-  assert.match(
-    navigation,
-    /\["Financial Research", "\/research\/financials"\]/,
+  assert.deepEqual(
+    navigation.links.find(([label]) => label === "Financial Research"),
+    ["Financial Research", "/research/financials"],
   );
+});
+
+test("the transit header takes its links from the shared navigation file", () => {
+  const source = readFileSync(new URL("../src/PortfolioNav.jsx", import.meta.url), "utf8");
+  const navigation = JSON.parse(readFileSync(
+    new URL("../../content/navigation.json", import.meta.url),
+    "utf8",
+  ));
+
+  assert.match(source, /import navigation from "\.\.\/\.\.\/content\/navigation\.json"/);
+  assert.doesNotMatch(source, /\["Home", "\/"\]/, "no second copy of the links");
+  assert.deepEqual(navigation.links.at(-1), ["Calgary Transit Live", "/calgary-transit-live/"]);
 });

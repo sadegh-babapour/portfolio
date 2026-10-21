@@ -6,24 +6,18 @@ import {
   RESOLVED_THEME_STORAGE_KEY,
   THEME_MODE_STORAGE_KEY,
 } from "./mountainTime.js";
+import navigation from "../../content/navigation.json" with { type: "json" };
 
-const NAV_LINKS = [
-  ["Home", "/"],
-  ["About", "/about"],
-  ["Resume", "/resume"],
-  ["Projects", "/projects"],
-  ["Contact", "/contact"],
-  ["Dashboard", "/dashboard"],
-  ["Financial Research", "/research/financials"],
-  ["Blog", "/blog"],
-];
-const TRANSIT_LINK = ["Calgary Transit Live", "/calgary-transit-live/"];
+// Shared with the NiceGUI header (app/components/navbar.py) via content/navigation.json.
+const NAV_LINKS = navigation.links;
+const [ACCOUNT_LABEL, ACCOUNT_PATH] = navigation.account_link;
+const CURRENT_PATH = "/calgary-transit-live/";
 
-function NavLinks({ className, mobile = false, accountLabel = "Account" }) {
-  const accountLink = [accountLabel, "/account"];
+function NavLinks({ className, mobile = false, accountLabel = ACCOUNT_LABEL }) {
+  const accountLink = [accountLabel, ACCOUNT_PATH];
   const links = mobile
-    ? [accountLink, ...NAV_LINKS, TRANSIT_LINK]
-    : [...NAV_LINKS, TRANSIT_LINK, accountLink];
+    ? [accountLink, ...NAV_LINKS]
+    : [...NAV_LINKS, accountLink];
 
   return (
     <nav className={className} aria-label="Portfolio navigation">
@@ -31,8 +25,8 @@ function NavLinks({ className, mobile = false, accountLabel = "Account" }) {
         <a
           key={path}
           href={path}
-          className={path === "/account" ? "portfolio-account-link" : undefined}
-          aria-current={path === "/calgary-transit-live/" ? "page" : undefined}
+          className={path === ACCOUNT_PATH ? "portfolio-account-link" : undefined}
+          aria-current={path === CURRENT_PATH ? "page" : undefined}
         >
           {label}
         </a>
@@ -47,7 +41,7 @@ export default function PortfolioNav() {
     return ["auto", "light", "dark"].includes(storedMode) ? storedMode : "auto";
   });
   const [now, setNow] = useState(() => new Date());
-  const [accountLabel, setAccountLabel] = useState("Account");
+  const [accountLabel, setAccountLabel] = useState(ACCOUNT_LABEL);
   const theme = resolveTheme(mode, now);
 
   useEffect(() => {
@@ -69,7 +63,7 @@ export default function PortfolioNav() {
       .then((session) => {
         if (!active || !session?.authenticated || !session?.user?.display_name) return;
         const firstName = session.user.display_name.trim().split(/\s+/)[0].slice(0, 24);
-        if (firstName) setAccountLabel(`Account · ${firstName}`);
+        if (firstName) setAccountLabel(`${ACCOUNT_LABEL} · ${firstName}`);
       })
       .catch(() => {});
     return () => { active = false; };

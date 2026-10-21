@@ -94,7 +94,7 @@ export function createPlaybackClock({
 export function computePlaybackVehicles(
   historyRows,
   playbackTimeMs,
-  { stoppedThresholdMeters = 20, staleThresholdSeconds = 120 } = {},
+  { stoppedThresholdMeters = 20, staleThresholdSeconds = 120, snapper = null } = {},
 ) {
   const results = [];
 
@@ -138,17 +138,21 @@ export function computePlaybackVehicles(
     const ratio = nextTimeMs > previousTimeMs && playbackTimeMs < nextTimeMs
       ? Math.max(0, (playbackTimeMs - previousTimeMs) / (nextTimeMs - previousTimeMs))
       : 1;
-    const lat = previous.lat + (next.lat - previous.lat) * ratio;
-    const lon = previous.lon + (next.lon - previous.lon) * ratio;
     const movedMeters = distanceMeters(previous.lat, previous.lon, next.lat, next.lon);
+    // Follow the road when the reports fit the route's shape (routeSnapping.js).
+    const onRoad = snapper && movedMeters >= stoppedThresholdMeters
+      ? snapper.position(vehicle, previous, next, ratio)
+      : null;
 
     results.push({
       ...vehicle,
-      lat,
-      lon,
-      heading: movedMeters >= 5
-        ? bearingDegrees(previous.lat, previous.lon, next.lat, next.lon)
-        : null,
+      lat: onRoad ? onRoad.lat : previous.lat + (next.lat - previous.lat) * ratio,
+      lon: onRoad ? onRoad.lon : previous.lon + (next.lon - previous.lon) * ratio,
+      heading: onRoad
+        ? onRoad.heading
+        : movedMeters >= 5
+          ? bearingDegrees(previous.lat, previous.lon, next.lat, next.lon)
+          : null,
       isStopped: movedMeters < stoppedThresholdMeters,
       isStale: latestTimeMs < playbackTimeMs - staleThresholdSeconds * 1000,
       latestObservationTimestamp: latest.vehicle_timestamp,

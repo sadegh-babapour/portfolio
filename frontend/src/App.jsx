@@ -35,6 +35,7 @@ import {
 } from "./transitPlayback";
 import { createGlideGuard } from "./glideGuard";
 import { createRoutePathsCache } from "./routePathsCache";
+import { createRouteSnapper } from "./routeSnapping";
 import { startVisibleInterval } from "./visibleInterval";
 
 
@@ -772,6 +773,10 @@ function App() {
   const [vehicleHistory, setVehicleHistory] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [routePaths, setRoutePaths] = useState([]);
+  // Every route shape loaded so far, by route, so buses stay on the road even when the
+  // drawn lines are narrowed to one route (routeSnapping.js).
+  const [routeShapes, setRouteShapes] = useState(() => new Map());
+  const snapper = useMemo(() => createRouteSnapper([...routeShapes.values()]), [routeShapes]);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [lastHistoryFetchMs, setLastHistoryFetchMs] = useState(null);
   const [refreshAgeSeconds, setRefreshAgeSeconds] = useState(0);
@@ -1051,6 +1056,11 @@ function App() {
       } else if (hasFreshPaths) {
         setRoutePaths(pathResult.value);
         routePathsCacheRef.current.set(pathsUrl, pathResult.value, Date.now());
+        setRouteShapes((current) => {
+          const next = new Map(current);
+          for (const route of pathResult.value) next.set(String(route.route_short_name), route);
+          return next;
+        });
       }
 
       if (!hasFreshHistory) {
@@ -1124,7 +1134,7 @@ function App() {
       const playbackTimeMs = playbackClockRef.current.tick(Date.now());
       if (!Number.isFinite(playbackTimeMs)) return;
 
-      const playbackVehicles = computePlaybackVehicles(vehicleHistory, playbackTimeMs);
+      const playbackVehicles = computePlaybackVehicles(vehicleHistory, playbackTimeMs, { snapper });
       setVehicles(playbackVehicles);
 
       const pending = pendingVehicleRef.current;
@@ -1161,6 +1171,7 @@ function App() {
     vehicleHistory,
     latestDataTimestampMs,
     trackedDestinationStop,
+    snapper,
   ]);
 
   const center = useMemo(() => [51.0447, -114.0719], []);

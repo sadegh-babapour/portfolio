@@ -1,3 +1,4 @@
+import json
 import logging
 from functools import wraps
 from html import escape
@@ -5,24 +6,20 @@ from html import escape
 from nicegui import ui
 
 from app.auth.service import SESSION_COOKIE, current_session
+from app.content import CONTENT_DIR
 from .footer import footer
 
 
 log = logging.getLogger(__name__)
 
 
-NAV_LINKS = [
-    ('Home', '/'),
-    ('About', '/about'),
-    ('Resume', '/resume'),
-    ('Projects', '/projects'),
-    ('Contact', '/contact'),
-    ('Dashboard', '/dashboard'),
-    ('Financial Research', '/research/financials'),
-    ('Blog', '/blog'),
-    ('Calgary Transit Live', '/calgary-transit-live/'),
-]
-ACCOUNT_LINK = ('Account', '/account')
+# Shared with the Calgary Transit map header (frontend/src/PortfolioNav.jsx), so links
+# and theme rules are edited in one place: content/navigation.json.
+NAVIGATION = json.loads((CONTENT_DIR / 'navigation.json').read_text(encoding='utf-8'))
+NAV_LINKS = [tuple(link) for link in NAVIGATION['links']]
+ACCOUNT_LINK = tuple(NAVIGATION['account_link'])
+# Inserted into the theme scripts below in place of __PORTFOLIO_THEME__.
+THEME_JSON = json.dumps(NAVIGATION['theme'])
 
 
 def navbar():
@@ -32,12 +29,14 @@ def navbar():
       <link rel="apple-touch-icon" href="/static/bizqlab_logo.png">
       <script>
         (() => {
-          const mode = localStorage.getItem('portfolio-theme-mode');
+          const config = __PORTFOLIO_THEME__;
+          const mode = localStorage.getItem(config.mode_storage_key);
           const parts = new Intl.DateTimeFormat('en-CA', {
-            timeZone: 'America/Edmonton', hour: '2-digit', hourCycle: 'h23'
+            timeZone: config.time_zone, hour: '2-digit', hourCycle: 'h23'
           }).formatToParts(new Date());
           const hour = Number(parts.find((part) => part.type === 'hour')?.value || 0);
-          const automatic = hour >= 7 && hour < 19 ? 'light' : 'dark';
+          const automatic = hour >= config.light_from_hour && hour < config.dark_from_hour
+            ? 'light' : 'dark';
           const theme = mode === 'light' || mode === 'dark' ? mode : automatic;
           document.documentElement.dataset.theme = theme;
           document.documentElement.style.colorScheme = theme;
@@ -50,7 +49,7 @@ def navbar():
           color: #e5e7eb;
         }
       </style>
-    ''')
+    '''.replace('__PORTFOLIO_THEME__', THEME_JSON))
     request = ui.context.client.request
     current_path = request.url.path.rstrip('/') or '/' if request else ''
     account_link = ACCOUNT_LINK
@@ -59,14 +58,15 @@ def navbar():
             session_user = current_session(request.cookies.get(SESSION_COOKIE))
             if session_user:
                 compact_name = session_user.display_name.strip().split()[0][:24]
-                account_link = (f'Account · {compact_name}', '/account')
+                account_label, account_path = ACCOUNT_LINK
+                account_link = (f'{account_label} · {compact_name}', account_path)
         except Exception:
             log.exception('Unable to personalize the account navigation label')
 
     def render_links(items):
         return ''.join(
             f'<a href="{escape(path, quote=True)}"'
-            f'{" class=\"portfolio-account-link\"" if path == "/account" else ""}'
+            f'{" class=\"portfolio-account-link\"" if path == ACCOUNT_LINK[1] else ""}'
             f'{" aria-current=\"page\"" if (path.rstrip("/") or "/") == current_path else ""}'
             f'>{escape(label)}</a>'
             for label, path in items
@@ -322,8 +322,9 @@ def navbar():
     ).classes('w-full').style('position: sticky; top: 0; z-index: 1400;')
     ui.run_javascript('''
       (() => {
-        const modeStorageKey = 'portfolio-theme-mode';
-        const resolvedStorageKey = 'portfolio-theme';
+        const config = __PORTFOLIO_THEME__;
+        const modeStorageKey = config.mode_storage_key;
+        const resolvedStorageKey = config.resolved_storage_key;
         const button = document.querySelector('.portfolio-theme-toggle');
         const clock = document.querySelector('.portfolio-mountain-clock');
         if (!button || button.dataset.themeReady === 'true') return;
@@ -335,14 +336,15 @@ def navbar():
 
         const mountainHour = (date) => {
           const parts = new Intl.DateTimeFormat('en-CA', {
-            timeZone: 'America/Edmonton', hour: '2-digit', hourCycle: 'h23'
+            timeZone: config.time_zone, hour: '2-digit', hourCycle: 'h23'
           }).formatToParts(date);
           return Number(parts.find((part) => part.type === 'hour')?.value || 0);
         };
         const resolveTheme = (date) => {
           if (mode === 'light' || mode === 'dark') return mode;
           const hour = mountainHour(date);
-          return hour >= 7 && hour < 19 ? 'light' : 'dark';
+          return hour >= config.light_from_hour && hour < config.dark_from_hour
+            ? 'light' : 'dark';
         };
         const modeLabel = () => mode === 'auto' ? 'Auto' : mode === 'light' ? 'Light' : 'Dark';
         const nextMode = () => mode === 'auto' ? 'light' : mode === 'light' ? 'dark' : 'auto';
@@ -417,7 +419,7 @@ def navbar():
           if (clock) {
             clock.dateTime = now.toISOString();
             clock.querySelector('strong').textContent = new Intl.DateTimeFormat('en-CA', {
-              timeZone: 'America/Edmonton', hour: 'numeric', minute: '2-digit',
+              timeZone: config.time_zone, hour: 'numeric', minute: '2-digit',
             }).format(now);
           }
           const resolved = resolveTheme(now);
@@ -433,7 +435,7 @@ def navbar():
         });
 
       })();
-    ''')
+    '''.replace('__PORTFOLIO_THEME__', THEME_JSON))
 
 
 def with_layout(page_func):

@@ -1,0 +1,22 @@
+{
+  "_comment": "Single source for the site header, used by the NiceGUI pages (app/components/navbar.py) and the Calgary Transit map (frontend/src/PortfolioNav.jsx, frontend/src/mountainTime.js).",
+  "links": [
+    ["Home", "/"],
+    ["About", "/about"],
+    ["Resume", "/resume"],
+    ["Projects", "/projects"],
+    ["Contact", "/contact"],
+    ["Dashboard", "/dashboard"],
+    ["Financial Research", "/research/financials"],
+    ["Blog", "/blog"],
+    ["Calgary Transit Live", "/calgary-transit-live/"]
+  ],
+  "account_link": ["Account", "/account"],
+  "theme": {
+    "time_zone": "America/Edmonton",
+    "light_from_hour": 7,
+    "dark_from_hour": 19,
+    "mode_storage_key": "portfolio-theme-mode",
+    "resolved_storage_key": "portfolio-theme"
+  }
+}

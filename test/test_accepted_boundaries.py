@@ -201,7 +201,7 @@ class PortfolioContentTests(unittest.TestCase):
         self.assertIn('"logo": "https://www.bizqlab.com/static/bizqlab_logo.png"', home_source)
         self.assertIn("[*NAV_LINKS, account_link]", navbar_source)
         self.assertIn("[account_link, *NAV_LINKS]", navbar_source)
-        self.assertIn("Account · {compact_name}", navbar_source)
+        self.assertIn("{account_label} · {compact_name}", navbar_source)
         self.assertIn("portfolio-development-note", projects_source)
         self.assertEqual(
             lab.working_method,

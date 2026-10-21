@@ -1,6 +1,11 @@
-export const MOUNTAIN_TIME_ZONE = "America/Edmonton";
-export const THEME_MODE_STORAGE_KEY = "portfolio-theme-mode";
-export const RESOLVED_THEME_STORAGE_KEY = "portfolio-theme";
+import navigation from "../../content/navigation.json" with { type: "json" };
+
+// Shared with the NiceGUI header (app/components/navbar.py) via content/navigation.json.
+const { theme: THEME } = navigation;
+
+export const MOUNTAIN_TIME_ZONE = THEME.time_zone;
+export const THEME_MODE_STORAGE_KEY = THEME.mode_storage_key;
+export const RESOLVED_THEME_STORAGE_KEY = THEME.resolved_storage_key;
 
 export function mountainHour(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -13,7 +18,7 @@ export function mountainHour(date = new Date()) {
 
 export function automaticTheme(date = new Date()) {
   const hour = mountainHour(date);
-  return hour >= 7 && hour < 19 ? "light" : "dark";
+  return hour >= THEME.light_from_hour && hour < THEME.dark_from_hour ? "light" : "dark";
 }
 
 export function resolveTheme(mode, date = new Date()) {

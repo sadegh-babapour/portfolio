@@ -7,6 +7,7 @@ const {
   getVehicles,
   getRoutePaths,
   getTripPath,
+  getShapes,
   getVehicleHistory,
   getVehicleContext,
   getVehicleStops,
@@ -70,6 +71,18 @@ app.get("/api/trips/:tripId/path", async (request, response) => {
   } catch (error) {
     console.error(error);
     return response.status(500).json({ error: "failed_to_load_trip_path" });
+  }
+});
+
+// Shapes only change with a GTFS update, so browsers may keep them for a day.
+app.get("/api/shapes", async (request, response) => {
+  try {
+    const shapes = await getShapes(pool, request.query.ids);
+    response.set("Cache-Control", "public, max-age=86400");
+    response.json(shapes);
+  } catch (error) {
+    console.error(error);
+    response.status(500).json({ error: "failed_to_load_shapes" });
   }
 });
 

@@ -33,6 +33,8 @@ import {
   createPlaybackClock,
   toMillis,
 } from "./transitPlayback";
+import { createRoutePathsCache } from "./routePathsCache";
+import { startVisibleInterval } from "./visibleInterval";
 
 
 
@@ -64,6 +66,7 @@ const TILE_CONFIG = {
 // about two minutes behind live with almost no frozen buses.
 const PLAYBACK_MARGIN_SECONDS = 45;
 const HISTORY_WINDOW_MINUTES = 4;
+const ROUTE_PATHS_MAX_AGE_MS = 30 * 60 * 1000;
 
 function cookieValue(name) {
   const prefix = `${encodeURIComponent(name)}=`;
@@ -543,11 +546,10 @@ function StopDrawer({
         if (!cancelled) setLoading(false);
       }
     };
-    load();
-    const interval = window.setInterval(load, 30_000);
+    const stopPolling = startVisibleInterval(load, 30_000);
     return () => {
       cancelled = true;
-      window.clearInterval(interval);
+      stopPolling();
     };
   }, [stop.stop_id]);
 
@@ -762,6 +764,10 @@ function App() {
   if (playbackClockRef.current === null) {
     playbackClockRef.current = createPlaybackClock({ marginSeconds: PLAYBACK_MARGIN_SECONDS });
   }
+  const routePathsCacheRef = useRef(null);
+  if (routePathsCacheRef.current === null) {
+    routePathsCacheRef.current = createRoutePathsCache({ maxAgeMs: ROUTE_PATHS_MAX_AGE_MS });
+  }
   const pendingVehicleRef = useRef(null);
   const drawerRef = useRef(null);
   const trackingRequested = Boolean(trackedDestinationStop);
@@ -932,17 +938,13 @@ function App() {
     return () => controller.abort();
   }, [stopRouteSelection?.tripId]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!lastHistoryFetchMs) {
-        setRefreshAgeSeconds(0);
-        return;
-      }
-      setRefreshAgeSeconds(Math.max(0, Math.floor((Date.now() - lastHistoryFetchMs) / 1000)));
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [lastHistoryFetchMs]);
+  useEffect(() => startVisibleInterval(() => {
+    if (!lastHistoryFetchMs) {
+      setRefreshAgeSeconds(0);
+      return;
+    }
+    setRefreshAgeSeconds(Math.max(0, Math.floor((Date.now() - lastHistoryFetchMs) / 1000)));
+  }, 1000), [lastHistoryFetchMs]);
 
   useEffect(() => {
     let cancelled = false;
@@ -956,21 +958,23 @@ function App() {
         return response.json();
       };
 
+      const pathsUrl = selectedVehicle?.route_short_name
+        ? `${API_BASE}/routes/paths?mode=${mode}&routes=${encodeURIComponent(
+          selectedVehicle.route_short_name
+        )}`
+        : activeRoute
+          ? `${API_BASE}/routes/paths?mode=all&routes=${encodeURIComponent(activeRoute)}`
+          : `${API_BASE}/routes/paths?mode=${mode}`;
+      const cachedPaths = routePathsCacheRef.current.get(pathsUrl, Date.now());
+      const needsPaths = cachedPaths === null;
+
       const [historyResult, pathResult, healthResult] = await Promise.allSettled([
         fetchJson(
           `${API_BASE}/vehicles/history?mode=${activeRoute ? "all" : mode}`
           + `&window_minutes=${HISTORY_WINDOW_MINUTES}`
           + (activeRoute ? `&routes=${encodeURIComponent(activeRoute)}` : "")
         ),
-        fetchJson(
-          selectedVehicle?.route_short_name
-            ? `${API_BASE}/routes/paths?mode=${mode}&routes=${encodeURIComponent(
-              selectedVehicle.route_short_name
-            )}`
-            : activeRoute
-              ? `${API_BASE}/routes/paths?mode=all&routes=${encodeURIComponent(activeRoute)}`
-              : `${API_BASE}/routes/paths?mode=${mode}`
-        ),
+        needsPaths ? fetchJson(pathsUrl) : Promise.resolve(null),
         fetchJson(`${API_BASE}/health`, true),
       ]);
 
@@ -978,8 +982,8 @@ function App() {
 
       const hasFreshHistory =
         historyResult.status === "fulfilled" && Array.isArray(historyResult.value);
-      const hasFreshPaths =
-        pathResult.status === "fulfilled" && Array.isArray(pathResult.value);
+      const hasFreshPaths = !needsPaths
+        || (pathResult.status === "fulfilled" && Array.isArray(pathResult.value));
 
       if (hasFreshHistory) {
         const historyData = historyResult.value;
@@ -1003,8 +1007,11 @@ function App() {
         setRefreshAgeSeconds(0);
       }
 
-      if (hasFreshPaths) {
+      if (!needsPaths) {
+        setRoutePaths(cachedPaths);
+      } else if (hasFreshPaths) {
         setRoutePaths(pathResult.value);
+        routePathsCacheRef.current.set(pathsUrl, pathResult.value, Date.now());
       }
 
       if (!hasFreshHistory) {
@@ -1019,12 +1026,11 @@ function App() {
       }
     };
 
-    load();
-    const interval = setInterval(load, 30000);
+    const stopPolling = startVisibleInterval(load, 30000);
 
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      stopPolling();
     };
   }, [activeRoute, mode, selectedVehicle?.route_short_name]);
 
@@ -1056,12 +1062,11 @@ function App() {
       }
     };
 
-    loadContext();
-    const interval = window.setInterval(loadContext, 15_000);
+    const stopPolling = startVisibleInterval(loadContext, 15_000);
 
     return () => {
       cancelled = true;
-      window.clearInterval(interval);
+      stopPolling();
     };
   }, [
     selectedVehicle?.vehicle_id,
@@ -1109,10 +1114,10 @@ function App() {
       });
     };
 
-    tick();
-    const animationInterval = setInterval(tick, 1000);
-
-    return () => clearInterval(animationInterval);
+    // After a hidden spell the clock is behind its target, so snap rather than steer.
+    return startVisibleInterval(tick, 1000, {
+      onResume: () => playbackClockRef.current.reset(),
+    });
   }, [
     vehicleHistory,
     latestDataTimestampMs,

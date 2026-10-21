@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 
-const { pool } = require("./db/pool");
+const { openPool, ready } = require("./db/pool");
 const {
   getTransitHealth,
   getVehicles,
@@ -19,6 +19,9 @@ const {
   getNearbyStops,
 } = require("./services/transitService");
 
+
+// The runtime gate runs before any pool exists; a refusal exits 2 (design §7).
+const pool = openPool();
 
 const app = express();
 app.use(cors());
@@ -205,6 +208,16 @@ app.get("/api/stops/:stopId/arrivals", async (request, response) => {
 });
 
 const port = Number(process.env.TRANSIT_API_PORT || process.env.PORT || 4000);
-app.listen(port, () => {
-  console.log(`API listening on ${port}`);
-});
+// Development verifies one connection's identity before accepting requests.
+ready(pool).then(
+  () => {
+    app.listen(port, () => {
+      console.log(`API listening on ${port}`);
+    });
+  },
+  (error) => {
+    const code = (error && error.code) || (error && error.name) || "startup_failed";
+    console.error(`BIZQLAB RUNTIME REFUSED (transit-api): startup probe failed: ${code}`);
+    pool.end().catch(() => undefined).finally(() => process.exit(2));
+  },
+);

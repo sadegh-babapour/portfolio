@@ -4,6 +4,7 @@ import argparse
 from datetime import date
 
 from app.contact.database import session_scope
+from app.runtime_state import bootstrap_entry_point
 from financial_research.edgar import EdgarClient
 from financial_research.ingestion import build_extraction_bundle, persist_extraction_bundle
 
@@ -24,6 +25,9 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if args.write:
+        # The runtime gate runs before any network or database access.
+        bootstrap_entry_point("sec-ingest")
     client = EdgarClient.from_env()
     bundle = build_extraction_bundle(
         client.submissions(args.cik),

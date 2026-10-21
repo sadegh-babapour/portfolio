@@ -1,7 +1,9 @@
+import hashlib
 import json
 import logging
 from functools import wraps
 from html import escape
+from pathlib import Path
 
 from nicegui import ui
 
@@ -20,6 +22,13 @@ NAV_LINKS = [tuple(link) for link in NAVIGATION['links']]
 ACCOUNT_LINK = tuple(NAVIGATION['account_link'])
 # Inserted into the theme scripts below in place of __PORTFOLIO_THEME__.
 THEME_JSON = json.dumps(NAVIGATION['theme'])
+# Header styles, shared with the transit map (frontend/src/PortfolioNav.jsx imports the
+# same file). The version changes with the content, so browsers fetch edits at once.
+NAV_STYLESHEET = Path(__file__).resolve().parents[2] / 'static' / 'portfolio-nav.css'
+NAV_STYLESHEET_URL = (
+    '/static/portfolio-nav.css?v='
+    + hashlib.sha256(NAV_STYLESHEET.read_bytes()).hexdigest()[:12]
+)
 
 
 def navbar():
@@ -27,6 +36,7 @@ def navbar():
     ui.add_head_html('''
       <link rel="icon" type="image/png" href="/static/bizqlab_logo.png">
       <link rel="apple-touch-icon" href="/static/bizqlab_logo.png">
+      <link rel="stylesheet" href="__NAV_STYLESHEET_URL__">
       <script>
         (() => {
           const config = __PORTFOLIO_THEME__;
@@ -49,7 +59,7 @@ def navbar():
           color: #e5e7eb;
         }
       </style>
-    '''.replace('__PORTFOLIO_THEME__', THEME_JSON))
+    '''.replace('__PORTFOLIO_THEME__', THEME_JSON).replace('__NAV_STYLESHEET_URL__', NAV_STYLESHEET_URL))
     request = ui.context.client.request
     current_path = request.url.path.rstrip('/') or '/' if request else ''
     account_link = ACCOUNT_LINK
@@ -77,103 +87,6 @@ def navbar():
     ui.html(
         f'''
         <style>
-          .nicegui-portfolio-nav {{
-            box-sizing: border-box;
-            position: sticky;
-            top: 0;
-            z-index: 1400;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 24px;
-            width: 100%;
-            height: 64px;
-            min-height: 64px;
-            padding: 10px 24px;
-            background: #5898d4;
-            color: #fff;
-            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
-            font-family: Arial, sans-serif;
-          }}
-          .nicegui-portfolio-nav a {{ color: inherit; text-decoration: none; }}
-          .nicegui-portfolio-brand {{
-            display: inline-flex;
-            align-items: center;
-            gap: 9px;
-            font-size: 22px;
-            font-weight: 700;
-            white-space: nowrap;
-          }}
-          .nicegui-portfolio-brand-logo {{
-            width: 42px;
-            height: 42px;
-            object-fit: cover;
-            border: 2px solid rgba(255, 255, 255, 0.9);
-            border-radius: 10px;
-            background: #fff;
-          }}
-          .nicegui-portfolio-links {{
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 20px;
-            margin-left: auto;
-            min-width: 0;
-          }}
-          .nicegui-nav-actions {{
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex: 0 0 auto;
-          }}
-          .portfolio-theme-toggle {{
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 44px;
-            min-height: 40px;
-            padding: 8px 10px;
-            border: 1px solid rgba(255, 255, 255, 0.7);
-            border-radius: 8px;
-            background: transparent;
-            color: inherit;
-            cursor: pointer;
-            font: inherit;
-            font-size: 18px;
-          }}
-          .portfolio-theme-toggle:hover,
-          .portfolio-theme-toggle:focus-visible {{
-            background: rgba(255, 255, 255, 0.14);
-          }}
-          .portfolio-mountain-clock {{
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            white-space: nowrap;
-            font-size: 11px;
-            line-height: 1.2;
-          }}
-          .portfolio-mountain-clock strong {{ font-size: 12px; }}
-          .nicegui-portfolio-links a,
-          .nicegui-mobile-links a {{ font-size: 14px; font-weight: 600; }}
-          .nicegui-portfolio-links .portfolio-account-link {{
-            padding: 8px 11px;
-            border: 1px solid rgba(255, 255, 255, 0.75);
-            border-radius: 999px;
-          }}
-          .nicegui-portfolio-links a:hover,
-          .nicegui-portfolio-links a:focus-visible,
-          .nicegui-mobile-links a:hover,
-          .nicegui-mobile-links a:focus-visible {{
-            text-decoration: underline;
-            text-underline-offset: 4px;
-          }}
-          .nicegui-portfolio-nav a[aria-current="page"] {{
-            text-decoration: underline;
-            text-decoration-thickness: 2px;
-            text-underline-offset: 5px;
-          }}
-          .nicegui-mobile-menu {{ display: none; }}
           html[data-theme="dark"] body {{
             color-scheme: dark;
             background: #111827;
@@ -225,83 +138,21 @@ def navbar():
             background: #1f2937;
             color: #e5e7eb;
           }}
-          html[data-theme="dark"] .nicegui-mobile-links {{
-            border-color: #4b5563;
-            background: #1f2937;
-            color: #f9fafb;
-          }}
-          html[data-theme="dark"] .nicegui-mobile-links a {{ border-color: #374151; }}
-          html[data-theme="dark"] .nicegui-mobile-links a[aria-current="page"] {{
-            background: #27364a;
-            color: #bfdbfe;
-          }}
           html[data-theme="dark"] .portfolio-development-note {{
             border-color: #3b82f6 !important;
             background: #172554 !important;
             color: #dbeafe !important;
           }}
-          @media (max-width: 1050px) {{
-            .nicegui-portfolio-nav {{
-              gap: 10px; height: 56px; min-height: 56px; padding: 8px 16px;
-            }}
-            .nicegui-portfolio-brand {{ font-size: 19px; }}
-            .nicegui-portfolio-brand-logo {{ width: 36px; height: 36px; }}
-            .portfolio-mountain-clock span {{ display: none; }}
-            .portfolio-mountain-clock strong {{ font-size: 11px; }}
-            .nicegui-nav-actions {{ gap: 8px; }}
-            .portfolio-theme-toggle {{ min-width: 40px; padding-inline: 8px; }}
-            .nicegui-portfolio-links {{ display: none; }}
-            .nicegui-mobile-menu {{ display: block; }}
-            .nicegui-mobile-menu summary {{
-              padding: 8px 12px;
-              border: 1px solid rgba(255, 255, 255, 0.7);
-              border-radius: 8px;
-              cursor: pointer;
-              font-size: 14px;
-              font-weight: 700;
-              list-style: none;
-            }}
-            .nicegui-mobile-menu summary::-webkit-details-marker {{ display: none; }}
-            .nicegui-mobile-links {{
-              position: absolute;
-              top: calc(100% - 4px);
-              right: 12px;
-              display: flex;
-              flex-direction: column;
-              min-width: 230px;
-              overflow: hidden;
-              border: 1px solid #dbe3ec;
-              border-radius: 10px;
-              background: #fff;
-              color: #111827;
-              box-shadow: 0 12px 24px rgba(15, 23, 42, 0.2);
-            }}
-            .nicegui-mobile-links a {{
-              padding: 12px 16px;
-              border-bottom: 1px solid #eef2f6;
-            }}
-            .nicegui-mobile-links a:last-child {{ border-bottom: 0; }}
-            .nicegui-mobile-links a[aria-current="page"] {{
-              background: #edf6ff;
-              color: #245d91;
-            }}
-            .nicegui-mobile-links .portfolio-account-link {{
-              background: #e8f3ff;
-              color: #245d91;
-              font-weight: 700;
-            }}
-          }}
         </style>
-        <header class="nicegui-portfolio-nav">
-          <a class="nicegui-portfolio-brand" href="/" aria-label="Bizqlab home">
-            <img class="nicegui-portfolio-brand-logo"
-                 src="/static/bizqlab_logo.png" alt="Bizqlab logo">
+        <header class="portfolio-nav">
+          <a class="portfolio-brand" href="/" aria-label="Bizqlab home">
+            <img src="/static/bizqlab_logo.png" alt="Bizqlab logo">
             <span>Bizqlab</span>
           </a>
-          <nav class="nicegui-portfolio-links" aria-label="Portfolio navigation">
+          <nav class="portfolio-nav-desktop" aria-label="Portfolio navigation">
             {desktop_links}
           </nav>
-          <div class="nicegui-nav-actions">
+          <div class="portfolio-nav-actions">
             <time class="portfolio-mountain-clock">
               <span>Calgary</span>
               <strong>--:--</strong>
@@ -310,9 +161,9 @@ def navbar():
                     aria-label="Theme: Auto" title="Theme: Auto">
               <span class="theme-mode-icon" aria-hidden="true">◐</span>
             </button>
-            <details class="nicegui-mobile-menu">
+            <details class="portfolio-nav-mobile">
               <summary aria-label="Open portfolio navigation">Menu</summary>
-              <nav class="nicegui-mobile-links" aria-label="Mobile portfolio navigation">
+              <nav class="portfolio-nav-mobile-links" aria-label="Mobile portfolio navigation">
                 {mobile_links}
               </nav>
             </details>

@@ -18,13 +18,14 @@ const {
   getStopArrivals,
   getNearbyStops,
 } = require("./services/transitService");
+const { isAllowedOrigin } = require("./config/transitConfig");
 
 
 // The runtime gate runs before any pool exists; a refusal exits 2 (design §7).
 const pool = openPool();
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: (origin, callback) => callback(null, isAllowedOrigin(origin)) }));
 app.use(express.json());
 
 app.get("/", (request, response) => {

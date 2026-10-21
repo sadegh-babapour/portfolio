@@ -48,3 +48,13 @@ test("the transit header uses the shared header stylesheet", () => {
     assert.match(shared, new RegExp(`\\.${className[1]}\\b`), className[1]);
   }
 });
+
+test("map tiles overlap so no seams show between them", () => {
+  const css = readFileSync(new URL("../src/App.css", import.meta.url), "utf8");
+  const rule = css.match(/\.leaflet-container img\.leaflet-tile \{([^}]*)\}/);
+
+  assert.ok(rule, "tile overlap rule");
+  assert.match(rule[1], /mix-blend-mode: normal;/);
+  assert.match(rule[1], /width: 257px !important;/);
+  assert.match(rule[1], /height: 257px !important;/);
+});

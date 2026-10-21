@@ -43,6 +43,16 @@ body,
   filter: grayscale(0.35) invert(1) hue-rotate(180deg) brightness(0.72) contrast(1.25);
 }
 
+/* Each tile reaches 1px under its neighbour, so no hairline gap shows between tiles while
+   the map pans or zooms through fractional pixel offsets (following a bus does this every
+   second). Leaflet's own fix, mix-blend-mode: plus-lighter, left lines along most of each
+   edge and would brighten the overlap, so it is switched off here. */
+.leaflet-container img.leaflet-tile {
+  mix-blend-mode: normal;
+  width: 257px !important;
+  height: 257px !important;
+}
+
 * {
   box-sizing: border-box;
 }

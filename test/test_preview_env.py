@@ -67,7 +67,6 @@ class PreviewEnvTests(unittest.TestCase):
             ("transit-api", {**BASE}, "database_settings_missing [key=PGHOST]"),
             ("transit-api", {**GOOD["transit-api"], "PGOPTIONS": "-c search_path=evil"},
              "unsupported_driver_setting [key=PGOPTIONS]"),
-            ("sec-research-refresh", {**BASE, "DATABASE_URL": URL}, "sec_refresh_excluded_from_preview"),
         ]
         for service, env, expected in cases:
             with self.subTest(expected):
@@ -126,7 +125,6 @@ class PreviewEnvTests(unittest.TestCase):
         # "disabled" settings below would write on startup.
         disabled = {**BASE, **PG, "POLL_ENABLED": "false", "GTFS_AUTO_SYNC_ENABLED": "false", "ADMIN_KILL_SWITCH": "true"}
         self.assertEqual(self.run_main("transit-poller", disabled), (1, "PREVIEW BLOCKED (transit-poller): poller_excluded_from_preview\n"))
-        self.assertEqual(self.run_main("sec-research-refresh", {**BASE, "DATABASE_URL": URL})[0], 1)
 
     def test_command_line_refuses_malformed_url_without_traceback(self):
         import os

@@ -33,6 +33,7 @@ import {
   createPlaybackClock,
   toMillis,
 } from "./transitPlayback";
+import { createGlideGuard } from "./glideGuard";
 import { createRoutePathsCache } from "./routePathsCache";
 import { startVisibleInterval } from "./visibleInterval";
 
@@ -90,7 +91,7 @@ function routeBadgeClass(vehicle) {
 // Leaflet rebuilds a marker's DOM whenever it gets a new icon object, so reuse one per look.
 const busIconCache = new Map();
 
-function createBusIcon(vehicle, selected = false) {
+function createBusIcon(vehicle, selected = false, glide = false) {
   const bg = vehicle.isStale
     ? "#4b5563"
     : vehicle.isStopped
@@ -108,11 +109,11 @@ function createBusIcon(vehicle, selected = false) {
   const markerLabel = String(vehicle.route_short_name || "Bus")
     .replace(/[^a-z0-9-]/gi, "")
     .slice(0, 6) || "Bus";
-  const cacheKey = [bg, selected, opacity, statusText, markerLabel].join("|");
+  const cacheKey = [bg, selected, opacity, statusText, markerLabel, glide].join("|");
   const cached = busIconCache.get(cacheKey);
   if (cached) return cached;
   const icon = L.divIcon({
-    className: "",
+    className: glide ? "bus-marker bus-marker-glide" : "bus-marker",
     html: `
       <div style="display:flex;flex-direction:column;align-items:center;">
         ${statusText
@@ -208,12 +209,49 @@ function ManualMapControl({ onDragStart }) {
   return null;
 }
 
+// Reports the visible map area so only buses in or near it glide; Leaflet keeps every
+// marker in the page, and gliding off-screen ones cost CPU for nothing.
+function MapViewBounds({ onChange }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const report = () => onChange(map.getBounds().pad(0.25));
+    report();
+    map.on("moveend", report);
+    return () => map.off("moveend", report);
+  }, [map, onChange]);
+
+  return null;
+}
+
+function MarkerGlideGuard() {
+  const map = useMap();
+
+  useEffect(() => {
+    const guard = createGlideGuard(map.getContainer());
+    const events = {
+      viewprereset: guard.start,
+      zoomstart: guard.start,
+      zoomend: guard.end,
+      viewreset: guard.end,
+    };
+    map.on(events);
+    return () => {
+      map.off(events);
+      guard.dispose();
+    };
+  }, [map]);
+
+  return null;
+}
+
 function FollowVehicle({ vehicle, enabled }) {
   const map = useMap();
 
   useEffect(() => {
     if (!enabled || !vehicle) return;
-    map.panTo([vehicle.lat, vehicle.lon], { animate: true, duration: 0.8 });
+    // Match the 1 s linear marker glide so a followed bus stays centred.
+    map.panTo([vehicle.lat, vehicle.lon], { animate: true, duration: 1, easeLinearity: 1 });
   }, [enabled, map, vehicle]);
 
   return null;
@@ -751,6 +789,7 @@ function App() {
     document.documentElement.dataset.theme === "light" ? "light" : "dark"
   );
   const [following, setFollowing] = useState(false);
+  const [glideArea, setGlideArea] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   const [nearbyStops, setNearbyStops] = useState([]);
   const [authenticated, setAuthenticated] = useState(false);
@@ -1274,6 +1313,8 @@ function App() {
         <div className="content">
         <div className="map-wrap">
           <MapContainer center={center} zoom={11} className="map">
+            <MarkerGlideGuard />
+            <MapViewBounds onChange={setGlideArea} />
 
 
 
@@ -1406,6 +1447,7 @@ function App() {
                   v,
                   selectedVehicle?.vehicle_id === v.vehicle_id
                     && selectedVehicle?.trip_id === v.trip_id,
+                  Boolean(glideArea?.contains([v.lat, v.lon])),
                 )}
                 eventHandlers={{
                   click: () => {

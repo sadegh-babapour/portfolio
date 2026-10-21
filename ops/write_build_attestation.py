@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Write the Railway build attestation for the Python services' build root (design §3.4).
 
-The repository root is the build root of portfolio, transit-poller and
-sec-research-refresh. The marker is `.bizqlab-build-attestation.json` directly
-inside it, bound to this Railway service, environment and (when Railway supplies
-it) commit. It holds no secrets and is ignored by Git.
+The repository root is the build root of portfolio and transit-poller. The
+marker is `.bizqlab-build-attestation.json` directly inside it, bound to this
+Railway service, environment and (when Railway supplies it) commit. It holds no secrets and is ignored by Git.
 
 Inert until a Railway build command calls it (see the M1 deployment checklist).
 It never runs on a workstation: it requires the Railway build identifiers and

@@ -9,7 +9,7 @@ if __name__ in {"__main__", "__mp_main__"}:
     bootstrap_entry_point("web")
 
 from fastapi import HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from nicegui import app as fastapi_app
 from nicegui import ui
@@ -67,13 +67,19 @@ async def resume_document(download: bool = False):
         },
     )
 
+# Financial Research was retired on 2026-10-21; old links and search results land on
+# the projects page instead of a 404.
+@fastapi_app.get('/research/financials', include_in_schema=False)
+@fastapi_app.get('/research/financials/{rest:path}', include_in_schema=False)
+async def retired_financial_research(rest: str = ''):
+    return RedirectResponse('/projects', status_code=301)
+
 # ── pages ─────────────────────────────────────────────────────────
 def _import_pages():
     import app.pages.about  # noqa: F401
     import app.pages.contact  # noqa: F401
     import app.pages.dashboard  # noqa: F401
     import app.pages.home  # noqa: F401
-    import app.pages.financial_research  # noqa: F401
     import app.pages.projects  # noqa: F401
     import app.pages.resume  # noqa: F401
     import app.pages.legal  # noqa: F401

@@ -13,16 +13,13 @@ test("mobile map attribution remains at the bottom edge", () => {
   assert.match(mobileAttributionPosition, /bottom:\s*0/);
 });
 
-test("transit navigation links back to financial research", () => {
+test("the retired financial research page is not in the navigation", () => {
   const navigation = JSON.parse(readFileSync(
     new URL("../../content/navigation.json", import.meta.url),
     "utf8",
   ));
 
-  assert.deepEqual(
-    navigation.links.find(([label]) => label === "Financial Research"),
-    ["Financial Research", "/research/financials"],
-  );
+  assert.equal(navigation.links.some(([, href]) => href.startsWith("/research")), false);
 });
 
 test("the transit header takes its links from the shared navigation file", () => {

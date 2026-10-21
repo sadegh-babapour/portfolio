@@ -28,11 +28,6 @@ class WebBoundaryTests(unittest.TestCase):
                 "/projects",
                 "/contact",
                 "/dashboard",
-                "/research/financials",
-                "/research/financials/paypal",
-                "/research/financials/company/{ticker}",
-                "/research/financials/comparisons/payments",
-                "/research/financials/sectors/{industry_key}",
                 "/blog",
                 "/blog/{slug}",
                 "/account",
@@ -78,6 +73,22 @@ class WebBoundaryTests(unittest.TestCase):
         self.assertFalse(any(path and path.startswith("/api/poller") for path in route_paths))
         self.assertFalse(any(path and path.startswith("/api/debug") for path in route_paths))
         self.assertFalse(any(path and path.startswith("/api/lrt") for path in route_paths))
+
+    def test_retired_financial_research_links_redirect_to_projects(self):
+        import asyncio
+
+        from app.blog.api import STATIC_SITEMAP_PATHS
+
+        research_paths = {
+            path
+            for route in nicegui_app.routes
+            if (path := getattr(route, "path", None)) and path.startswith("/research")
+        }
+        self.assertEqual(research_paths, {"/research/financials", "/research/financials/{rest:path}"})
+        response = asyncio.run(web_main.retired_financial_research("company/pypl"))
+        self.assertEqual(response.status_code, 301)
+        self.assertEqual(response.headers["location"], "/projects")
+        self.assertFalse(any(path.startswith("/research") for path in STATIC_SITEMAP_PATHS))
 
     def test_resume_path_defaults_to_the_ignored_static_document(self):
         with patch.dict(os.environ, {}, clear=True):

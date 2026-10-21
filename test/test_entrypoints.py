@@ -33,13 +33,11 @@ ALEMBIC = [PY, "-m", "alembic", "upgrade", "head"]
 POLLER = [PY, "-m", "poller.poll_calgary_gtfs_rt_current", "--once"]
 STATIC_SCRIPT = [PY, "scripts/bootstrap_transit_db.py"]
 STATIC_MODULE = [PY, "-m", "scripts.bootstrap_transit_db"]
-SEC_REFRESH = [PY, "-m", "scripts.run_sec_research_refresh", "--write", "--trigger", "scheduled", "--max-attempts", "1"]
-SEC_INGEST = [PY, "-m", "scripts.ingest_sec_company", "320193", "--write"]
 LAUNCHER = [PY, "ops/dev.py", "check", "--expected-db", "portfolio_dev"]
 
 ALL_COMMANDS = {
     "web": WEB, "alembic": ALEMBIC, "poller": POLLER, "static-script": STATIC_SCRIPT,
-    "static-module": STATIC_MODULE, "sec-refresh": SEC_REFRESH, "sec-ingest": SEC_INGEST, "launcher": LAUNCHER,
+    "static-module": STATIC_MODULE, "launcher": LAUNCHER,
 }
 CONNECT_EVENTS = {"dev_connect", "production_connect", "production_engine", "sql"}
 
@@ -143,7 +141,7 @@ class RefusalTests(EntrypointCase):
     def test_unattested_production_is_refused(self):
         for attestation, label in ((None, "absent"), ({**ATTESTATION, "railway_service_id": "svc-2"}, "cross-service"),
                                    ({**ATTESTATION, "build_root": "backend/transit_api"}, "wrong build root")):
-            for name in ("web", "alembic", "poller", "sec-refresh"):
+            for name in ("web", "alembic", "poller"):
                 with self.subTest(name=name, attestation=label):
                     result = run(ALL_COMMANDS[name], env=production_env(DATABASE_URL=PROD_URL),
                                  fs={"kind": "production", "attestation": attestation})
@@ -182,10 +180,9 @@ class DevelopmentTests(EntrypointCase):
             "static-script": (STATIC_SCRIPT, {}, 0, "transit-bootstrap"),
             "static-module": (STATIC_MODULE, {}, 0, "transit-bootstrap"),
             "launcher": (LAUNCHER, {}, 0, "launcher"),
-            # The poller and SEC refresh reach the network after the database gate; the
-            # isolation shim blocks it, so they exit non-zero after their first SQL.
+            # The poller reaches the network after the database gate; the isolation
+            # shim blocks it, so it exits non-zero after its first SQL.
             "poller": (POLLER, {}, None, "poller"),
-            "sec-refresh": (SEC_REFRESH, {}, None, "sec-refresh"),
         }
         for name, (command, options, exit_code, purpose) in cases.items():
             with self.subTest(name):
@@ -195,8 +192,8 @@ class DevelopmentTests(EntrypointCase):
                 self.assertEqual([e["purpose"] for e in result.of("bootstrapped")], [purpose], name)
                 self.assertEqual([e["mode"] for e in result.of("bootstrapped")], ["development"], name)
                 self.assertEqual(result.of("dotenv"), [], name)
-                if name in ("poller", "sec-refresh"):
-                    # Both open their database before the network fetch fails.
+                if name == "poller":
+                    # It opens its database before the network fetch fails.
                     self.assertTrue(result.of("dev_connect"), f"{name}\n{result.output()[-3000:]}")
                     self.assertNotEqual(result.code, 0)
                 self.assert_identity_first(result, name)
@@ -240,14 +237,6 @@ class DevelopmentTests(EntrypointCase):
         self.assertEqual(len(result.of("dev_connect")), 2)
         self.assert_identity_first(result, "launcher run")
 
-    def test_sec_dry_runs_do_not_bootstrap_or_connect(self):
-        for command in ([PY, "-m", "scripts.ingest_sec_company", "320193"],
-                        [PY, "-m", "scripts.run_sec_research_refresh", "--max-attempts", "1"]):
-            with self.subTest(command[2]):
-                result = run(command)
-                self.assertEqual(result.of("bootstrap"), [])
-                self.assertEqual([e for e in result.events if e["event"] in CONNECT_EVENTS], [])
-
 
 class ProductionTests(EntrypointCase):
     """Attested production keeps today's connection parameters after the gate."""
@@ -290,7 +279,7 @@ class ProductionTests(EntrypointCase):
 class SourceScanTests(unittest.TestCase):
     """No alternate configuration or connection path bypasses the gate."""
 
-    PY_SOURCES = ("app", "scripts", "poller", "migrations", "ops", "financial_research")
+    PY_SOURCES = ("app", "scripts", "poller", "migrations", "ops")
 
     def python_files(self):
         for root in self.PY_SOURCES:

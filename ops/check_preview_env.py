@@ -45,10 +45,9 @@ if __name__ == "__main__":
 from app import runtime_env as rt  # noqa: E402
 from app.contact.config import normalize_database_url  # noqa: E402
 
-SERVICES = ("portfolio", "transit-api", "transit-poller", "sec-research-refresh")
+SERVICES = ("portfolio", "transit-api", "transit-poller")
 EXCLUDED = {
     "transit-poller": "poller_excluded_from_preview",
-    "sec-research-refresh": "sec_refresh_excluded_from_preview",
 }
 # Variables pg reads for the transit API's connection; any other PG* is refused.
 PG_ALLOWED = ("PGHOST", "PGPORT", "PGDATABASE", "PGUSER", "PGPASSWORD", "PGSSLMODE", "PGCONNECT_TIMEOUT", "PGAPPNAME")

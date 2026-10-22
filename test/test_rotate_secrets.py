@@ -5,6 +5,7 @@ A fake Railway CLI stands in for the real one; nothing here reaches Railway.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import unittest
 
@@ -13,23 +14,32 @@ from ops import rotate_secrets as rs
 DB_PASSWORD = "old-db-password-SYNTHETIC"
 RESEND = "SYNTHETIC-old-resend-value"
 NEW_KEY = "SYNTHETIC-new-provider-value"
+# Stored the way Railway stores them: the Postgres template's own values reference
+# POSTGRES_PASSWORD; portfolio references Postgres; transit-api holds a pasted copy.
 PROJECT = {
-    "Postgres": {"POSTGRES_PASSWORD": DB_PASSWORD, "PGPASSWORD": DB_PASSWORD, "PGUSER": "postgres",
-                 "DATABASE_URL": f"postgresql://postgres:{DB_PASSWORD}@postgres.railway.internal:5432/railway",
-                 "DATABASE_PUBLIC_URL": f"postgresql://postgres:{DB_PASSWORD}@shuttle.proxy.rlwy.net:41234/railway",
+    "Postgres": {"POSTGRES_PASSWORD": DB_PASSWORD, "PGPASSWORD": "${{POSTGRES_PASSWORD}}", "PGUSER": "postgres",
+                 "DATABASE_URL": "postgresql://postgres:${{POSTGRES_PASSWORD}}@postgres.railway.internal:5432/railway",
+                 "DATABASE_PUBLIC_URL": "postgresql://postgres:${{POSTGRES_PASSWORD}}@shuttle.proxy.rlwy.net:41234/railway",
                  "RAILWAY_PRIVATE_DOMAIN": "postgres.railway.internal"},
-    "portfolio": {"DATABASE_URL": f"postgresql://postgres:{DB_PASSWORD}@postgres.railway.internal:5432/railway",
+    "portfolio": {"DATABASE_URL": "${{Postgres.DATABASE_URL}}",
                   "RESEND_API_KEY": RESEND, "CONTACT_TOKEN_PEPPER": "old-pepper-SYNTHETIC",
                   "CONTACT_IP_HASH_KEY": "old-hash-SYNTHETIC", "ANTHROPIC_API_KEY": "sk-ant-SYNTHETIC",
-                  "CONTACT_TO_EMAIL": "owner@example.com"},
+                  "CONTACT_TO_EMAIL": "owner@example.com", "TURNSTILE_SITE_KEY": "0x-site-SYNTHETIC"},
     "transit-api": {"PGPASSWORD": DB_PASSWORD, "PGHOST": "postgres.railway.internal"},
 }
 VALUES = [v for variables in PROJECT.values() for v in variables.values() if "SYNTHETIC" in v]
+REFERENCE = re.compile(r"\$\{\{(?:([\w-]+)\.)?(\w+)\}\}")
 
 
 class FakeRailway:
+    """Lists rendered values (references resolved), like `railway variable list --json`."""
+
     def __init__(self, project=PROJECT, proxies=("proxy",)):
-        self.project, self.proxies, self.calls = project, list(proxies), []
+        self.project = {service: dict(variables) for service, variables in project.items()}
+        self.proxies, self.calls = list(proxies), []
+
+    def render(self, service, value):
+        return REFERENCE.sub(lambda m: self.render(m[1] or service, self.project[m[1] or service][m[2]]), value)
 
     def __call__(self, args, stdin=None):
         self.calls.append((list(args), stdin))
@@ -37,10 +47,12 @@ class FakeRailway:
             service = args[args.index("--service") + 1]
             if service not in self.project:
                 return subprocess.CompletedProcess(args, 1, "", "service not found")
-            return subprocess.CompletedProcess(args, 0, json.dumps(self.project[service]), "")
+            rendered = {k: self.render(service, v) for k, v in self.project[service].items()}
+            return subprocess.CompletedProcess(args, 0, json.dumps(rendered), "")
         if args[:2] == ["tcp-proxy", "list"]:
             return subprocess.CompletedProcess(args, 0, json.dumps(self.proxies), "")
         if args[:2] == ["variable", "set"]:
+            self.project[args[args.index("--service") + 1]][args[2]] = stdin
             return subprocess.CompletedProcess(args, 0, "{}", "")
         return subprocess.CompletedProcess(args, 1, "", "unexpected")
 
@@ -72,6 +84,7 @@ class InventoryTests(unittest.TestCase):
         self.assertRegex(text, r"ANTHROPIC_API_KEY\s+SECRET, NOT IN REGISTRY")
         self.assertRegex(text, r"RESEND_API_KEY\s+secret \(provider\)")
         self.assertRegex(text, r"CONTACT_TO_EMAIL\s+setting")
+        self.assertRegex(text, r"TURNSTILE_SITE_KEY\s+setting \(public by design\)")
         self.assertIn("Postgres public TCP proxy: ON", text)
         self.assertIn("transit-poller: not found", text)
 
@@ -121,7 +134,7 @@ class RotateTests(unittest.TestCase):
 
     def test_only_services_that_already_have_the_variable_are_written(self):
         _, railway, _, _ = self.rotate(apply=True, secret_answers=[NEW_KEY])
-        written = {(a[a.index("--service") + 1], a[2]) for a, _ in railway.sets()}
+        written = {(a[a.index("--service") + 1], a[2]) for a, _ in railway.sets() if a[2] in rs.KNOWN}
         self.assertEqual(written, {("Postgres", "POSTGRES_PASSWORD"), ("portfolio", "RESEND_API_KEY"),
                                    ("portfolio", "CONTACT_TOKEN_PEPPER"), ("portfolio", "CONTACT_IP_HASH_KEY")})
 
@@ -131,6 +144,31 @@ class RotateTests(unittest.TestCase):
         self.assertEqual(clipped[0], f"ALTER ROLE postgres WITH PASSWORD '{staged}';")
         self.assertEqual(clipped[-1], "")
         self.assertNotEqual(staged, DB_PASSWORD)
+
+    def test_pasted_copies_become_references_and_the_database_password_goes_last(self):
+        code, railway, out, _ = self.rotate(apply=True, secret_answers=[NEW_KEY])
+        self.assertEqual(code, 0, out.text())
+        writes = [(a[a.index("--service") + 1], a[2], s) for a, s in railway.sets()]
+        self.assertIn(("transit-api", "PGPASSWORD", "${{Postgres.PGPASSWORD}}"), writes)
+        self.assertIn(("portfolio", "DATABASE_URL", "${{Postgres.DATABASE_URL}}"), writes)
+        self.assertEqual(writes[-1][:2], ("Postgres", "POSTGRES_PASSWORD"))
+        self.assertLess(writes.index(("transit-api", "PGPASSWORD", "${{Postgres.PGPASSWORD}}")), len(writes) - 1)
+
+    def test_every_connection_is_checked_for_the_new_password(self):
+        _, _, out, _ = self.rotate(apply=True)
+        for line in ("ok: PGPASSWORD on Postgres", "ok: DATABASE_URL on Postgres",
+                     "ok: DATABASE_URL on portfolio", "ok: PGPASSWORD on transit-api"):
+            self.assertIn(line, out.text())
+        self.assertNotIn("STALE", out.text())
+
+    def test_a_connection_that_differs_is_left_alone_and_flagged(self):
+        project = {**PROJECT, "transit-api": {"PGPASSWORD": "another-password-SYNTHETIC"}}
+        code, railway, out, _ = self.rotate(apply=True, railway=FakeRailway(project))
+        self.assertEqual(code, 1)
+        self.assertNotIn("transit-api", [a[a.index("--service") + 1] for a, _ in railway.sets()])
+        self.assertIn("PGPASSWORD on transit-api differs from the Postgres service", out.text())
+        self.assertIn("STALE: PGPASSWORD on transit-api", out.text())
+        self.assertNotIn("another-password-SYNTHETIC", out.text())
 
     def test_database_password_not_staged_unless_the_owner_confirms(self):
         _, railway, out, clipped = self.rotate(apply=True, answers=("no",))

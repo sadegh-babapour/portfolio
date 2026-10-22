@@ -25,7 +25,51 @@ jobs:
           node-version: "22" # the cross-language parity tests run the Node resolver
       - run: python -m pip install -r requirements.txt
       - run: python test/run_isolated.py
-      - run: python -m compileall -q app poller scripts test migrations ops
+      - run: python -m compileall -q app poller scripts test migrations ops pipelines test_data
+
+  # The reporting pipeline against a real Postgres that exists only for this job:
+  # loader behaviour (re-runs, revisions, rollback) on a recorded API response, then
+  # every dbt model and test. No network data source and no secrets.
+  data:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: reporting_ci
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci-only-throwaway
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ci -d reporting_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATA_CI_PG_HOST: localhost
+      DATA_CI_PG_PORT: "5432"
+      DATA_CI_PG_DBNAME: reporting_ci
+      DATA_CI_PG_USER: ci
+      DATA_CI_PG_PASSWORD: ci-only-throwaway
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-data.txt
+      # The loader's two libraries at the app's pins (the full app pins protobuf 5, dbt needs 6).
+      - run: python -m pip install $(grep -E '^(requests|psycopg2-binary)==' requirements.txt)
+      - run: python -m venv .venv-data && .venv-data/bin/pip install -r requirements-data.txt
+      - run: .venv-data/bin/dbt parse --project-dir warehouse --profiles-dir warehouse
+        env:
+          DBT_PG_HOST: localhost
+          DBT_PG_PORT: "5432"
+          DBT_PG_DBNAME: reporting_ci
+          DBT_PG_USER: ci
+          DBT_ENV_SECRET_PG_PASSWORD: ci-only-throwaway
+          DBT_PG_SSLMODE: disable
+      - run: python -m unittest discover -s test_data -v
 
   transit-api:
     runs-on: ubuntu-latest

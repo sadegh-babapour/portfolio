@@ -1,0 +1,4 @@
+# dbt for the reporting warehouse (warehouse/). Installed in .venv-data, never in the
+# web service: dbt needs protobuf 6 and the transit poller pins protobuf 5.
+dbt-core==1.12.5
+dbt-postgres==1.11.0

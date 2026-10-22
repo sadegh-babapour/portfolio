@@ -1,0 +1,40 @@
+version: 2
+
+models:
+  - name: dim_series
+    description: One row per series, with our name, category and the Bank's description.
+    columns:
+      - name: series_id
+        data_tests: [unique, not_null]
+      - name: measure
+        data_tests: [unique, not_null]
+      - name: source_label
+        description: Null would mean the loader has not stored this series' metadata yet.
+        data_tests: [not_null]
+
+  - name: fct_rates_daily
+    description: One row per series per date with a value, and the change from its previous published day.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [series_id, obs_date]
+    columns:
+      - name: series_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_series')
+                field: series_id
+      - name: obs_date
+        data_tests: [not_null]
+      - name: value
+        data_tests: [not_null]
+
+  - name: mart_canada_rates_daily
+    description: >
+      One row per date with the policy rate, CORRA, 2/5/10-year yields, USD/CAD and the
+      10y − 2y spread in basis points. Source: Bank of Canada (attribution required).
+    columns:
+      - name: obs_date
+        data_tests: [unique, not_null]

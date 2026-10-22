@@ -1,0 +1,282 @@
+{
+ "observations": [
+  {
+   "AVG.INTWO": {
+    "v": "2.2800"
+   },
+   "BD.CDN.10YR.DQ.YLD": {
+    "v": "3.46"
+   },
+   "BD.CDN.2YR.DQ.YLD": {
+    "v": "2.60"
+   },
+   "BD.CDN.5YR.DQ.YLD": {
+    "v": "2.98"
+   },
+   "FXUSDCAD": {
+    "v": "1.3748"
+   },
+   "V39079": {
+    "v": "2.25"
+   },
+   "d": "2025-12-22"
+  },
+  {
+   "AVG.INTWO": {
+    "v": "2.3000"
+   },
+   "BD.CDN.10YR.DQ.YLD": {
+    "v": "3.42"
+   },
+   "BD.CDN.2YR.DQ.YLD": {
+    "v": "2.57"
+   },
+   "BD.CDN.5YR.DQ.YLD": {
+    "v": "2.94"
+   },
+   "FXUSDCAD": {
+    "v": "1.3705"
+   },
+   "V39079": {
+    "v": "2.25"
+   },
+   "d": "2025-12-23"
+  },
+  {
+   "AVG.INTWO": {
+    "v": "2.3000"
+   },
+   "BD.CDN.10YR.DQ.YLD": {
+    "v": "3.40"
+   },
+   "BD.CDN.2YR.DQ.YLD": {
+    "v": "2.57"
+   },
+   "BD.CDN.5YR.DQ.YLD": {
+    "v": "2.93"
+   },
+   "FXUSDCAD": {
+    "v": "1.3674"
+   },
+   "V39079": {
+    "v": "2.25"
+   },
+   "d": "2025-12-24"
+  },
+  {
+   "AVG.INTWO": {
+    "v": "2.3000"
+   },
+   "BD.CDN.10YR.DQ.YLD": {
+    "v": "3.39"
+   },
+   "BD.CDN.2YR.DQ.YLD": {
+    "v": "2.56"
+   },
+   "BD.CDN.5YR.DQ.YLD": {
+    "v": "2.92"
+   },
+   "FXUSDCAD": {
+    "v": "1.3686"
+   },
+   "V39079": {
+    "v": "2.25"
+   },
+   "d": "2025-12-29"
+  },
+  {
+   "AVG.INTWO": {
+    "v": "2.2900"
+   },
+   "BD.CDN.10YR.DQ.YLD": {
+    "v": "3.41"
+   },
+   "BD.CDN.2YR.DQ.YLD": {
+    "v": "2.58"
+   },
+   "BD.CDN.5YR.DQ.YLD": {
+    "v": "2.95"
+   },
+   "FXUSDCAD": {
+    "v": "1.3693"
+   },
+   "V39079": {
+    "v": "2.25"
+   },
+   "d": "2025-12-30"
+  },
+  {
+   "AVG.INTWO": {
+    "v": "2.3000"
+   },
+   "BD.CDN.10YR.DQ.YLD": {
+    "v": "3.42"
+   },
+   "BD.CDN.2YR.DQ.YLD": {
+    "v": "2.58"
+   },
+   "BD.CDN.5YR.DQ.YLD": {
+    "v": "2.96"
+   },
+   "FXUSDCAD": {
+    "v": "1.3706"
+   },
+   "V39079": {
+    "v": "2.25"
+   },
+   "d": "2025-12-31"
+  },
+  {
+   "V39079": {
+    "v": "2.25"
+   },
+   "d": "2026-01-01"
+  },
+  {
+   "AVG.INTWO": {
+    "v": "2.2900"
+   },
+   "BD.CDN.10YR.DQ.YLD": {
+    "v": "3.47"
+   },
+   "BD.CDN.2YR.DQ.YLD": {
+    "v": "2.61"
+   },
+   "BD.CDN.5YR.DQ.YLD": {
+    "v": "3.00"
+   },
+   "FXUSDCAD": {
+    "v": "1.3737"
+   },
+   "V39079": {
+    "v": "2.25"
+   },
+   "d": "2026-01-02"
+  },
+  {
+   "AVG.INTWO": {
+    "v": "2.2800"
+   },
+   "BD.CDN.10YR.DQ.YLD": {
+    "v": "3.42"
+   },
+   "BD.CDN.2YR.DQ.YLD": {
+    "v": "2.57"
+   },
+   "BD.CDN.5YR.DQ.YLD": {
+    "v": "2.94"
+   },
+   "FXUSDCAD": {
+    "v": "1.3768"
+   },
+   "V39079": {
+    "v": "2.25"
+   },
+   "d": "2026-01-05"
+  },
+  {
+   "AVG.INTWO": {
+    "v": "2.2800"
+   },
+   "BD.CDN.10YR.DQ.YLD": {
+    "v": "3.43"
+   },
+   "BD.CDN.2YR.DQ.YLD": {
+    "v": "2.59"
+   },
+   "BD.CDN.5YR.DQ.YLD": {
+    "v": "2.96"
+   },
+   "FXUSDCAD": {
+    "v": "1.3789"
+   },
+   "V39079": {
+    "v": "2.25"
+   },
+   "d": "2026-01-06"
+  }
+ ],
+ "seriesDetail": {
+  "AVG.INTWO": {
+   "dateFormat": "daily",
+   "description": "A measure of the cost of overnight general collateral funding in Canadian dollars using Government of Canada treasury bills and bonds as collateral for repurchase transactions (repos).",
+   "dimension": {
+    "key": "d",
+    "name": "Date"
+   },
+   "label": "Canadian Overnight Repo Rate Average (CORRA)",
+   "metadata": {
+    "frequency": "Business daily",
+    "unit": "Percent"
+   }
+  },
+  "BD.CDN.10YR.DQ.YLD": {
+   "dateFormat": "daily",
+   "description": "The yield on the Government of Canada 10-year benchmark bond. This series represents the prevailing market interest rate for the 10-year Government of Canada bond and is used as a reference for financial market analysis and reporting.",
+   "dimension": {
+    "key": "d",
+    "name": "Date"
+   },
+   "label": "Benchmark bond yield, 10-year",
+   "metadata": {
+    "frequency": "Business daily",
+    "unit": "Percent"
+   }
+  },
+  "BD.CDN.2YR.DQ.YLD": {
+   "dateFormat": "daily",
+   "description": "The yield on the Government of Canada 2-year benchmark bond. This series reflects the prevailing interest rate for the 2-year term and is used to monitor short-term government borrowing costs.",
+   "dimension": {
+    "key": "d",
+    "name": "Date"
+   },
+   "label": "Benchmark bond yield, 2-year",
+   "metadata": {
+    "frequency": "Business daily",
+    "unit": "Percent"
+   }
+  },
+  "BD.CDN.5YR.DQ.YLD": {
+   "dateFormat": "daily",
+   "description": "The yield on the Government of Canada 5-year benchmark bond. This series reports the prevailing yield for the 5-year maturity point on the Canadian government bond yield curve.",
+   "dimension": {
+    "key": "d",
+    "name": "Date"
+   },
+   "label": "Benchmark bond yield, 5-year",
+   "metadata": {
+    "frequency": "Business daily",
+    "unit": "Percent"
+   }
+  },
+  "FXUSDCAD": {
+   "dateFormat": "daily",
+   "description": "Daily average exchange rate of the US dollar in Canadian dollars.",
+   "dimension": {
+    "key": "d",
+    "name": "Date"
+   },
+   "label": "USD/CAD",
+   "metadata": {
+    "frequency": "Business daily",
+    "unit": "Canadian dollars per US dollar"
+   }
+  },
+  "V39079": {
+   "dateFormat": "daily",
+   "description": "Also called the policy interest rate, the average rate that the Bank of Canada wants to see in the market for overnight money market financing. (V39079)",
+   "dimension": {
+    "key": "d",
+    "name": "Date"
+   },
+   "label": "Target for the overnight rate (business daily)",
+   "metadata": {
+    "frequency": "Business daily",
+    "unit": "Percent"
+   }
+  }
+ },
+ "terms": {
+  "url": "https://www.bankofcanada.ca/terms/"
+ }
+}

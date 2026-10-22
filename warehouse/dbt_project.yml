@@ -1,0 +1,27 @@
+# Reporting models over the raw schema the pipelines load. Run it through
+# `python -m pipelines.run_dbt <command>` so dbt only ever sees the approved database.
+name: bizqlab_warehouse
+version: "1.0.0"
+config-version: 2
+profile: bizqlab
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+flags:
+  send_anonymous_usage_stats: false
+
+models:
+  bizqlab_warehouse:
+    staging:
+      +schema: staging
+      +materialized: view    # thin renames and types; always current
+    marts:
+      +schema: marts
+      +materialized: table   # what dashboards read; rebuilt by each run
+
+seeds:
+  bizqlab_warehouse:
+    +schema: staging

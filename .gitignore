@@ -20,6 +20,7 @@ lib64/
 # Virtual environments
 .env
 .venv
+.venv-data/
 myvenv/
 env/
 venv/
@@ -81,6 +82,7 @@ docs/CHAT_HISTORY_RAW.md
 !/openspec/changes/local-db-isolation/design.md
 !/openspec/changes/local-db-isolation/tasks.md
 !/openspec/changes/local-db-isolation/specs/local-db-isolation/spec.md
+!/openspec/changes/boc-reporting-pipeline/proposal.md
 
 # Railway build attestation markers (generated during the Railway build; never committed)
 /.bizqlab-build-attestation.json
@@ -88,3 +90,8 @@ docs/CHAT_HISTORY_RAW.md
 
 # Added by ggshield
 .cache_ggshield
+
+# dbt build output and logs
+/warehouse/target/
+/warehouse/logs/
+/warehouse/dbt_packages/

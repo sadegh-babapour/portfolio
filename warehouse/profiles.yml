@@ -1,0 +1,16 @@
+# No values here. pipelines/run_dbt.py fills these from the approved development
+# target; CI fills them for its throwaway Postgres. dbt hides any variable whose
+# name starts with DBT_ENV_SECRET_ from its logs.
+bizqlab:
+  target: default
+  outputs:
+    default:
+      type: postgres
+      host: "{{ env_var('DBT_PG_HOST') }}"
+      port: "{{ env_var('DBT_PG_PORT') | int }}"
+      dbname: "{{ env_var('DBT_PG_DBNAME') }}"
+      user: "{{ env_var('DBT_PG_USER') }}"
+      password: "{{ env_var('DBT_ENV_SECRET_PG_PASSWORD') }}"
+      sslmode: "{{ env_var('DBT_PG_SSLMODE') }}"
+      schema: staging
+      threads: 4

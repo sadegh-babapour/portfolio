@@ -1,0 +1,7 @@
+series_id,measure,category,display_name,min_expected,max_expected
+V39079,policy_rate,rate,Bank of Canada policy rate (%),0,10
+AVG.INTWO,corra,rate,CORRA overnight repo rate (%),-0.5,10
+BD.CDN.2YR.DQ.YLD,gov_2y,yield,2-year Government of Canada yield (%),-1,12
+BD.CDN.5YR.DQ.YLD,gov_5y,yield,5-year Government of Canada yield (%),-1,12
+BD.CDN.10YR.DQ.YLD,gov_10y,yield,10-year Government of Canada yield (%),-1,12
+FXUSDCAD,usd_cad,fx,USD/CAD (Canadian dollars per US dollar),0.9,2

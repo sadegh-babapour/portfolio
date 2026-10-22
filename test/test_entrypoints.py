@@ -34,10 +34,12 @@ POLLER = [PY, "-m", "poller.poll_calgary_gtfs_rt_current", "--once"]
 STATIC_SCRIPT = [PY, "scripts/bootstrap_transit_db.py"]
 STATIC_MODULE = [PY, "-m", "scripts.bootstrap_transit_db"]
 LAUNCHER = [PY, "ops/dev.py", "check", "--expected-db", "portfolio_dev"]
+BOC_LOADER = [PY, "-m", "pipelines.bank_of_canada"]
+DBT_WRAPPER = [PY, "-m", "pipelines.run_dbt", "build"]
 
 ALL_COMMANDS = {
     "web": WEB, "alembic": ALEMBIC, "poller": POLLER, "static-script": STATIC_SCRIPT,
-    "static-module": STATIC_MODULE, "launcher": LAUNCHER,
+    "static-module": STATIC_MODULE, "launcher": LAUNCHER, "boc-loader": BOC_LOADER, "dbt-wrapper": DBT_WRAPPER,
 }
 CONNECT_EVENTS = {"dev_connect", "production_connect", "production_engine", "sql"}
 
@@ -183,6 +185,8 @@ class DevelopmentTests(EntrypointCase):
             # The poller reaches the network after the database gate; the isolation
             # shim blocks it, so it exits non-zero after its first SQL.
             "poller": (POLLER, {}, None, "poller"),
+            # The loader records its run in the database, then the shim blocks the API fetch.
+            "boc-loader": (BOC_LOADER, {}, None, "bank-of-canada"),
         }
         for name, (command, options, exit_code, purpose) in cases.items():
             with self.subTest(name):
@@ -214,7 +218,8 @@ class DevelopmentTests(EntrypointCase):
         wrong = ("portfolio_dev", "portfolio_dev_user", "10.0.0.9", 5432)
         for name, command, options in (("static-script", STATIC_SCRIPT, {}), ("poller", POLLER, {}),
                                        ("alembic", ALEMBIC, {}), ("web", WEB, {"stub_ui_run": True}),
-                                       ("launcher", LAUNCHER, {})):
+                                       ("launcher", LAUNCHER, {}), ("boc-loader", BOC_LOADER, {}),
+                                       ("dbt-wrapper", DBT_WRAPPER, {})):
             with self.subTest(name):
                 result = run(command, identity=wrong, **options)
                 self.assertNotEqual(result.code, 0, name)
@@ -269,6 +274,15 @@ class ProductionTests(EntrypointCase):
         for result in (web, alembic):
             self.assertEqual(result.of("dev_connect") + result.of("sql"), [])
 
+    def test_pipelines_refuse_production_until_a_reporting_database_exists(self):
+        for name, command in (("boc-loader", BOC_LOADER), ("dbt-wrapper", DBT_WRAPPER)):
+            with self.subTest(name):
+                result = self.run_production(command)
+                self.assertEqual(result.code, 2, result.output()[-2000:])
+                self.assertIn("production has no reporting database yet", result.output())
+                self.assertEqual([e["mode"] for e in result.of("bootstrapped")], ["production"], name)
+                self.assertEqual([e for e in result.events if e["event"] in CONNECT_EVENTS], [], name)
+
     def test_launcher_refuses_production(self):
         result = self.run_production(LAUNCHER)
         self.assertEqual(result.code, 2)
@@ -279,7 +293,7 @@ class ProductionTests(EntrypointCase):
 class SourceScanTests(unittest.TestCase):
     """No alternate configuration or connection path bypasses the gate."""
 
-    PY_SOURCES = ("app", "scripts", "poller", "migrations", "ops")
+    PY_SOURCES = ("app", "scripts", "poller", "migrations", "ops", "pipelines")
 
     def python_files(self):
         for root in self.PY_SOURCES:

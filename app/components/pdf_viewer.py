@@ -26,41 +26,29 @@ def create_pdf_viewer(pdf_url: str):
         justify-content: center;
         min-height: 44px;
         padding: 0.65rem 1rem;
-        border: 1px solid #5898d4;
-        border-radius: 0.5rem;
-        color: #245d91;
-        font-weight: 700;
+        border: 1px solid var(--bq-blue);
+        border-radius: 10px;
+        color: var(--bq-blue);
+        font-weight: 600;
         text-decoration: none;
       }}
       .resume-actions a.primary {{
-        background: #5898d4;
+        background: var(--bq-blue);
         color: white;
       }}
       .resume-pdf-frame {{
         width: 100%;
         height: clamp(640px, 82vh, 1100px);
         overflow: hidden;
-        border: 1px solid #d7dde5;
-        border-radius: 0.75rem;
-        background: #f3f4f6;
-        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
+        border: 1px solid var(--bq-line);
+        border-radius: var(--bq-radius);
+        background: var(--bq-panel);
+        box-shadow: var(--bq-shadow);
       }}
       .resume-pdf-frame iframe {{
         width: 100%;
         height: 100%;
         border: 0;
-      }}
-      html[data-theme="dark"] .resume-actions a {{
-        border-color: #93c5fd;
-        color: #bfdbfe;
-      }}
-      html[data-theme="dark"] .resume-actions a.primary {{
-        background: #3b82f6;
-        color: #fff;
-      }}
-      html[data-theme="dark"] .resume-pdf-frame {{
-        border-color: #4b5563;
-        background: #1f2937;
       }}
       @media (max-width: 700px) {{
         .resume-actions {{ flex-direction: column; }}

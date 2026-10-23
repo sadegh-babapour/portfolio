@@ -8,7 +8,7 @@ from app.components.navbar import with_layout
 @contextmanager
 def _legal_shell(title: str, updated: str):
     with ui.column().classes('w-full max-w-4xl mx-auto px-4 py-8 sm:px-8 gap-5'):
-        ui.label(title).classes('text-4xl')
+        ui.label(title).classes('text-4xl sm:text-5xl font-bold')
         ui.label(f'Last updated: {updated}').classes('text-sm text-grey-7')
         yield
 

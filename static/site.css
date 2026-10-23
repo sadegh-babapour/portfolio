@@ -1,0 +1,162 @@
+/* Site-wide look: the logo palette as tokens, and the Quasar defaults NiceGUI ships
+   (blue #5898d4, Roboto, grey cards, all-caps buttons) brought in line with it.
+   Linked from every page by app/components/navbar.py. The header has its own file,
+   static/portfolio-nav.css, because the transit map bundles it too.
+   Chart colours live in app/components/charts.py: ECharts can't read CSS variables. */
+
+:root {
+  --bq-navy: #0b1f4d;
+  --bq-blue: #1f6feb;
+  --bq-sky: #7fb2ff;
+  --bq-amber: #f2a93b;
+  --bq-red: #e5534b;
+  --bq-green: #1f9d6b;
+
+  --bq-page: #f4f7fc;
+  --bq-panel: #ffffff;
+  --bq-ink: #0b1f4d;
+  --bq-muted: #586b8f;
+  --bq-line: #dbe3f1;
+  --bq-field: #b7c3d9;
+  --bq-chip: #e8f0fe;
+  --bq-shadow: 0 1px 2px rgba(11, 31, 77, 0.06), 0 8px 24px rgba(11, 31, 77, 0.06);
+
+  --bq-font: "Avenir Next", Avenir, "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+  --bq-radius: 14px;
+}
+
+html[data-theme="dark"] {
+  --bq-blue: #4c8dff;
+  --bq-sky: #9cc4ff;
+  --bq-page: #0d1730;
+  --bq-panel: #13213f;
+  --bq-ink: #e8eef9;
+  --bq-muted: #9aa9c6;
+  --bq-line: #24365e;
+  --bq-field: #3a4f7a;
+  --bq-chip: #1b2d55;
+  --bq-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* Quasar's brand colour, set inline on <body> by NiceGUI; follows the theme. */
+body {
+  --q-primary: var(--bq-blue) !important;
+}
+
+html,
+body,
+.q-layout,
+.q-page,
+.q-page-container,
+.nicegui-content {
+  background: var(--bq-page);
+  color: var(--bq-ink);
+}
+
+body {
+  font-family: var(--bq-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Every page pads its own column, so the header can run edge to edge. */
+.nicegui-content {
+  padding: 0;
+}
+
+html[data-theme="dark"] body {
+  color-scheme: dark;
+}
+
+/* Cards: one style everywhere. */
+.q-card {
+  border: 1px solid var(--bq-line);
+  border-radius: var(--bq-radius);
+  background: var(--bq-panel);
+  color: var(--bq-ink);
+  box-shadow: var(--bq-shadow);
+}
+
+/* Buttons: sentence case, rounded like the cards. */
+.q-btn {
+  border-radius: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.text-grey-7,
+.text-grey-8,
+.text-grey {
+  color: var(--bq-muted) !important;
+}
+
+.q-separator {
+  background: var(--bq-line);
+}
+
+.q-chip--outline,
+.q-badge--outline {
+  border-color: var(--bq-line);
+}
+
+.q-expansion-item .q-item {
+  border-radius: 10px;
+}
+
+/* Quasar parts that keep a white or grey background in dark mode. */
+html[data-theme="dark"] .q-tab-panels,
+html[data-theme="dark"] .q-tab-panel,
+html[data-theme="dark"] .q-table__container,
+html[data-theme="dark"] .q-table thead,
+html[data-theme="dark"] .q-table tbody,
+html[data-theme="dark"] .q-table tr,
+html[data-theme="dark"] .q-timeline__content,
+html[data-theme="dark"] .q-field__control,
+html[data-theme="dark"] .q-menu {
+  background: var(--bq-panel);
+  color: var(--bq-ink);
+}
+
+html[data-theme="dark"] .q-field__native,
+html[data-theme="dark"] .q-field__input,
+html[data-theme="dark"] .q-field__label,
+html[data-theme="dark"] .q-field__marginal,
+html[data-theme="dark"] .q-tab,
+html[data-theme="dark"] .q-table th,
+html[data-theme="dark"] .q-table td,
+html[data-theme="dark"] .q-item {
+  color: var(--bq-ink);
+}
+
+html[data-theme="dark"] .q-field--outlined .q-field__control::before,
+html[data-theme="dark"] .q-table th,
+html[data-theme="dark"] .q-table td {
+  border-color: var(--bq-line);
+}
+
+/* Charts sit on their card. */
+.nicegui-echart {
+  background: transparent;
+}
+
+/* Footer: a slim line, not a second blue bar. */
+.q-footer.portfolio-footer {
+  border-top: 1px solid var(--bq-line);
+  background: var(--bq-panel);
+  color: var(--bq-muted);
+}
+
+.portfolio-footer a {
+  color: inherit;
+}
+
+.portfolio-footer a:hover {
+  color: var(--bq-blue);
+}
+
+/* Projects: the note under the build notes. */
+.portfolio-development-note.q-card {
+  border-color: var(--bq-sky);
+  background: var(--bq-chip);
+  box-shadow: none;
+}

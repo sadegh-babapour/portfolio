@@ -1,40 +1,5 @@
-/* Bizqlab palette, taken from the logo: navy ink, brand blue, and a sky tint, with
-   amber as the one warm accent. Used by the Canada rates page (app/pages/markets.py)
-   for now; the rest of the site can adopt the same tokens later.
-   Chart colours live in app/pages/markets.py (ECharts can't read CSS variables) and
-   are mid-tones that read on both themes. */
-
-:root {
-  --bq-navy: #0b1f4d;
-  --bq-blue: #1f6feb;
-  --bq-sky: #7fb2ff;
-  --bq-amber: #f2a93b;
-  --bq-red: #e5534b;
-  --bq-green: #1f9d6b;
-
-  --bq-page: #f4f7fc;
-  --bq-panel: #ffffff;
-  --bq-ink: #0b1f4d;
-  --bq-muted: #586b8f;
-  --bq-line: #dbe3f1;
-  --bq-chip: #e8f0fe;
-  --bq-shadow: 0 1px 2px rgba(11, 31, 77, 0.06), 0 8px 24px rgba(11, 31, 77, 0.06);
-
-  --bq-font: "Avenir Next", Avenir, "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
-  --bq-radius: 14px;
-}
-
-html[data-theme="dark"] {
-  --bq-blue: #4c8dff;
-  --bq-sky: #9cc4ff;
-  --bq-page: #0d1730;
-  --bq-panel: #13213f;
-  --bq-ink: #e8eef9;
-  --bq-muted: #9aa9c6;
-  --bq-line: #24365e;
-  --bq-chip: #1b2d55;
-  --bq-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
-}
+/* Canada rates page (app/pages/markets.py). The palette tokens (--bq-*) are defined
+   site-wide in static/site.css; chart colours live in app/components/charts.py. */
 
 /* NiceGUI pads its content column; the hero runs edge to edge instead. */
 .nicegui-content:has(> .bq-page) {

@@ -37,7 +37,6 @@ def _traffic_charts(summary: dict) -> None:
                                 "smooth": True,
                                 "areaStyle": {"opacity": 0.18},
                                 "data": [row["views"] for row in daily],
-                                "itemStyle": {"color": "#2563eb"},
                             }
                         ],
                     },
@@ -68,7 +67,6 @@ def _traffic_charts(summary: dict) -> None:
                                 "name": "Page renders",
                                 "type": "bar",
                                 "data": [row["views"] for row in ordered],
-                                "itemStyle": {"color": "#0f766e"},
                             }
                         ],
                     },

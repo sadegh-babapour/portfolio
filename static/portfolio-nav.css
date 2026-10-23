@@ -1,6 +1,8 @@
 /* Site header, shared by the NiceGUI pages (app/components/navbar.py links it from
    /static) and the Calgary Transit map (frontend/src/PortfolioNav.jsx imports it, so
-   Vite bundles it). Links and theme rules live in content/navigation.json. */
+   Vite bundles it). Links and theme rules live in content/navigation.json.
+   Colours are the logo palette (static/site.css), written out here because the
+   transit map does not load site.css. */
 
 .portfolio-nav {
   box-sizing: border-box;
@@ -15,10 +17,10 @@
   height: 64px;
   min-height: 64px;
   padding: 10px 24px;
-  background: #5898d4;
+  background: linear-gradient(90deg, #0b1f4d 0%, #123a8a 100%);
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
-  font-family: Arial, sans-serif;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06), 0 4px 16px rgba(11, 31, 77, 0.25);
+  font-family: "Avenir Next", Avenir, "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
 }
 
 .portfolio-nav a {
@@ -81,8 +83,8 @@
   min-width: 44px;
   min-height: 40px;
   padding: 8px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 10px;
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -101,10 +103,20 @@
   font-weight: 600;
 }
 
+.portfolio-nav-desktop a {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.portfolio-nav-desktop a:hover,
+.portfolio-nav-desktop a[aria-current="page"] {
+  color: #ffffff;
+}
+
 .portfolio-nav-desktop .portfolio-account-link {
-  padding: 8px 11px;
-  border: 1px solid rgba(255, 255, 255, 0.75);
+  padding: 7px 14px;
   border-radius: 999px;
+  background: #1f6feb;
+  color: #ffffff !important;
 }
 
 .portfolio-nav-desktop a:hover,
@@ -118,8 +130,9 @@
 /* The current page, in the bar and in the phone menu. */
 .portfolio-nav a[aria-current="page"] {
   text-decoration: underline;
+  text-decoration-color: #7fb2ff;
   text-decoration-thickness: 2px;
-  text-underline-offset: 5px;
+  text-underline-offset: 6px;
 }
 
 .portfolio-nav-mobile {
@@ -127,7 +140,7 @@
 }
 
 /* Below this width the links do not fit on one line, so they move into the menu. */
-@media (max-width: 1260px) {
+@media (max-width: 960px) {
   .portfolio-nav {
     gap: 10px;
     height: 56px;
@@ -171,8 +184,8 @@
 
   .portfolio-nav-mobile summary {
     padding: 8px 12px;
-    border: 1px solid rgba(255, 255, 255, 0.7);
-    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 10px;
     cursor: pointer;
     font-size: 14px;
     font-weight: 700;
@@ -191,16 +204,16 @@
     flex-direction: column;
     min-width: 230px;
     overflow: hidden;
-    border: 1px solid #dbe3ec;
-    border-radius: 10px;
+    border: 1px solid #dbe3f1;
+    border-radius: 14px;
     background: #ffffff;
-    color: #111827;
-    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.2);
+    color: #0b1f4d;
+    box-shadow: 0 12px 28px rgba(11, 31, 77, 0.22);
   }
 
   .portfolio-nav-mobile-links a {
     padding: 12px 16px;
-    border-bottom: 1px solid #eef2f6;
+    border-bottom: 1px solid #eef2f9;
   }
 
   .portfolio-nav-mobile-links a:last-child {
@@ -208,28 +221,29 @@
   }
 
   .portfolio-nav-mobile-links a[aria-current="page"] {
-    background: #edf6ff;
-    color: #245d91;
+    background: #e8f0fe;
+    color: #1f6feb;
+    text-decoration: none;
   }
 
   .portfolio-nav-mobile-links .portfolio-account-link {
-    background: #e8f3ff;
-    color: #245d91;
+    background: #1f6feb;
+    color: #ffffff;
     font-weight: 700;
   }
 
   html[data-theme="dark"] .portfolio-nav-mobile-links {
-    border-color: #4b5563;
-    background: #1f2937;
-    color: #f9fafb;
+    border-color: #24365e;
+    background: #13213f;
+    color: #e8eef9;
   }
 
   html[data-theme="dark"] .portfolio-nav-mobile-links a {
-    border-color: #374151;
+    border-color: #24365e;
   }
 
   html[data-theme="dark"] .portfolio-nav-mobile-links a[aria-current="page"] {
-    background: #27364a;
-    color: #bfdbfe;
+    background: #1b2d55;
+    color: #9cc4ff;
   }
 }

@@ -81,9 +81,9 @@ def blog_post(slug: str):
       .blog-body code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
       .blog-body :not(pre)>code { padding:.12rem .3rem; border-radius:.3rem; background:#e2e8f0; color:#0f172a; }
       html[data-theme="dark"] .blog-body :not(pre)>code { background:#334155; color:#f8fafc; }
-      .blog-body blockquote { margin-left:0; padding-left:1rem; border-left:4px solid #5898d4; color:#64748b; }
+      .blog-body blockquote { margin-left:0; padding-left:1rem; border-left:4px solid var(--bq-blue); color:var(--bq-muted); }
       .blog-body table { width:100%; border-collapse:collapse; display:block; overflow-x:auto; }
-      .blog-body th,.blog-body td { padding:.55rem; border:1px solid #94a3b8; }
+      .blog-body th,.blog-body td { padding:.55rem; border:1px solid var(--bq-line); }
     """)
     with ui.column().classes("w-full max-w-4xl mx-auto px-4 py-8 sm:px-8 gap-5"):
         ui.link("← All articles", "/blog").classes(

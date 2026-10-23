@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from datetime import datetime, timezone
 from functools import partial
 
 from nicegui import ui
@@ -10,6 +11,7 @@ from app.admin.service import require_admin
 from app.auth.service import SESSION_COOKIE
 from app.components.admin_nav import admin_navigation
 from app.components.navbar import with_layout
+from app.resume.document import MAX_PDF_BYTES, ResumePdfError, replace_resume_pdf, resume_pdf_path
 from app.resume.service import (
     KINDS,
     ResumeValidationError,
@@ -94,6 +96,18 @@ def admin_resume():
                     delete_button.disable()
                 status_label = ui.label("New unsaved entry").classes("min-h-6 text-sm text-grey-7")
 
+        with ui.card().classes("w-full p-4 sm:p-6 gap-3"):
+            ui.label("Résumé PDF").classes("text-xl font-semibold")
+            pdf_status = ui.label().classes("text-sm text-grey-7")
+            ui.upload(
+                label="Upload a new PDF (replaces the current one)",
+                auto_upload=True,
+                max_files=1,
+                max_file_size=MAX_PDF_BYTES,
+                on_upload=lambda event: upload_pdf(event),
+                on_rejected=lambda: ui.notify("PDF only, 5 MB or smaller.", type="warning"),
+            ).props('accept=".pdf,application/pdf" flat bordered').classes("w-full max-w-md")
+
         with ui.dialog() as delete_dialog, ui.card().classes("w-full max-w-md p-5 gap-4"):
             ui.label("Delete this entry?").classes("text-xl font-semibold")
             ui.label("It is removed from the résumé page permanently.").classes(
@@ -107,6 +121,30 @@ def admin_resume():
 
     def check_admin() -> None:
         require_admin(request.cookies.get(SESSION_COOKIE))
+
+    def refresh_pdf_status() -> None:
+        try:
+            stat = resume_pdf_path().stat()
+            pdf_status.set_text(
+                f"Current file: {stat.st_size / 1024:,.0f} KB, replaced "
+                f"{datetime.fromtimestamp(stat.st_mtime, timezone.utc):%Y-%m-%d %H:%M} UTC."
+            )
+        except OSError:
+            pdf_status.set_text("No PDF yet; /resume shows a placeholder until you upload one.")
+
+    def upload_pdf(event) -> None:
+        try:
+            check_admin()
+            replace_resume_pdf(event.content.read(MAX_PDF_BYTES + 1))
+            refresh_pdf_status()
+            ui.notify("Résumé PDF replaced.", type="positive")
+        except ResumePdfError as exc:
+            ui.notify(str(exc), type="warning")
+        except Exception:
+            log.exception("Unable to replace the résumé PDF")
+            ui.notify("The PDF could not be saved.", type="negative")
+        finally:
+            event.sender.reset()
 
     def refresh_entries() -> None:
         entries_container.clear()
@@ -233,4 +271,5 @@ def admin_resume():
     delete_button.on("click", delete_dialog.open)
     confirm_delete_button.on("click", confirm_delete)
 
+    refresh_pdf_status()
     refresh_entries()

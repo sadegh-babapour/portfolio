@@ -3,6 +3,7 @@ import logging
 from nicegui import ui
 from app.components.pdf_viewer import create_pdf_viewer
 from app.components.navbar import with_layout
+from app.resume.document import resume_pdf_version
 from app.resume.service import list_entries
 
 
@@ -53,4 +54,4 @@ def resume():
                                     ui.chip(skill).props('outline dense').classes('text-xs')
             ui.separator().classes('my-8')
             ui.label('Full résumé').classes('text-2xl font-semibold mb-4')
-        create_pdf_viewer('/resume/document.pdf')
+        create_pdf_viewer(f'/resume/document.pdf?v={resume_pdf_version()}')

@@ -111,6 +111,7 @@ def contact():
       .contact-native-form button:disabled { opacity:.55; cursor:not-allowed; }
       .contact-honeypot { position:absolute!important; left:-10000px!important; width:1px!important; overflow:hidden; }
       #contact-status { min-height:1.5rem; margin:0; }
+      #contact-turnstile { width:300px; max-width:100%; min-height:65px; }
       @media(max-width:640px){.contact-grid{grid-template-columns:1fr}}
     """)
     ui.run_javascript(f"""
@@ -179,8 +180,9 @@ def contact():
         const renderWidget = () => {{
           if (window.turnstile && widgetId === null) {{
             widgetId = window.turnstile.render('#contact-turnstile', {{
-              sitekey: siteKey, action: 'contact', theme: 'auto',
-              size: window.matchMedia('(max-width: 400px)').matches ? 'compact' : 'flexible',
+              sitekey: siteKey, action: 'contact',
+              theme: document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light',
+              size: form.clientWidth < 300 ? 'compact' : 'normal',
               appearance: 'always',
               'response-field': false,
               callback: (token) => {{

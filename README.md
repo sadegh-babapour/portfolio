@@ -186,6 +186,9 @@ alembic upgrade head
 The résumé is read locally from the ignored `static/resume.pdf` by default.
 Production reads it from the Railway volume using
 `RESUME_PDF_PATH=/data/resume.pdf`.
+An administrator replaces it from `/admin/resume` (PDF only, 5 MB or smaller); the
+new file is written beside the old one and swapped in, and `/resume` links it
+with a version query so browsers and Cloudflare fetch the new copy.
 
 The on-page résumé timeline is separate from the PDF. An administrator edits it
 at `/admin/resume` (add, edit, hide, reorder, delete); entries are stored in

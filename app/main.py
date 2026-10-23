@@ -21,6 +21,8 @@ import app.contact.api  # noqa: F401,E402
 import app.auth.api  # noqa: F401,E402
 import app.admin.api  # noqa: F401,E402
 import app.blog.api  # noqa: F401,E402
+import app.security_headers  # noqa: F401,E402
+from app.resume.document import DEFAULT_RESUME_PDF, resume_pdf_path  # noqa: E402,F401
 
 logging.basicConfig(
     level=logging.INFO,
@@ -31,7 +33,6 @@ logging.basicConfig(
 REPO_ROOT = Path(__file__).resolve().parent.parent
 STATIC_DIR = REPO_ROOT / 'static'
 TRANSIT_FRONTEND_DIR = REPO_ROOT / 'frontend' / 'dist'
-DEFAULT_RESUME_PDF = REPO_ROOT / 'static' / 'resume.pdf'
 
 fastapi_app.mount('/static', StaticFiles(directory=STATIC_DIR), name='static')
 if TRANSIT_FRONTEND_DIR.is_dir():
@@ -49,11 +50,7 @@ else:
 
 @fastapi_app.get('/resume/document.pdf', include_in_schema=False)
 async def resume_document(download: bool = False):
-    configured_path = os.getenv('RESUME_PDF_PATH')
-    pdf_path = Path(configured_path) if configured_path else DEFAULT_RESUME_PDF
-    if not pdf_path.is_absolute():
-        pdf_path = REPO_ROOT / pdf_path
-
+    pdf_path = resume_pdf_path()
     if not pdf_path.is_file():
         raise HTTPException(status_code=404, detail='Resume PDF is not available')
 

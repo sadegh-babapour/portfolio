@@ -7,7 +7,8 @@ from nicegui import ui
 def create_pdf_viewer(pdf_url: str):
     """Render a same-origin PDF in a responsive browser frame."""
     safe_url = escape(pdf_url, quote=True)
-    download_url = f'{safe_url}?download=true'
+    separator = '&amp;' if '?' in pdf_url else '?'
+    download_url = f'{safe_url}{separator}download=true'
     viewer_url = (
         '/calgary-transit-live/pdf-viewer.html?file='
         f'{quote(pdf_url, safe="")}'

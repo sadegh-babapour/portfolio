@@ -29,6 +29,12 @@ NAV_STYLESHEET_URL = (
     '/static/portfolio-nav.css?v='
     + hashlib.sha256(NAV_STYLESHEET.read_bytes()).hexdigest()[:12]
 )
+# Palette tokens and Quasar overrides for every page.
+SITE_STYLESHEET = NAV_STYLESHEET.with_name('site.css')
+SITE_STYLESHEET_URL = (
+    '/static/site.css?v='
+    + hashlib.sha256(SITE_STYLESHEET.read_bytes()).hexdigest()[:12]
+)
 
 
 def navbar():
@@ -36,6 +42,7 @@ def navbar():
     ui.add_head_html('''
       <link rel="icon" type="image/png" href="/static/bizqlab_logo.png">
       <link rel="apple-touch-icon" href="/static/bizqlab_logo.png">
+      <link rel="stylesheet" href="__SITE_STYLESHEET_URL__">
       <link rel="stylesheet" href="__NAV_STYLESHEET_URL__">
       <script>
         (() => {
@@ -52,14 +59,9 @@ def navbar():
           document.documentElement.style.colorScheme = theme;
         })();
       </script>
-      <style>
-        html[data-theme="dark"],
-        html[data-theme="dark"] body {
-          background: #111827;
-          color: #e5e7eb;
-        }
-      </style>
-    '''.replace('__PORTFOLIO_THEME__', THEME_JSON).replace('__NAV_STYLESHEET_URL__', NAV_STYLESHEET_URL))
+    '''.replace('__PORTFOLIO_THEME__', THEME_JSON)
+       .replace('__NAV_STYLESHEET_URL__', NAV_STYLESHEET_URL)
+       .replace('__SITE_STYLESHEET_URL__', SITE_STYLESHEET_URL))
     request = ui.context.client.request
     current_path = request.url.path.rstrip('/') or '/' if request else ''
     account_link = ACCOUNT_LINK
@@ -86,64 +88,6 @@ def navbar():
     mobile_links = render_links([account_link, *NAV_LINKS])
     ui.html(
         f'''
-        <style>
-          html[data-theme="dark"] body {{
-            color-scheme: dark;
-            background: #111827;
-            color: #e5e7eb;
-          }}
-          html[data-theme="dark"] .q-layout,
-          html[data-theme="dark"] .q-page,
-          html[data-theme="dark"] .q-page-container,
-          html[data-theme="dark"] .nicegui-content {{
-            background: #111827;
-            color: #e5e7eb;
-          }}
-          html[data-theme="dark"] .q-card,
-          html[data-theme="dark"] .q-tab-panels,
-          html[data-theme="dark"] .q-tab-panel,
-          html[data-theme="dark"] .q-table__container,
-          html[data-theme="dark"] .q-timeline__content {{
-            background: #1f2937;
-            color: #e5e7eb;
-          }}
-          html[data-theme="dark"] .q-field__control {{
-            background: #1f2937;
-            color: #f3f4f6;
-          }}
-          html[data-theme="dark"] .q-field__native,
-          html[data-theme="dark"] .q-field__input,
-          html[data-theme="dark"] .q-field__label,
-          html[data-theme="dark"] .q-field__marginal,
-          html[data-theme="dark"] .q-tab,
-          html[data-theme="dark"] .q-table th,
-          html[data-theme="dark"] .q-table td {{
-            color: #e5e7eb;
-          }}
-          html[data-theme="dark"] .q-field--outlined .q-field__control::before {{
-            border-color: #64748b;
-          }}
-          html[data-theme="dark"] .q-table thead,
-          html[data-theme="dark"] .q-table tbody,
-          html[data-theme="dark"] .q-table tr {{
-            background: #1f2937;
-          }}
-          html[data-theme="dark"] .q-table th,
-          html[data-theme="dark"] .q-table td,
-          html[data-theme="dark"] .q-separator {{ border-color: #374151; }}
-          html[data-theme="dark"] .q-separator {{ background: #374151; }}
-          html[data-theme="dark"] .text-grey {{ color: #cbd5e1 !important; }}
-          html[data-theme="dark"] .nicegui-echart {{
-            border-radius: 8px;
-            background: #1f2937;
-            color: #e5e7eb;
-          }}
-          html[data-theme="dark"] .portfolio-development-note {{
-            border-color: #3b82f6 !important;
-            background: #172554 !important;
-            color: #dbeafe !important;
-          }}
-        </style>
         <header class="portfolio-nav">
           <a class="portfolio-brand" href="/" aria-label="Bizqlab home">
             <img src="/static/bizqlab_logo.png" alt="Bizqlab logo">
@@ -202,11 +146,12 @@ def navbar():
 
         const applyChartTheme = () => {
           const dark = theme === 'dark';
-          const text = dark ? '#e5e7eb' : '#374151';
-          const muted = dark ? '#94a3b8' : '#9ca3af';
-          const grid = dark ? '#374151' : '#e5e7eb';
-          const tooltipBackground = dark ? '#111827' : '#ffffff';
-          const tooltipBorder = dark ? '#64748b' : '#d1d5db';
+          // The palette in static/site.css.
+          const text = dark ? '#e8eef9' : '#0b1f4d';
+          const muted = dark ? '#9aa9c6' : '#586b8f';
+          const grid = dark ? '#24365e' : '#dbe3f1';
+          const tooltipBackground = dark ? '#0d1730' : '#ffffff';
+          const tooltipBorder = dark ? '#3a4f7a' : '#b7c3d9';
 
           if (!window.echarts) return;
           document.querySelectorAll('.nicegui-echart, nicegui-echart').forEach((element) => {
@@ -225,7 +170,7 @@ def navbar():
               }));
             }
             if (current.legend?.length) {
-              update.legend = current.legend.map(() => ({ textStyle: { color: text } }));
+              update.legend = current.legend.map(() => ({ textStyle: { color: muted } }));
             }
             if (current.tooltip?.length) {
               update.tooltip = current.tooltip.map(() => ({
@@ -235,8 +180,8 @@ def navbar():
               }));
             }
             const axisTheme = () => ({
-                axisLabel: { color: text },
-                axisLine: { lineStyle: { color: muted } },
+                axisLabel: { color: muted },
+                axisLine: { lineStyle: { color: grid } },
                 splitLine: { lineStyle: { color: grid } },
                 nameTextStyle: { color: text },
             });

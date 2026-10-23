@@ -3,9 +3,34 @@ from __future__ import annotations
 from nicegui import ui
 
 
+# Chart colours: the logo palette in static/site.css, as mid-tones that read on both
+# the light and the dark theme (ECharts can't read CSS variables).
+BLUE = "#2f7bf5"
+AMBER = "#f2a93b"
+CYAN = "#22b8cf"
+VIOLET = "#8e7cf0"
+RED = "#e5534b"
+MUTED = "#8a99b8"
+GRID = "rgba(138, 153, 184, 0.22)"
+PALETTE = [BLUE, AMBER, CYAN, VIOLET, RED, MUTED]
+
+AXIS = {
+    "axisLabel": {"color": MUTED},
+    "axisLine": {"lineStyle": {"color": GRID}},
+    "axisTick": {"show": False},
+    "splitLine": {"lineStyle": {"color": GRID}},
+}
+TOOLTIP = {
+    "backgroundColor": "#0b1f4d",
+    "borderColor": "#1f6feb",
+    "textStyle": {"color": "#ffffff", "fontSize": 12},
+}
+LEGEND = {"icon": "roundRect", "itemWidth": 14, "itemHeight": 4, "textStyle": {"color": MUTED}}
+
+
 def viewport_chart(options: dict, *, classes: str, aria_label: str):
     """Render once near the viewport so ECharts animation is visible on scroll."""
-    initial_options = dict(options)
+    initial_options = {"color": PALETTE, **options}
     initial_options["animation"] = False
     return (
         ui.echart(initial_options)

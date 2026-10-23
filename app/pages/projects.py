@@ -37,9 +37,7 @@ def _project_lab(
                         ui.label(f'Concept — {technique.concept}').classes('text-sm')
                         ui.label(f'Implementation — {technique.implementation}').classes('text-sm')
                         ui.label(f'Trade-off — {technique.tradeoff}').classes('text-sm text-grey-7')
-                with ui.card().classes('portfolio-development-note w-full p-4 gap-2').style(
-                    'background: #eff6ff; border: 1px solid #93c5fd; color: #1e3a5f;'
-                ):
+                with ui.card().classes('portfolio-development-note w-full p-4 gap-2'):
                     ui.label('Development note').classes('font-semibold')
                     ui.label(project.lab.working_method).classes('text-sm')
         return

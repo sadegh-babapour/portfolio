@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 
 from nicegui import ui
 
-from app.components.charts import enable_viewport_chart_animations, viewport_chart
+from app.components.charts import AXIS, LEGEND, TOOLTIP, enable_viewport_chart_animations, viewport_chart
 from app.components.navbar import with_layout
 from app.dashboard.service import build_live_transit_analysis
 
@@ -74,13 +74,14 @@ def _live_dashboard(live: dict) -> None:
                 "Buses by service type",
                 "Vehicles reporting, not riders.",
                 {
-                    "tooltip": {"trigger": "item"},
-                    "legend": {"type": "scroll", "bottom": 0},
+                    "tooltip": {"trigger": "item", **TOOLTIP},
+                    "legend": {"type": "scroll", "bottom": 0, **LEGEND},
                     "series": [
                         {
                             "name": "Buses",
                             "type": "pie",
-                            "radius": ["38%", "68%"],
+                            "radius": ["42%", "68%"],
+                            "itemStyle": {"borderRadius": 6, "borderColor": "transparent", "borderWidth": 2},
                             "center": ["50%", "44%"],
                             "data": [
                                 {"name": _mode_label(row["mode"]), "value": row["vehicles"]}
@@ -98,24 +99,26 @@ def _live_dashboard(live: dict) -> None:
                 f"{sum(row['observations'] for row in cadence):,} positions in "
                 f"{len(cadence)} minutes, Calgary time.",
                 {
-                    "tooltip": {"trigger": "axis"},
-                    "legend": {"data": ["Positions", "Buses"], "bottom": 0},
+                    "tooltip": {"trigger": "axis", **TOOLTIP},
+                    "legend": {"data": ["Positions", "Buses"], "bottom": 0, **LEGEND},
                     "grid": {"left": 45, "right": 18, "top": 24, "bottom": 58},
-                    "xAxis": {"type": "category", "data": labels},
-                    "yAxis": {"type": "value", "minInterval": 1},
+                    "xAxis": {"type": "category", "data": labels, **AXIS},
+                    "yAxis": {"type": "value", "minInterval": 1, **AXIS},
                     "series": [
                         {
                             "name": "Positions",
                             "type": "line",
                             "smooth": True,
+                            "symbol": "none",
+                            "areaStyle": {"opacity": 0.12},
                             "data": [row["observations"] for row in cadence],
-                            "itemStyle": {"color": "#2563eb"},
                         },
                         {
                             "name": "Buses",
                             "type": "line",
+                            "smooth": True,
+                            "symbol": "none",
                             "data": [row["vehicles"] for row in cadence],
-                            "itemStyle": {"color": "#d97706"},
                         },
                     ],
                 },
@@ -132,16 +135,16 @@ def _live_dashboard(live: dict) -> None:
                 "Busiest routes",
                 "Top ten routes by buses reporting.",
                 {
-                    "tooltip": {"trigger": "axis"},
+                    "tooltip": {"trigger": "axis", **TOOLTIP},
                     "grid": {"left": 45, "right": 18, "top": 24, "bottom": 48},
-                    "xAxis": {"type": "category", "data": [row["route"] for row in routes]},
-                    "yAxis": {"type": "value", "minInterval": 1},
+                    "xAxis": {"type": "category", "data": [row["route"] for row in routes], **AXIS},
+                    "yAxis": {"type": "value", "minInterval": 1, **AXIS},
                     "series": [
                         {
                             "name": "Buses",
                             "type": "bar",
                             "data": [row["vehicles"] for row in routes],
-                            "itemStyle": {"color": "#0f766e"},
+                            "itemStyle": {"borderRadius": [6, 6, 0, 0]},
                         }
                     ],
                 },

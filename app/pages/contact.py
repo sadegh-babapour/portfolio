@@ -97,25 +97,17 @@ def contact():
       .contact-native-form label { display:grid; min-width:0; gap:.4rem; font-weight:600; }
       .contact-native-form > *, .contact-grid > * { min-width:0; max-width:100%; }
       .contact-native-form input,.contact-native-form select,.contact-native-form textarea {
-        box-sizing:border-box; width:100%; border:1px solid #94a3b8; border-radius:.6rem;
-        padding:.72rem .85rem; color:#111827; background:#fff;
+        box-sizing:border-box; width:100%; border:1px solid var(--bq-field); border-radius:.6rem;
+        padding:.72rem .85rem; color:var(--bq-ink); background:var(--bq-panel); font:inherit;
         transition:border-color .15s ease,box-shadow .15s ease;
       }
       .contact-native-form input:hover,.contact-native-form select:hover,
-      .contact-native-form textarea:hover { border-color:#64748b; }
+      .contact-native-form textarea:hover { border-color:var(--bq-muted); }
       .contact-native-form input:focus,.contact-native-form select:focus,
       .contact-native-form textarea:focus { border-color:var(--q-primary); outline:none;
-        box-shadow:0 0 0 3px rgba(37,99,235,.18); }
-      html[data-theme="dark"] .contact-native-form input,
-      html[data-theme="dark"] .contact-native-form select,
-      html[data-theme="dark"] .contact-native-form textarea {
-        border-color:#64748b; background:#1f2937; color:#f3f4f6;
-      }
-      html[data-theme="dark"] .contact-native-form input:hover,
-      html[data-theme="dark"] .contact-native-form select:hover,
-      html[data-theme="dark"] .contact-native-form textarea:hover { border-color:#94a3b8; }
-      .contact-native-form button { justify-self:start; border:0; border-radius:.6rem;
-        padding:.75rem 1.1rem; background:var(--q-primary); color:#fff; font-weight:700; cursor:pointer; }
+        box-shadow:0 0 0 3px rgba(31,111,235,.2); }
+      .contact-native-form button { justify-self:start; border:0; border-radius:10px;
+        padding:.75rem 1.4rem; background:var(--q-primary); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
       .contact-native-form button:disabled { opacity:.55; cursor:not-allowed; }
       .contact-honeypot { position:absolute!important; left:-10000px!important; width:1px!important; overflow:hidden; }
       #contact-status { min-height:1.5rem; margin:0; }

@@ -7,7 +7,20 @@ from pathlib import Path
 
 from nicegui import ui
 
-from app.components.charts import enable_viewport_chart_animations, viewport_chart
+from app.components.charts import (
+    AMBER,
+    AXIS,
+    BLUE,
+    CYAN,
+    GRID,
+    LEGEND as CHART_LEGEND,
+    MUTED,
+    RED,
+    TOOLTIP,
+    VIOLET,
+    enable_viewport_chart_animations,
+    viewport_chart,
+)
 from app.components.navbar import with_layout
 from app.markets.service import load_rates
 
@@ -18,28 +31,7 @@ THEME_STYLESHEET_URL = (
     + hashlib.sha256(THEME_STYLESHEET.read_bytes()).hexdigest()[:12]
 )
 
-# Chart colours: the palette in static/bizqlab-theme.css, as mid-tones that read on
-# both the light and the dark theme (ECharts can't read CSS variables).
-BLUE = "#2f7bf5"
-AMBER = "#f2a93b"
-CYAN = "#22b8cf"
-VIOLET = "#8e7cf0"
-RED = "#e5534b"
-MUTED = "#8a99b8"
-GRID = "rgba(138, 153, 184, 0.22)"
-
-AXIS = {
-    "axisLabel": {"color": MUTED},
-    "axisLine": {"lineStyle": {"color": GRID}},
-    "axisTick": {"show": False},
-    "splitLine": {"lineStyle": {"color": GRID}},
-}
-TOOLTIP = {
-    "backgroundColor": "#0b1f4d",
-    "borderColor": "#1f6feb",
-    "textStyle": {"color": "#ffffff", "fontSize": 12},
-}
-LEGEND = {"top": 0, "icon": "roundRect", "itemWidth": 14, "itemHeight": 4, "textStyle": {"color": MUTED}}
+LEGEND = {"top": 0, **CHART_LEGEND}
 PERCENT = "v => v == null ? '–' : v.toFixed(2) + '%'"
 BPS = "v => v == null ? '–' : Math.round(v) + ' bps'"
 

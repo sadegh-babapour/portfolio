@@ -3,40 +3,41 @@ body,
 #root {
   margin: 0;
   height: 100%;
-  font-family: Arial, sans-serif;
+  font-family: "Avenir Next", Avenir, "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
   background: var(--page-bg);
   color: var(--text-color);
 }
 
+/* The logo palette, as on the rest of the site (static/site.css). */
 :root {
-  --page-bg: #f8f9fb;
+  --page-bg: #f4f7fc;
   --surface: #ffffff;
-  --surface-muted: #fafafa;
-  --text-color: #111827;
-  --text-muted: #68707a;
-  --border-color: #e3e6ea;
+  --surface-muted: #f7f9fd;
+  --text-color: #0b1f4d;
+  --text-muted: #586b8f;
+  --border-color: #dbe3f1;
 }
 
 :root[data-theme="dark"] {
-  --page-bg: #111827;
-  --surface: #1f2937;
-  --surface-muted: #273449;
-  --text-color: #f3f4f6;
-  --text-muted: #cbd5e1;
-  --border-color: #374151;
+  --page-bg: #0d1730;
+  --surface: #13213f;
+  --surface-muted: #1b2d55;
+  --text-color: #e8eef9;
+  --text-muted: #9aa9c6;
+  --border-color: #24365e;
 }
 
 :root[data-theme="dark"] .status-pill,
 :root[data-theme="dark"] .filters button.active,
 :root[data-theme="dark"] .basemap-switcher button.active {
-  background: #e5e7eb;
-  border-color: #e5e7eb;
-  color: #111827;
+  background: #e8eef9;
+  border-color: #e8eef9;
+  color: #0b1f4d;
 }
 
 :root[data-theme="dark"] .leaflet-control-zoom a {
-  background: #1f2937;
-  color: #f3f4f6;
+  background: #13213f;
+  color: #e8eef9;
 }
 
 .leaflet-tile-pane .osm-dark-tiles {
@@ -55,6 +56,13 @@ body,
 
 * {
   box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
 }
 
 .app {
@@ -89,7 +97,7 @@ body,
 
 .status-pill {
   white-space: nowrap;
-  background: #111827;
+  background: #0b1f4d;
   color: white;
   border-radius: 999px;
   padding: 8px 12px;
@@ -134,9 +142,9 @@ body,
 }
 
 .filters button.active {
-  background: #111827;
+  background: #0b1f4d;
   color: #ffffff;
-  border-color: #111827;
+  border-color: #0b1f4d;
 }
 
 .filters button:disabled,
@@ -242,17 +250,17 @@ body,
   width: 100%;
   margin: 0 0 18px;
   padding: 10px 14px;
-  border: 1px solid #2563eb;
+  border: 1px solid #1f6feb;
   border-radius: 10px;
   background: transparent;
-  color: #2563eb;
+  color: #1f6feb;
   cursor: pointer;
   font: inherit;
   font-weight: 700;
 }
 
 .follow-btn.active {
-  background: #2563eb;
+  background: #1f6feb;
   color: #ffffff;
 }
 
@@ -277,7 +285,7 @@ body,
   margin: 0 0 14px;
   padding: 9px 11px;
   border-radius: 9px;
-  background: color-mix(in srgb, #2563eb 10%, var(--surface));
+  background: color-mix(in srgb, #1f6feb 10%, var(--surface));
   color: var(--text-muted);
   font-size: 12px;
   line-height: 1.45;
@@ -289,7 +297,7 @@ body,
 }
 
 :root[data-theme="dark"] .follow-btn.active {
-  background: #2563eb;
+  background: #1f6feb;
   color: #ffffff;
 }
 
@@ -307,7 +315,7 @@ body,
 }
 
 .badge.bus {
-  background: #2563eb;
+  background: #1f6feb;
 }
 
 .badge.featured {
@@ -390,14 +398,14 @@ button.list-item {
   min-width: 44px;
   padding: 7px 8px;
   border-radius: 9px;
-  background: #2563eb;
+  background: #1f6feb;
   color: #ffffff;
   font-weight: 800;
   text-align: center;
 }
 
 .arrival-action {
-  color: #2563eb;
+  color: #1f6feb;
   font-size: 12px;
   font-weight: 800;
 }
@@ -484,7 +492,7 @@ button.list-item {
   border: 0;
   border-radius: 9px;
   background: #dbeafe;
-  color: #1d4ed8;
+  color: #1a5fd0;
   cursor: pointer;
   font-size: 12px;
   font-weight: 700;
@@ -496,7 +504,7 @@ button.list-item {
   border: 1px solid #93c5fd;
   border-radius: 9px;
   background: #eff6ff;
-  color: #1d4ed8;
+  color: #1a5fd0;
   cursor: pointer;
   font-size: 12px;
   font-weight: 700;
@@ -509,7 +517,7 @@ button.list-item {
 }
 
 :root[data-theme="dark"] .nearby-button {
-  border-color: #1d4ed8;
+  border-color: #1a5fd0;
   background: #172554;
   color: #bfdbfe;
 }
@@ -544,7 +552,7 @@ button.list-item {
   padding: 4px 8px;
   border: 0;
   background: transparent;
-  color: #2563eb;
+  color: #1f6feb;
   cursor: pointer;
   font: inherit;
   font-weight: 700;
@@ -568,10 +576,10 @@ button.list-item {
   width: 100%;
   margin: 0 0 12px;
   padding: 9px 12px;
-  border: 1px solid #2563eb;
+  border: 1px solid #1f6feb;
   border-radius: 10px;
   background: transparent;
-  color: #2563eb;
+  color: #1f6feb;
   cursor: pointer;
   font: inherit;
   font-weight: 700;
@@ -591,7 +599,7 @@ button.list-item {
 }
 
 .favorite-note a {
-  color: #2563eb;
+  color: #1f6feb;
 }
 
 .favorite-error {
@@ -636,8 +644,8 @@ button.list-item {
 }
 
 .stop-route-picker button.active {
-  border-color: #2563eb;
-  background: #2563eb;
+  border-color: #1f6feb;
+  background: #1f6feb;
   color: #ffffff;
   font-weight: 800;
 }
@@ -665,7 +673,7 @@ button.list-item {
 }
 
 .teletext-note a {
-  color: #2563eb;
+  color: #1f6feb;
 }
 
 .search-result {
@@ -690,7 +698,7 @@ button.list-item {
 
 .search-result strong {
   grid-row: span 2;
-  color: #2563eb;
+  color: #1f6feb;
   font-size: 15px;
 }
 
@@ -802,7 +810,7 @@ button.list-item {
 }
 
 .data-source-links a {
-  color: #2563eb;
+  color: #1f6feb;
 }
 
 :root[data-theme="dark"] .data-source-links a {
@@ -844,9 +852,9 @@ button.list-item {
 }
 
 .basemap-switcher button.active {
-  background: #111827;
+  background: #0b1f4d;
   color: #ffffff;
-  border-color: #111827;
+  border-color: #0b1f4d;
 }
 @media (max-width: 1050px) {
   .transit-workspace {

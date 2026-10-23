@@ -79,6 +79,7 @@ def _import_pages():
     import app.pages.about  # noqa: F401
     import app.pages.contact  # noqa: F401
     import app.pages.dashboard  # noqa: F401
+    import app.pages.markets  # noqa: F401
     import app.pages.home  # noqa: F401
     import app.pages.projects  # noqa: F401
     import app.pages.resume  # noqa: F401

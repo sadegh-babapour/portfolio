@@ -1,0 +1,396 @@
+/* Bizqlab palette, taken from the logo: navy ink, brand blue, and a sky tint, with
+   amber as the one warm accent. Used by the Canada rates page (app/pages/markets.py)
+   for now; the rest of the site can adopt the same tokens later.
+   Chart colours live in app/pages/markets.py (ECharts can't read CSS variables) and
+   are mid-tones that read on both themes. */
+
+:root {
+  --bq-navy: #0b1f4d;
+  --bq-blue: #1f6feb;
+  --bq-sky: #7fb2ff;
+  --bq-amber: #f2a93b;
+  --bq-red: #e5534b;
+  --bq-green: #1f9d6b;
+
+  --bq-page: #f4f7fc;
+  --bq-panel: #ffffff;
+  --bq-ink: #0b1f4d;
+  --bq-muted: #586b8f;
+  --bq-line: #dbe3f1;
+  --bq-chip: #e8f0fe;
+  --bq-shadow: 0 1px 2px rgba(11, 31, 77, 0.06), 0 8px 24px rgba(11, 31, 77, 0.06);
+
+  --bq-font: "Avenir Next", Avenir, "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+  --bq-radius: 14px;
+}
+
+html[data-theme="dark"] {
+  --bq-blue: #4c8dff;
+  --bq-sky: #9cc4ff;
+  --bq-page: #0d1730;
+  --bq-panel: #13213f;
+  --bq-ink: #e8eef9;
+  --bq-muted: #9aa9c6;
+  --bq-line: #24365e;
+  --bq-chip: #1b2d55;
+  --bq-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* NiceGUI pads its content column; the hero runs edge to edge instead. */
+.nicegui-content:has(> .bq-page) {
+  padding: 0;
+}
+
+.bq-page {
+  box-sizing: border-box;
+  width: 100%;
+  background: var(--bq-page);
+  color: var(--bq-ink);
+  font-family: var(--bq-font);
+}
+
+.bq-page *,
+.bq-page *::before,
+.bq-page *::after {
+  box-sizing: border-box;
+}
+
+.bq-wrap {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 max(16px, 3vw);
+}
+
+/* Hero: the logo's navy-to-blue, over faint graph paper. */
+.bq-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 44px 0 92px;
+  color: #ffffff;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(120deg, #0b1f4d 0%, #123a8a 55%, #1f6feb 100%);
+}
+
+.bq-eyebrow {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #9cc4ff;
+}
+
+.bq-hero h1 {
+  margin: 0;
+  font-size: clamp(32px, 5vw, 52px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+
+.bq-lede {
+  max-width: 62ch;
+  margin: 14px 0 0;
+  font-size: 17px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.bq-lede b {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.bq-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.bq-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 13px;
+  color: #ffffff;
+}
+
+.bq-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bq-green);
+  box-shadow: 0 0 0 3px rgba(31, 157, 107, 0.25);
+}
+
+.bq-dot.is-warn {
+  background: var(--bq-red);
+  box-shadow: 0 0 0 3px rgba(229, 83, 75, 0.25);
+}
+
+/* KPI cards overlap the hero's bottom edge. */
+.bq-kpis {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+  gap: 14px;
+  margin-top: -64px;
+}
+
+.bq-kpi {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--bq-line);
+  border-radius: var(--bq-radius);
+  background: var(--bq-panel);
+  box-shadow: var(--bq-shadow);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.bq-kpi:hover {
+  transform: translateY(-2px);
+}
+
+.bq-kpi-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px 0;
+}
+
+.bq-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--bq-muted);
+}
+
+.bq-value {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.bq-delta {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bq-chip);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--bq-blue);
+}
+
+.bq-delta.is-up {
+  color: #b86e00;
+  background: rgba(242, 169, 59, 0.16);
+}
+
+html[data-theme="dark"] .bq-delta.is-up {
+  color: var(--bq-amber);
+}
+
+.bq-spark {
+  width: 100%;
+  height: 54px;
+}
+
+.bq-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 36px 0 0;
+}
+
+.bq-section-head h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.bq-section-head p {
+  max-width: 70ch;
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--bq-muted);
+}
+
+.bq-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 16px;
+}
+
+.bq-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--bq-line);
+  border-radius: var(--bq-radius);
+  background: var(--bq-panel);
+  box-shadow: var(--bq-shadow);
+}
+
+.bq-card.is-wide {
+  grid-column: 1 / -1;
+}
+
+.bq-card h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.bq-note {
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--bq-muted);
+}
+
+.bq-chart {
+  width: 100%;
+  height: 320px;
+}
+
+.bq-chart.is-tall {
+  height: 400px;
+}
+
+/* Rate decisions table */
+.bq-table-wrap {
+  max-height: 360px;
+  overflow: auto;
+}
+
+.bq-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.bq-table th {
+  position: sticky;
+  top: 0;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--bq-line);
+  background: var(--bq-panel);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--bq-muted);
+}
+
+.bq-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--bq-line);
+}
+
+.bq-table .num {
+  text-align: right;
+}
+
+.bq-cut {
+  color: var(--bq-blue);
+  font-weight: 600;
+}
+
+.bq-hike {
+  color: #b86e00;
+  font-weight: 600;
+}
+
+html[data-theme="dark"] .bq-hike {
+  color: var(--bq-amber);
+}
+
+/* Pipeline strip: where the numbers come from. */
+.bq-flow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 12px;
+  counter-reset: step;
+}
+
+.bq-step {
+  position: relative;
+  padding: 14px 16px;
+  border: 1px dashed var(--bq-line);
+  border-radius: 12px;
+  background: var(--bq-page);
+}
+
+.bq-step-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.bq-step-title::before {
+  counter-increment: step;
+  content: counter(step);
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--bq-blue);
+  font-size: 11px;
+  color: #ffffff;
+}
+
+.bq-step p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--bq-muted);
+}
+
+.bq-step code {
+  font-size: 12px;
+}
+
+.bq-empty {
+  padding: 28px;
+  border: 1px solid var(--bq-line);
+  border-radius: var(--bq-radius);
+  background: var(--bq-panel);
+  color: var(--bq-muted);
+}
+
+.bq-foot {
+  padding: 28px 0 40px;
+  font-size: 12px;
+  color: var(--bq-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bq-kpi {
+    transition: none;
+  }
+
+  .bq-kpi:hover {
+    transform: none;
+  }
+}

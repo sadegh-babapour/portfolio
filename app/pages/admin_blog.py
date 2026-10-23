@@ -1,3 +1,9 @@
+"""/admin/blog: write, preview, publish and delete blog posts without a deploy.
+
+NiceGUI pattern used by the admin pages: the page function builds the widgets once, and
+the nested functions (load_post, persist, ...) are the click handlers. Each handler checks
+admin again, because a page can stay open long after the session that loaded it expired.
+"""
 from __future__ import annotations
 
 import logging

@@ -1,3 +1,5 @@
+"""Blog JSON routes for the admin, plus sitemap.xml and robots.txt.
+"""
 from __future__ import annotations
 
 import logging

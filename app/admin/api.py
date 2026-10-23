@@ -1,3 +1,5 @@
+"""The page-view middleware and the admin summary route.
+"""
 from __future__ import annotations
 
 import asyncio

@@ -1,3 +1,8 @@
+"""HTTP routes for the contact form: a CSRF token, the submission, and the email link.
+
+Pydantic (ContactSubmission) rejects oversized fields before any code runs; the stricter
+rules live in app/contact/security.py.
+"""
 from __future__ import annotations
 
 import logging
@@ -41,6 +46,8 @@ def _require_settings() -> ContactSettings:
 
 
 def _request_ip(request: Request) -> str:
+    # Behind Cloudflare every request arrives from a Cloudflare address; the visitor's own IP
+    # is in CF-Connecting-IP. Used only for the hashed rate limit.
     return request.headers.get("cf-connecting-ip") or (
         request.client.host if request.client else "unknown"
     )

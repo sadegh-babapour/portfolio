@@ -1,3 +1,6 @@
+"""/projects: case studies from content/projects.json (app/content.py). The build notes
+("lab") are shown only to signed-in visitors.
+"""
 import logging
 from urllib.parse import urlencode
 

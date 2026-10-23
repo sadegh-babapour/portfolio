@@ -1,5 +1,18 @@
 """Runtime mode and development database resolution (M1 local-db-isolation).
 
+In plain words: before anything connects, decide "am I production or a developer's
+machine?" and, on a developer machine, which single database is allowed. Production must
+prove itself (Railway's ID variables plus a build attestation file written during the
+Railway build); a laptop reads its target only from the strict .env.local profile and
+must match the root-owned policy file. Anything ambiguous is refused. This is the fix for
+the stray .env that once pointed the Mac at production (docs/lessons/02 and 04).
+
+The three runtime_* modules split the job:
+- runtime_env (this file): read and validate settings; pure, no I/O to databases;
+- runtime_state: remember the decision for this process and revoke it if settings change;
+- runtime_db: open connections that first ask the server "who are you?" and compare.
+
+
 Batch 1 scope: pure classification, parsing and validation, mirrored exactly by
 ``backend/transit_api/config/runtimeEnv.js``. Nothing in this module connects to
 a database, mutates ``os.environ``, or caches state. Callers pass the inherited

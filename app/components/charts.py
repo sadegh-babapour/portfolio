@@ -1,3 +1,5 @@
+"""Shared ECharts helpers: the chart palette and a chart that animates once it scrolls into view.
+"""
 from __future__ import annotations
 
 from nicegui import ui

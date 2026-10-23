@@ -1,3 +1,13 @@
+"""HTTP routes for sign-in, sign-out, the session check and saved transit stops.
+
+Cookies set here:
+- portfolio_session: the login token. HttpOnly (page scripts can't read it), Secure on
+  https, SameSite=Lax (sent when following a link to the site, not on cross-site posts).
+- portfolio_auth_csrf: the CSRF token. Readable by our scripts on purpose, so they can copy
+  it into the X-CSRF-Token header; SameSite=Strict.
+- portfolio_oidc_browser: ties a Google callback to the browser that started it; lives
+  only under /api/auth/google for a few minutes.
+"""
 from __future__ import annotations
 
 import logging
@@ -48,6 +58,8 @@ def _secure_cookie(settings: AuthSettings) -> bool:
 
 
 def _uses_public_host(request: Request, settings: AuthSettings) -> bool:
+    # Cookies belong to one host. A login started on the Railway URL or www. is first
+    # redirected to the canonical address, so the callback finds its cookie.
     supplied = urlsplit(str(request.url))
     expected = urlsplit(settings.public_base_url)
     return supplied.netloc == expected.netloc
@@ -59,6 +71,7 @@ def _canonical_login_url(settings: AuthSettings, return_to: str) -> str:
 
 
 def _validate_origin(request: Request, settings: AuthSettings) -> None:
+    # Browsers add an Origin header to cross-site requests; ours must say bizqlab.com.
     supplied = urlsplit(request.headers.get("origin", ""))
     expected = urlsplit(settings.public_base_url)
     if (supplied.scheme, supplied.netloc) != (expected.scheme, expected.netloc):
@@ -220,15 +233,7 @@ def delete_favorite_stop(request: Request, stop_id: str):
 @fastapi_app.post("/api/auth/logout", include_in_schema=False)
 def logout(request: Request):
     settings = _settings()
-    _validate_origin(request, settings)
-    try:
-        user = require_mutation_session(
-            request.cookies.get(SESSION_COOKIE),
-            request.cookies.get(CSRF_COOKIE),
-            request.headers.get("x-csrf-token"),
-        )
-    except AuthenticationError as exc:
-        raise HTTPException(status_code=403, detail="Session expired; reload and try again") from exc
+    user = _mutation_user(request)
     revoke_session(user)
     response = RedirectResponse("/", status_code=303)
     _clear_auth_cookies(response, settings)
@@ -237,16 +242,7 @@ def logout(request: Request):
 
 @fastapi_app.delete("/api/auth/account", include_in_schema=False)
 def remove_account(request: Request):
-    settings = _settings()
-    _validate_origin(request, settings)
-    try:
-        require_mutation_session(
-            request.cookies.get(SESSION_COOKIE),
-            request.cookies.get(CSRF_COOKIE),
-            request.headers.get("x-csrf-token"),
-        )
-    except AuthenticationError as exc:
-        raise HTTPException(status_code=403, detail="Session expired; reload and try again") from exc
+    _mutation_user(request)
     raise HTTPException(
         status_code=409,
         detail=(

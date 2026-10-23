@@ -1,3 +1,18 @@
+// Why the buses glide instead of jumping (docs/lessons/09).
+//
+// Calgary's feed is late and lumpy: each bus reports about every 45 s, reports arrive in
+// batches about once a minute, and they are 40-100 s old when we fetch them. Drawing each
+// report as it arrives makes buses sit still, then leap.
+//
+// So the map plays the recent past, like a video with a buffer:
+// 1. createPlaybackClock (below) runs a clock about 2 minutes behind real time, far enough
+//    back that both reports around "playback now" have almost always arrived. It moves at
+//    wall-clock speed, nudges itself by at most 10% toward its target, and never goes back.
+// 2. computePlaybackVehicles places each bus between its report before and its report
+//    after the playback time; routeSnapping.js bends that path along the road.
+// 3. App.jsx recomputes positions once a second, and a 1 s CSS transition (App.css,
+//    .bus-marker-glide) slides each marker to its new spot, so motion is continuous.
+//    glideGuard.js pauses the slide while Leaflet zooms; reduced-motion turns it off.
 const EARTH_RADIUS_METERS = 6371000;
 
 

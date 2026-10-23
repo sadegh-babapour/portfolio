@@ -1,3 +1,6 @@
+"""/admin/resume: edit the résumé timeline and replace the résumé PDF, without a deploy.
+Same pattern as app/pages/admin_blog.py.
+"""
 from __future__ import annotations
 
 import logging

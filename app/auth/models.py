@@ -1,3 +1,6 @@
+"""Tables for users and sign-in: users, Google identities, roles, sessions (token digests
+only), one-time login states, an event log, and saved transit stops.
+"""
 from __future__ import annotations
 
 import uuid

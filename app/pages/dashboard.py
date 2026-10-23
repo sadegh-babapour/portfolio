@@ -1,3 +1,6 @@
+"""/dashboard: live transit numbers from app/dashboard/service.py, drawn with ECharts.
+Only aggregates are shown, never vehicle IDs.
+"""
 from __future__ import annotations
 
 from datetime import datetime

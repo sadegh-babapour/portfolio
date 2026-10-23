@@ -1,3 +1,8 @@
+"""/contact: a plain HTML form plus a small script that talks to /api/contact/*.
+
+The form is native HTML rather than NiceGUI inputs so it works like any web form and the
+submit logic stays in one script: fetch a CSRF token, solve Turnstile, POST the message.
+"""
 from __future__ import annotations
 
 import json

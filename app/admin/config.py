@@ -1,3 +1,5 @@
+"""Analytics settings: how long page-view rows are kept.
+"""
 from __future__ import annotations
 
 import os

@@ -1,3 +1,7 @@
+// The transit-api service: a small read-only JSON API over the transit tables the poller
+// fills. The React map (frontend/) calls it from the visitor's browser, so CORS allows
+// only bizqlab.com and local development. Every route is a GET; SQL lives in
+// services/transitService.js, with parameters passed separately ($1, $2), never pasted in.
 const express = require("express");
 const cors = require("cors");
 

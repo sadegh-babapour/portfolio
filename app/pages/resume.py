@@ -1,3 +1,5 @@
+"""/resume: the timeline (database, edited at /admin/resume) above the PDF viewer.
+"""
 import logging
 
 from nicegui import ui

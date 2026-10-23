@@ -25,16 +25,17 @@ THEME_JSON = json.dumps(NAVIGATION['theme'])
 # Header styles, shared with the transit map (frontend/src/PortfolioNav.jsx imports the
 # same file). The version changes with the content, so browsers fetch edits at once.
 NAV_STYLESHEET = Path(__file__).resolve().parents[2] / 'static' / 'portfolio-nav.css'
-NAV_STYLESHEET_URL = (
-    '/static/portfolio-nav.css?v='
-    + hashlib.sha256(NAV_STYLESHEET.read_bytes()).hexdigest()[:12]
-)
 # Palette tokens and Quasar overrides for every page.
 SITE_STYLESHEET = NAV_STYLESHEET.with_name('site.css')
-SITE_STYLESHEET_URL = (
-    '/static/site.css?v='
-    + hashlib.sha256(SITE_STYLESHEET.read_bytes()).hexdigest()[:12]
-)
+
+
+def _versioned_url(path: Path) -> str:
+    """/static/<name>?v=<content hash>: a new URL whenever the file changes ("cache busting")."""
+    return f'/static/{path.name}?v=' + hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+
+
+NAV_STYLESHEET_URL = _versioned_url(NAV_STYLESHEET)
+SITE_STYLESHEET_URL = _versioned_url(SITE_STYLESHEET)
 
 
 def navbar():

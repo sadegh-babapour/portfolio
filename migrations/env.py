@@ -1,3 +1,9 @@
+"""Alembic's entry point: how `alembic upgrade head` finds the database and the models.
+
+Alembic compares nothing by itself here; each file in migrations/versions/ is a hand-checked
+step with upgrade() and downgrade(). Production runs `alembic upgrade head` as Railway's
+pre-deploy command: if it fails, the new version never goes live.
+"""
 from __future__ import annotations
 
 from logging.config import fileConfig
@@ -9,6 +15,7 @@ from app import runtime_db, runtime_state
 from app.contact.config import ContactSettings
 from app.contact.models import Base, PORTFOLIO_SCHEMA
 from app.runtime_env import RuntimeConfigError
+# Importing each models module registers its tables on Base.metadata.
 import app.auth.models  # noqa: F401,E402
 import app.admin.models  # noqa: F401,E402
 import app.blog.models  # noqa: F401,E402

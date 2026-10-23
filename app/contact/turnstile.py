@@ -1,3 +1,9 @@
+"""Server-side check of a Cloudflare Turnstile token (the "are you human" box).
+
+The widget in the browser only produces a token; it proves nothing until our server asks
+Cloudflare whether that token is real, unused, and was issued for our hostname and for the
+"contact" action. Any network error counts as a failure: fail closed.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass

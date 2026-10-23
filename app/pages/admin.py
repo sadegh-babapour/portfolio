@@ -1,3 +1,5 @@
+"""/admin: the owner's health page (page views, sign-ins, transit feed freshness).
+"""
 from __future__ import annotations
 
 from nicegui import ui

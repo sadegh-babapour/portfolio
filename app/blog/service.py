@@ -1,3 +1,5 @@
+"""Blog reads and writes. Every save adds a revision row, so older versions are never lost.
+"""
 from __future__ import annotations
 
 import uuid

@@ -1,3 +1,5 @@
+"""Contact-form settings from environment variables; `configured` is False until all are set.
+"""
 from __future__ import annotations
 
 import os

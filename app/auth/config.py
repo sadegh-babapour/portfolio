@@ -1,3 +1,8 @@
+"""Sign-in settings, read from environment variables (Railway Variables in production).
+
+Admins are an allowlist: AUTH_ADMIN_EMAILS or AUTH_ADMIN_GOOGLE_SUBJECTS. Nobody can
+make themselves admin from the site.
+"""
 from __future__ import annotations
 
 import os

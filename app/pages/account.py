@@ -1,3 +1,5 @@
+"""/account: sign in or out, see what is stored, and ask for account deletion.
+"""
 import logging
 from urllib.parse import urlencode
 

@@ -1,3 +1,19 @@
+"""Google sign-in (OpenID Connect) and the site's own login sessions.
+
+The flow, start to finish:
+1. begin_google_login: store a one-time "state" and "nonce" (as digests) and send the
+   browser to Google.
+2. Google sends the browser back to /api/auth/google/callback with a code.
+3. consume_login_state: the state must exist, be unused, unexpired, and belong to the
+   same browser (a cookie set in step 1). This blocks forged callbacks (login CSRF).
+4. exchange_google_code + verify_google_identity: swap the code for an ID token and
+   check its signature, audience, nonce and verified email with Google's library.
+5. issue_local_session: create or update the user, then a session row. The browser gets
+   the session token in an HttpOnly cookie; the database keeps only its digest.
+
+Every request after that calls current_session with the cookie. Requests that change
+data also need the CSRF token (require_mutation_session).
+"""
 from __future__ import annotations
 
 import hmac
@@ -99,6 +115,7 @@ def _event(
 
 
 def _cleanup(database: Session, settings: AuthSettings, now: datetime) -> None:
+    # Housekeeping on every login start, so expired rows never pile up and no cron is needed.
     database.execute(delete(OidcLoginState).where(OidcLoginState.expires_at < now))
     database.execute(delete(AuthSession).where(AuthSession.expires_at < now))
     cutoff = now - timedelta(days=settings.event_retention_days)
@@ -148,6 +165,7 @@ def begin_google_login(settings: AuthSettings, return_to: str | None) -> LoginSt
 def consume_login_state(state: str, browser_token: str) -> ConsumedLogin:
     now = utc_now()
     with session_scope() as database:
+        # FOR UPDATE locks the row, so two callbacks racing with the same state can't both pass.
         login_state = database.scalar(
             select(OidcLoginState)
             .where(OidcLoginState.state_digest == token_digest(state))
@@ -157,13 +175,15 @@ def consume_login_state(state: str, browser_token: str) -> ConsumedLogin:
             login_state is None
             or login_state.consumed_at is not None
             or login_state.expires_at <= now
+            # compare_digest takes the same time whether the first or last character differs,
+            # so response timing leaks nothing about the secret.
             or not hmac.compare_digest(
                 login_state.browser_digest, token_digest(browser_token)
             )
         ):
             raise AuthenticationError("Login state is invalid or expired")
 
-        login_state.consumed_at = now
+        login_state.consumed_at = now  # one use only: a replayed callback fails
         consumed = ConsumedLogin(
             nonce_digest=login_state.nonce_digest,
             return_path=safe_return_path(login_state.return_path),
@@ -196,11 +216,14 @@ def verify_google_identity(
     expected_nonce_digest: str,
     settings: AuthSettings,
 ) -> dict[str, Any]:
+    # Checks Google's signature, the expiry, and that the token was issued for our client ID.
     claims = google_id_token.verify_oauth2_token(
         encoded_id_token,
         GoogleRequest(),
         audience=settings.google_client_id,
     )
+    # The nonce we sent in step 1 must come back inside the signed token: proof this token
+    # was minted for this login, not replayed from another one.
     nonce = claims.get("nonce")
     if not isinstance(nonce, str) or not hmac.compare_digest(
         token_digest(nonce), expected_nonce_digest
@@ -220,6 +243,8 @@ def _upsert_identity(
     settings: AuthSettings,
     now: datetime,
 ) -> User:
+    # "sub" is Google's permanent ID for the person. Emails can change; sub doesn't, so the
+    # identity is matched on (provider, sub).
     subject = claims["sub"].strip()
     email = claims["email"].strip().lower()
     display_name = str(claims.get("name") or email.split("@", 1)[0])[:100]
@@ -268,6 +293,7 @@ def _upsert_identity(
     if registered is None:
         database.add(UserRole(user_id=user.id, role="registered", source="google_login"))
 
+    # Admin follows the allowlist on every login: removed from the list, admin is gone next time.
     admin = database.get(UserRole, (user.id, "admin"))
     is_admin = settings.is_admin_identity(subject, email)
     if is_admin and admin is None:
@@ -290,6 +316,7 @@ def issue_local_session(
 
     with session_scope() as database:
         user = _upsert_identity(database, claims, settings, now)
+        # Signing in again ends the old session (no session fixation).
         if previous_session_token:
             previous = database.scalar(
                 select(AuthSession).where(
@@ -318,6 +345,7 @@ def issue_local_session(
 
 
 def current_session(session_token: str | None) -> SessionUser | None:
+    """The signed-in user for this cookie, or None. Looked up by digest, never by raw token."""
     if not session_token:
         return None
     now = utc_now()
@@ -351,6 +379,10 @@ def current_session(session_token: str | None) -> SessionUser | None:
         )
 
 
+# CSRF (cross-site request forgery): another site can make your browser send a request to
+# ours with your cookies attached, but it can't read our CSRF cookie. So a write must echo
+# the CSRF cookie's value in the X-CSRF-Token header ("double submit"), and that value must
+# also match the digest stored with the session.
 def require_mutation_session(
     session_token: str | None,
     csrf_cookie: str | None,

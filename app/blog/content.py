@@ -1,3 +1,9 @@
+"""Blog validation and Markdown rendering.
+
+Posts are untrusted input even from the owner (a pasted snippet can carry a script), so
+raw HTML is off in the Markdown parser and the output is cleaned again by nh3, an
+allowlist sanitizer: only the listed tags and attributes survive.
+"""
 from __future__ import annotations
 
 import re

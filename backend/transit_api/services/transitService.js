@@ -1,3 +1,6 @@
+// Every query the transit API runs. Each function takes the connection pool and returns
+// plain objects for JSON. Shapes are simplified (shapeGeometry.js) before sending: about
+// 80% fewer points with no visible change at map zoom levels.
 const { FEATURED_ROUTES } = require("../config/transitConfig");
 const { simplifyPath } = require("./shapeGeometry");
 

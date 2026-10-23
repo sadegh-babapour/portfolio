@@ -72,7 +72,7 @@ def _project_card(
             ui.badge(project.status, color='primary' if project.featured else 'grey')
 
         with ui.row().classes('gap-2 flex-wrap'):
-            ui.chip(project.data_mode.replace('_', ' ').title(), icon='database').props('outline')
+            ui.chip(project.data_mode.replace('_', ' ').title(), icon='storage').props('outline')
             if project.lab is not None:
                 ui.chip(
                     'Build notes' if member else 'Build notes (sign in)',
@@ -84,7 +84,7 @@ def _project_card(
                 ui.label('Highlights').classes('text-sm font-semibold text-grey-7')
                 _bullet_list(project.outcomes[:3])
 
-        with ui.expansion('How it works', icon='unfold_more').classes('w-full'):
+        with ui.expansion('How it works').classes('w-full'):
             with ui.column().classes('w-full gap-4 p-2'):
                 ui.label('Problem').classes('text-lg font-semibold')
                 ui.label(project.problem).classes('text-sm')

@@ -35,8 +35,7 @@ def contact():
         with ui.column().classes("gap-3 max-w-3xl"):
             ui.label("Let’s build something useful").classes("text-4xl sm:text-5xl font-bold")
             ui.label(
-                "Have a data engineering role, analytics problem, or project worth "
-                "discussing? Send the context and I’ll reply by email."
+                "A role, a data problem or a project idea? Send the details and I’ll reply by email."
             ).classes("text-lg text-grey-7")
 
         with ui.element("div").classes(
@@ -45,8 +44,7 @@ def contact():
             with ui.card().classes("w-full min-w-0 p-5 sm:p-8 gap-5"):
                 ui.label("Send a message").classes("text-2xl font-semibold")
                 ui.label(
-                    "You’ll receive a verification link first. Your message is delivered "
-                    "only after you confirm the address."
+                    "You’ll get a link to confirm your email; the message is sent once you click it."
                 ).classes("text-sm text-grey-7")
 
                 form_html = """
@@ -69,31 +67,23 @@ def contact():
                   </label>
                   <div id="contact-turnstile"></div>
                   <p id="contact-status" role="status" aria-live="polite"></p>
-                  <button id="contact-submit" type="submit">Send verification email</button>
+                  <button id="contact-submit" type="submit">Send</button>
                 </form>
                 """
                 ui.html(form_html).classes("w-full min-w-0")
 
-            with ui.column().classes("gap-4"):
-                with ui.card().classes("w-full p-5 gap-3"):
-                    ui.icon("schedule", size="md").classes("text-primary")
-                    ui.label("What to expect").classes("text-xl font-semibold")
-                    ui.label("We will respond within three business days.").classes("text-sm")
-                    ui.label(
-                        "Please don’t include passwords, private datasets, or other secrets."
-                    ).classes("text-sm text-grey-7")
-                with ui.card().classes("w-full p-5 gap-3"):
-                    ui.icon("verified_user", size="md").classes("text-primary")
-                    ui.label("Privacy & spam protection").classes("text-xl font-semibold")
-                    ui.label(
-                        "Your address is used to verify and reply to this message. "
-                        "Turnstile, throttling, and a hidden bot field protect the form."
-                    ).classes("text-sm text-grey-7")
+            with ui.card().classes("w-full p-5 gap-3 self-start"):
+                ui.label("Good to know").classes("text-xl font-semibold")
+                for line in (
+                    "I reply within three business days.",
+                    "Your email is only used to confirm and reply.",
+                    "Please don’t send passwords or private data.",
+                ):
+                    ui.label(line).classes("text-sm text-grey-7")
 
         if not settings.configured:
             ui.label(
-                "Secure message delivery is being configured. The form will remain "
-                "disabled until its database, Turnstile, and mail settings are ready."
+                "The form is switched off while message delivery is being set up."
             ).classes("text-warning text-sm")
 
     site_key = json.dumps(settings.turnstile_site_key)
@@ -203,7 +193,7 @@ def contact():
               'response-field': false,
               callback: (token) => {{
                 turnstileToken = token;
-                status.textContent = 'Security check complete. You can send the verification email.';
+                status.textContent = 'Check complete. You can send.';
               }},
               'error-callback': () => {{
                 status.textContent = 'The security check could not load. Refresh and try again.';
@@ -229,7 +219,7 @@ def contact():
             return;
           }}
           button.disabled = true;
-          status.textContent = 'Preparing your verification email…';
+          status.textContent = 'Sending…';
           try {{
             const csrfResponse = await fetch('/api/contact/csrf', {{credentials:'same-origin'}});
             const csrf = await csrfResponse.json();

@@ -74,9 +74,13 @@ async def resume_document(download: bool = False):
 async def retired_financial_research(rest: str = ''):
     return RedirectResponse('/projects', status_code=301)
 
+# About was folded into the home page on 2026-10-23.
+@fastapi_app.get('/about', include_in_schema=False)
+async def retired_about():
+    return RedirectResponse('/', status_code=301)
+
 # ── pages ─────────────────────────────────────────────────────────
 def _import_pages():
-    import app.pages.about  # noqa: F401
     import app.pages.contact  # noqa: F401
     import app.pages.dashboard  # noqa: F401
     import app.pages.markets  # noqa: F401

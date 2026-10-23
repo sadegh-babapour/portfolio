@@ -20,7 +20,6 @@ log = logging.getLogger(__name__)
 TRACKED_PAGE_PATHS = frozenset(
     {
         "/",
-        "/about",
         "/resume",
         "/projects",
         "/contact",

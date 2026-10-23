@@ -25,7 +25,8 @@ test("explicit theme modes override Calgary time and cycle back to automatic", (
 
 test("clock is explicitly formatted in Mountain Time", () => {
   const value = formatMountainClock(new Date("2026-09-02T14:05:06Z"));
-  assert.match(value, /8:05/);
+  assert.equal(value, "08:05");
+  assert.equal(formatMountainClock(new Date("2026-09-02T03:30:00Z")), "21:30");
   assert.doesNotMatch(value, /:06/);
   assert.doesNotMatch(value, /M[DS]T/);
 });

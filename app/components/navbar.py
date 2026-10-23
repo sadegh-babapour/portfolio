@@ -270,7 +270,7 @@ def navbar():
           if (clock) {
             clock.dateTime = now.toISOString();
             clock.querySelector('strong').textContent = new Intl.DateTimeFormat('en-CA', {
-              timeZone: config.time_zone, hour: 'numeric', minute: '2-digit',
+              timeZone: config.time_zone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
             }).format(now);
           }
           const resolved = resolveTheme(now);

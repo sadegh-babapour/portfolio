@@ -31,7 +31,7 @@ test("the transit header takes its links from the shared navigation file", () =>
 
   assert.match(source, /import navigation from "\.\.\/\.\.\/content\/navigation\.json"/);
   assert.doesNotMatch(source, /\["Home", "\/"\]/, "no second copy of the links");
-  assert.deepEqual(navigation.links.at(-1), ["Calgary Transit Live", "/calgary-transit-live/"]);
+  assert.ok(navigation.links.some(([, href]) => href === "/calgary-transit-live/"));
 });
 
 test("the transit header uses the shared header stylesheet", () => {

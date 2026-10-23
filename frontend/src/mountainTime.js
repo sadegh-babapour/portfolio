@@ -28,8 +28,9 @@ export function resolveTheme(mode, date = new Date()) {
 export function formatMountainClock(date = new Date()) {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: MOUNTAIN_TIME_ZONE,
-    hour: "numeric",
+    hour: "2-digit",
     minute: "2-digit",
+    hourCycle: "h23",
   }).format(date);
 }
 

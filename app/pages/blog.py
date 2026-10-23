@@ -31,8 +31,7 @@ def blog_index():
         with ui.column().classes("gap-3 max-w-4xl"):
             ui.label("Blog").classes("text-4xl sm:text-5xl font-bold")
             ui.label(
-                "Practical notes on data engineering, analytics, system decisions, "
-                "and what the projects teach along the way."
+                "Notes on data engineering and what the projects teach."
             ).classes("text-lg text-grey-7 leading-relaxed")
         try:
             posts = list_published_posts()
@@ -42,10 +41,7 @@ def blog_index():
             return
         if not posts:
             with ui.card().classes("w-full p-6 gap-2 border"):
-                ui.label("First article coming soon").classes("text-2xl font-semibold")
-                ui.label(
-                    "The publishing system is ready; no articles have been published yet."
-                ).classes("text-grey-7")
+                ui.label("No posts yet.").classes("text-grey-7")
             return
         with ui.element("section").classes("grid w-full grid-cols-1 gap-5 md:grid-cols-2"):
             for post in posts:

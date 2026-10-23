@@ -32,7 +32,7 @@ from app.blog.service import (
 
 log = logging.getLogger(__name__)
 STATIC_SITEMAP_PATHS = (
-    "/", "/about", "/resume", "/projects", "/contact", "/dashboard",
+    "/", "/resume", "/projects", "/contact", "/dashboard",
     "/blog", "/calgary-transit-live/", "/privacy", "/terms",
 )
 

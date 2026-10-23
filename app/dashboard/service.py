@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import json
 import logging
 import threading
 import time
-from pathlib import Path
 from typing import Any
 
 from sqlalchemy import text
@@ -13,51 +11,10 @@ from app.contact.database import session_scope
 
 
 log = logging.getLogger(__name__)
-SNAPSHOT_PATH = Path(__file__).resolve().parents[2] / "dashboard_cache.json"
-EXPECTED_SNAPSHOT_TABLES = (
-    "daily_stats",
-    "membership_summary",
-    "revenue_summary",
-    "member_visits",
-)
 LIVE_ANALYSIS_CACHE_SECONDS = 30
 _LIVE_CACHE_LOCK = threading.Lock()
 _LIVE_CACHE_VALUE: dict[str, Any] | None = None
 _LIVE_CACHE_EXPIRES_AT = 0.0
-
-
-def load_cached_analysis(path: Path = SNAPSHOT_PATH) -> dict[str, Any]:
-    """Load and summarize the committed, non-sensitive demonstration snapshot."""
-    try:
-        document = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        log.exception("Unable to load the dashboard snapshot")
-        return {"available": False, "tables": {}, "quality": []}
-
-    raw_tables = document.get("data")
-    if not isinstance(raw_tables, dict):
-        return {"available": False, "tables": {}, "quality": []}
-
-    tables = {
-        name: rows if isinstance((rows := raw_tables.get(name)), list) else []
-        for name in EXPECTED_SNAPSHOT_TABLES
-    }
-    quality = [
-        {
-            "table": name,
-            "rows": len(rows),
-            "status": "pass" if rows else "empty",
-        }
-        for name, rows in tables.items()
-    ]
-    return {
-        "available": all(item["status"] == "pass" for item in quality),
-        "cache_date": document.get("cache_date"),
-        "last_updated": document.get("last_updated"),
-        "tables": tables,
-        "quality": quality,
-        "row_count": sum(item["rows"] for item in quality),
-    }
 
 
 def build_live_transit_analysis() -> dict[str, Any]:

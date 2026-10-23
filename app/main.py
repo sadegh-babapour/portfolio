@@ -17,6 +17,11 @@ import logging
 import os
 from pathlib import Path
 
+# One Python process serves the whole site (docs/lessons/08):
+# - NiceGUI pages (app/pages/*), server-rendered with Python;
+# - JSON routes (the *.api modules), plain FastAPI under /api/...;
+# - static files, and the built React transit map under /calgary-transit-live/.
+# Importing an api module is what registers its routes (the decorators run on import).
 import app.contact.api  # noqa: F401,E402
 import app.auth.api  # noqa: F401,E402
 import app.admin.api  # noqa: F401,E402

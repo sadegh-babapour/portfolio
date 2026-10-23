@@ -1,3 +1,5 @@
+"""Blog tables: the current post, plus an immutable revision row for every save.
+"""
 from __future__ import annotations
 
 import uuid

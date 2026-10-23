@@ -1,3 +1,8 @@
+"""Sends email through Resend's HTTP API (no SMTP server to run or secure).
+
+User-supplied text is escaped before it goes into HTML, so a message can't inject markup
+into the owner's inbox.
+"""
 from __future__ import annotations
 
 from email.message import EmailMessage

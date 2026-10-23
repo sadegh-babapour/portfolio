@@ -1,3 +1,8 @@
+"""Owner console data: anonymous page counts, health of the transit feed, and the admin check.
+
+Page views are deliberately minimal: the path and a timestamp. No IP, cookie or user id,
+and rows older than the retention window are deleted as new ones arrive.
+"""
 from __future__ import annotations
 
 import logging
@@ -51,6 +56,7 @@ def record_page_view(path: str) -> None:
 
 
 def require_admin(session_token: str | None) -> SessionUser:
+    """The admin's session, or 403. Admin pages call it on load and again in every action."""
     user = current_session(session_token)
     if user is None or "admin" not in user.roles:
         raise HTTPException(status_code=403, detail="Administrator access is required")

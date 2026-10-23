@@ -1,3 +1,5 @@
+"""Anonymous page-view counts (path and time only).
+"""
 from __future__ import annotations
 
 from datetime import datetime

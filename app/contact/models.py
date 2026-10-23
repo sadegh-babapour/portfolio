@@ -1,3 +1,6 @@
+"""Tables for the contact form, and Base: the SQLAlchemy base every portfolio table uses
+(all live in the `portfolio` Postgres schema).
+"""
 from __future__ import annotations
 
 import uuid

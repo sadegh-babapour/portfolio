@@ -1,3 +1,5 @@
+"""/privacy and /terms.
+"""
 from contextlib import contextmanager
 
 from nicegui import ui

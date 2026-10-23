@@ -29,7 +29,8 @@ import sys
 from dataclasses import dataclass
 from urllib.parse import unquote, urlsplit
 
-SERVICES = ("Postgres", "portfolio", "transit-api", "transit-poller", "sec-research-refresh")
+# The live Railway services (sec-research-refresh was deleted on 2026-10-21).
+SERVICES = ("Postgres", "portfolio", "transit-api", "transit-poller")
 SECRET_NAME = re.compile(
     r"(SECRET|PASSWORD|PASSWD|TOKEN|PEPPER|API_KEY|PRIVATE_KEY|_KEY$|CREDENTIAL|DATABASE_URL|DATABASE_PUBLIC_URL|_DSN$)")
 # Look secret by name, but are public by design: sent to every visitor's browser.
@@ -77,10 +78,6 @@ DERIVED = ("DATABASE_URL", "DATABASE_PUBLIC_URL", "PGPASSWORD", "PGUSER", "PGHOS
 # Postgres service by reference (${{Postgres.PGPASSWORD}}), so a new password reaches them too;
 # a pasted copy keeps the old password and fails after the redeploy.
 LINKED = ("DATABASE_URL", "PGPASSWORD")
-
-
-class RailwayError(Exception):
-    pass
 
 
 def run_railway(args: list[str], stdin: str | None = None) -> subprocess.CompletedProcess:

@@ -1,5 +1,12 @@
 """Guarded development connections and engines (M1 design §5, §6, §8.3).
 
+In plain words: on a developer machine, every new connection's first statement is
+IDENTITY_SQL ("which database, user, server address and port am I on?"). If the answer
+doesn't match the approved target, the connection is closed before any real query runs.
+The 2026-10-20 bug lived here: psycopg2's own helpers asked for a plain cursor class the
+guard didn't expect (fixed in 7ea37b3; docs/lessons/10).
+
+
 Batch 2. Every development connection is created by ``connect_verified()``:
 psycopg2 keyword arguments from the resolved target, a guarded
 ``connection_factory``, and the identity query as the first statement. Guards

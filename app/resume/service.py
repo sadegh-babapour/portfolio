@@ -1,3 +1,5 @@
+"""Résumé timeline reads and writes. `position` orders the entries; new ones go on top.
+"""
 from __future__ import annotations
 
 import uuid

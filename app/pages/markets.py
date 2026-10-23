@@ -1,3 +1,6 @@
+"""/markets: Canada rates from the dbt mart (app/markets/service.py). Not in the nav until
+production has the warehouse (stage 2).
+"""
 from __future__ import annotations
 
 import hashlib

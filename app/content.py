@@ -1,3 +1,10 @@
+"""Project case studies from content/projects.json, checked before they are shown.
+
+Content lives in a JSON file rather than code so wording changes don't touch Python; it is
+validated into frozen dataclasses, so a typo fails loudly instead of rendering a broken page.
+(Blog posts and the résumé timeline are in the database instead, so they can change
+without a deploy.)
+"""
 from __future__ import annotations
 
 import json

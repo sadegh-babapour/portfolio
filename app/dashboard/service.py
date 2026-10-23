@@ -1,3 +1,9 @@
+"""Numbers for /dashboard: aggregate SQL over the transit tables the poller fills.
+
+Two protections keep a busy page from loading the database: results are cached in memory
+for 30 seconds (every visitor in that window shares one query), and each query gets a
+2-second statement_timeout.
+"""
 from __future__ import annotations
 
 import logging
@@ -21,6 +27,8 @@ def build_live_transit_analysis() -> dict[str, Any]:
     """Return bounded aggregate transit quality metrics; never expose vehicle IDs."""
     global _LIVE_CACHE_EXPIRES_AT, _LIVE_CACHE_VALUE
 
+    # monotonic(), not the wall clock: it never jumps when the system time is corrected.
+    # The lock means only one request refreshes an expired cache; the rest wait and reuse it.
     now = time.monotonic()
     with _LIVE_CACHE_LOCK:
         if _LIVE_CACHE_VALUE is not None and now < _LIVE_CACHE_EXPIRES_AT:

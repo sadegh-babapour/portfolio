@@ -1,3 +1,14 @@
+"""The transit-poller service: Calgary's realtime feeds → Postgres, every 30 seconds.
+
+One loop (main), forever:
+  fetch each feed (GTFS-Realtime, a protobuf binary) → parse → write → commit.
+- "current" tables hold one row per vehicle, trip or alert: an upsert replaces the old row.
+- vehicle_positions_raw keeps the last few minutes of points so the map can replay them
+  (docs/lessons/09); older rows are deleted on every pass (RAW_RETENTION_MINUTES).
+- Each feed is its own transaction: a broken alerts feed doesn't lose the bus positions.
+- Polling runs only during service hours, and POLL_ENABLED / ADMIN_KILL_SWITCH stop it
+  without a deploy. The static schedule (routes, stops, shapes) re-syncs every 6 hours.
+"""
 from __future__ import annotations
 
 import argparse
@@ -73,6 +84,7 @@ def upsert_vehicle_positions(conn) -> None:
             updated_at
         )
         values (%s, %s, %s, %s, %s, %s, %s, %s, now())
+        -- One row per bus: a newer report overwrites the last one.
         on conflict (vehicle_id) do update
         set trip_id = excluded.trip_id,
             feed_entity_id = excluded.feed_entity_id,
@@ -97,6 +109,7 @@ def upsert_vehicle_positions(conn) -> None:
         raw_sha256
     )
     values (now(), %s, %s, %s, %s, %s, %s, %s, %s)
+    -- The feed repeats a bus's last report until it sends a new one; keep each report once.
     on conflict (trip_id, vehicle_id, vehicle_timestamp) do nothing
 """
 
@@ -145,6 +158,7 @@ def upsert_vehicle_positions(conn) -> None:
             )
             count += 1
 
+        # Retention: the map needs minutes of history, not days, so the table stays small.
         retention_minutes = int(os.getenv("RAW_RETENTION_MINUTES", "15"))
         cur.execute(
             """
@@ -406,6 +420,7 @@ def run_once(conn) -> None:
         ("alerts", upsert_alerts),
     )
 
+    # Commit per feed: one failing feed rolls back only its own writes.
     for feed_name, update_feed in feed_updates:
         try:
             update_feed(conn)

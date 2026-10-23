@@ -1,3 +1,8 @@
+"""The one place the web app gets database connections (despite the "contact" path, every
+module imports session_scope from here).
+
+Use it as `with session_scope() as database: ...`; nothing is saved without commit().
+"""
 from __future__ import annotations
 
 from functools import lru_cache
@@ -27,6 +32,8 @@ def _production_engine() -> Engine:
     settings = ContactSettings.from_env()
     if not settings.database_url:
         raise RuntimeError("DATABASE_URL is required for the contact workflow")
+    # pre_ping tests a pooled connection before use; recycle drops ones older than 5 minutes.
+    # Both avoid errors from connections the server or network closed while idle.
     return create_engine(settings.database_url, pool_pre_ping=True, pool_recycle=300)
 
 

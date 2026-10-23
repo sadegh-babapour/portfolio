@@ -1,3 +1,6 @@
+"""The home page. Its app name, purpose, data-use line and privacy link are what Google's
+OAuth review asks a homepage to show, so keep them when editing.
+"""
 from nicegui import ui
 
 from app.components.navbar import with_layout

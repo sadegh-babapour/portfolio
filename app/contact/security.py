@@ -1,3 +1,10 @@
+"""Input cleaning and keyed hashes for the contact form.
+
+Two kinds of hash are used across the app:
+- plain SHA-256 (app/auth/security.py) for random tokens, which are unguessable anyway;
+- HMAC with a secret key (keyed_digest, here) for values someone could guess, such as an
+  IP or email address. Without the key, nobody can hash every IP and match the table.
+"""
 from __future__ import annotations
 
 import hashlib
@@ -22,6 +29,8 @@ class ContactValidationError(ValueError):
 
 
 def clean_text(value: str, field: str, minimum: int, maximum: int) -> str:
+    # Collapses runs of whitespace, including newlines: an email subject with a newline in it
+    # could inject extra mail headers.
     normalized = " ".join(value.split())
     if not minimum <= len(normalized) <= maximum:
         raise ContactValidationError(f"{field} must be {minimum}–{maximum} characters")
@@ -60,6 +69,8 @@ def new_verification_token() -> str:
     return secrets.token_urlsafe(32)
 
 
+# The contact form's CSRF token is stateless: "time.random.signature". The server can check
+# it was issued here, and when, without storing anything.
 def new_csrf_token(secret: str, now: int | None = None) -> str:
     timestamp = now or int(time.time())
     nonce = secrets.token_urlsafe(24)

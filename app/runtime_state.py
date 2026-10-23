@@ -1,5 +1,11 @@
 """Runtime authorization state, fingerprint and revocation (M1 design §8).
 
+In plain words: each process (web, poller, alembic, a pipeline) calls
+bootstrap_entry_point once at start. The decision from runtime_env is frozen here. On a
+developer machine every database call re-checks it, and if the environment variables
+changed underneath the process, the state is revoked and stays revoked.
+
+
 Batch 2. ``bootstrap_runtime`` resolves the runtime with the Batch 1 resolver
 (``app.runtime_env``), then commits an immutable ``RuntimeState`` under a lock.
 ``assert_usable`` re-checks that state at every guarded boundary in

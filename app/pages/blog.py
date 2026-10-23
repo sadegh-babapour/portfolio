@@ -1,3 +1,5 @@
+"""/blog and /blog/<slug>: published posts, rendered from sanitized Markdown.
+"""
 from __future__ import annotations
 
 import logging

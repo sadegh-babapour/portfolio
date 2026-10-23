@@ -1,3 +1,13 @@
+"""The contact workflow: a message is only delivered after the sender confirms their email.
+
+accept_contact, in order, cheapest check first:
+  honeypot field → input validation → rate limit (5 per IP per hour, 3 per email per day)
+  → Turnstile → store the message as pending → email a one-time confirmation link.
+verify_and_deliver runs when the link is clicked: mark verified, then send it to the owner.
+
+Every outcome is recorded (contact_attempts, contact_audit_events), but IPs and emails in
+the attempts table are keyed hashes, never the raw values.
+"""
 from __future__ import annotations
 
 import asyncio
@@ -64,11 +74,14 @@ def validate_contact(value: ContactInput) -> CleanContact:
 
 
 def _advisory_key(digest: str) -> int:
+    # Postgres advisory locks take a signed 64-bit number; fold the first 16 hex digits into one.
     value = int(digest[:16], 16)
     return value - 2**64 if value >= 2**63 else value
 
 
 def _enforce_rate_limit(session, ip_hash: str, email_hash: str, now: datetime) -> None:
+    # Lock on this IP for the rest of the transaction, so ten requests fired at once are counted
+    # one after another instead of all seeing "0 so far".
     session.execute(select(func.pg_advisory_xact_lock(_advisory_key(ip_hash))))
     hour_ago = now - timedelta(hours=1)
     day_ago = now - timedelta(days=1)
@@ -94,6 +107,8 @@ async def accept_contact(
     remote_ip: str,
     settings: ContactSettings,
 ) -> str:
+    # Honeypot: "website" is hidden from people, so only bots fill it. They get the normal
+    # answer, which tells them nothing.
     if value.website.strip():
         return GENERIC_ACCEPTED_MESSAGE
 
@@ -133,6 +148,7 @@ async def accept_contact(
         log.warning("Turnstile rejected contact submission: %s", turnstile.error_codes)
         raise PermissionError("Bot verification failed")
 
+    # Same rule as sessions: the link carries the raw token, the table only its keyed digest.
     raw_token = new_verification_token()
     digest = verification_digest(raw_token, settings.token_pepper)
     message = ContactMessage(

@@ -187,12 +187,14 @@ The résumé is read locally from the ignored `static/resume.pdf` by default.
 Production reads it from the Railway volume using
 `RESUME_PDF_PATH=/data/resume.pdf`.
 
-The on-page résumé timeline and project case studies are separate from the PDF.
-Edit `content/resume_timeline.json` to update the job/education tree above the
-document and `content/projects.json` to update project case studies. These are
-source-controlled files, so changing either requires validation, commit/push,
-and a web deployment. Application validation rejects malformed content before
-rendering it.
+The on-page résumé timeline is separate from the PDF. An administrator edits it
+at `/admin/resume` (add, edit, hide, reorder, delete); entries are stored in
+`portfolio.resume_entries` and show on `/resume` as soon as they are saved, with
+no deployment. With no visible entries the page shows only the PDF.
+
+Project case studies live in `content/projects.json`. That is a source-controlled
+file, so changing it requires validation, commit/push and a web deployment.
+Application validation rejects malformed content before rendering it.
 
 Blog articles use a different workflow. An allowlisted administrator can open
 `/admin/blog`, write Markdown, preview the sanitized result, save drafts, and

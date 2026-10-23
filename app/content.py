@@ -8,34 +8,12 @@ from typing import Any
 
 CONTENT_DIR = Path(__file__).resolve().parent.parent / "content"
 SUPPORTED_SCHEMA_VERSION = 1
-ALLOWED_TIMELINE_KINDS = {"work", "education", "project", "milestone"}
 ALLOWED_VISIBILITY = {"public", "registered"}
 ALLOWED_DATA_MODES = {"static_content", "static_snapshot", "scheduled_snapshot", "live_database"}
 
 
 class ContentValidationError(ValueError):
     """Raised when source-controlled portfolio content violates its contract."""
-
-
-@dataclass(frozen=True)
-class TimelineEntry:
-    id: str
-    period: str
-    title: str
-    organization: str
-    kind: str
-    summary: str
-    highlights: tuple[str, ...]
-    skills: tuple[str, ...]
-    icon: str
-    color: str
-
-
-@dataclass(frozen=True)
-class ResumeTimeline:
-    heading: str
-    intro: str
-    entries: tuple[TimelineEntry, ...]
 
 
 @dataclass(frozen=True)
@@ -122,42 +100,6 @@ def _unique_ids(items: list[dict[str, Any]], field: str) -> None:
     ids = [_text(item.get("id"), f"{field}[].id") for item in items]
     if len(ids) != len(set(ids)):
         raise ContentValidationError(f"{field} contains duplicate ids")
-
-
-def load_resume_timeline(path: Path | None = None) -> ResumeTimeline:
-    document = _read_document(path or CONTENT_DIR / "resume_timeline.json")
-    raw_entries = document.get("entries")
-    # Empty is allowed: the résumé page then shows only the PDF.
-    if not isinstance(raw_entries, list):
-        raise ContentValidationError("entries must be a list")
-    if not all(isinstance(entry, dict) for entry in raw_entries):
-        raise ContentValidationError("entries must contain objects")
-    _unique_ids(raw_entries, "entries")
-
-    entries = []
-    for raw in raw_entries:
-        kind = _text(raw.get("kind"), "entries[].kind")
-        if kind not in ALLOWED_TIMELINE_KINDS:
-            raise ContentValidationError(f"Unsupported timeline kind: {kind}")
-        entries.append(
-            TimelineEntry(
-                id=_text(raw.get("id"), "entries[].id"),
-                period=_text(raw.get("period"), "entries[].period"),
-                title=_text(raw.get("title"), "entries[].title"),
-                organization=_text(raw.get("organization"), "entries[].organization"),
-                kind=kind,
-                summary=_text(raw.get("summary"), "entries[].summary"),
-                highlights=_text_list(raw.get("highlights"), "entries[].highlights"),
-                skills=_text_list(raw.get("skills"), "entries[].skills"),
-                icon=_text(raw.get("icon"), "entries[].icon"),
-                color=_text(raw.get("color"), "entries[].color"),
-            )
-        )
-    return ResumeTimeline(
-        heading=_text(document.get("heading"), "heading"),
-        intro=_text(document.get("intro"), "intro"),
-        entries=tuple(entries),
-    )
 
 
 def load_projects(path: Path | None = None) -> ProjectCollection:

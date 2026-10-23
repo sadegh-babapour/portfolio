@@ -12,6 +12,7 @@ from app.runtime_env import RuntimeConfigError
 import app.auth.models  # noqa: F401,E402
 import app.admin.models  # noqa: F401,E402
 import app.blog.models  # noqa: F401,E402
+import app.resume.models  # noqa: F401,E402
 
 
 config = context.config

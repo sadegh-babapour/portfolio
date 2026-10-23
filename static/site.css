@@ -110,7 +110,6 @@ html[data-theme="dark"] .q-table__container,
 html[data-theme="dark"] .q-table thead,
 html[data-theme="dark"] .q-table tbody,
 html[data-theme="dark"] .q-table tr,
-html[data-theme="dark"] .q-timeline__content,
 html[data-theme="dark"] .q-field__control,
 html[data-theme="dark"] .q-menu {
   background: var(--bq-panel);

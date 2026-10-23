@@ -92,6 +92,7 @@ def _import_pages():
     import app.pages.admin  # noqa: F401
     import app.pages.blog  # noqa: F401
     import app.pages.admin_blog  # noqa: F401
+    import app.pages.admin_resume  # noqa: F401
 
 
 # ── run ───────────────────────────────────────────────────────────

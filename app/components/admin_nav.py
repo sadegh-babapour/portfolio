@@ -6,6 +6,7 @@ from nicegui import ui
 ADMIN_LINKS = (
     ("Operational health", "/admin"),
     ("Blog publishing", "/admin/blog"),
+    ("Résumé timeline", "/admin/resume"),
     ("View public blog", "/blog"),
 )
 

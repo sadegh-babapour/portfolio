@@ -12,15 +12,13 @@ log = logging.getLogger(__name__)
 @with_layout
 def resume():
     with ui.column().classes('w-full max-w-7xl mx-auto px-4 py-8 sm:px-8'):
-        ui.label('My Resume').classes('text-4xl sm:text-5xl font-bold mb-6')
+        ui.label('Résumé').classes('text-4xl sm:text-5xl font-bold mb-6')
         try:
             timeline = load_resume_timeline()
         except ContentValidationError as exc:
             log.error('Unable to load résumé timeline: %s', exc)
-            ui.label('The career timeline is temporarily unavailable.').classes(
-                'w-full max-w-4xl mx-auto text-negative'
-            )
-        else:
+            timeline = None
+        if timeline is not None and timeline.entries:
             ui.label(timeline.heading).classes('text-2xl w-full max-w-4xl mx-auto')
             ui.label(timeline.intro).classes(
                 'w-full max-w-4xl mx-auto text-base text-grey-7 mb-4'
@@ -40,6 +38,6 @@ def resume():
                         icon=entry.icon,
                         color=entry.color,
                     )
-        ui.separator().classes('my-8')
-        ui.label('Resume Document').classes('text-2xl mb-4')
+            ui.separator().classes('my-8')
+            ui.label('Full résumé').classes('text-2xl mb-4')
         create_pdf_viewer('/resume/document.pdf')

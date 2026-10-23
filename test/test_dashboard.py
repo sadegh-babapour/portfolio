@@ -1,11 +1,10 @@
 import json
-import tempfile
 import unittest
 from pathlib import Path
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
-from app.dashboard.service import build_live_transit_analysis, load_cached_analysis
+from app.dashboard.service import build_live_transit_analysis
 
 
 class DashboardPresentationTests(unittest.TestCase):
@@ -17,31 +16,6 @@ class DashboardPresentationTests(unittest.TestCase):
         self.assertIn('initial_options["animation"] = False', source)
         self.assertIn("IntersectionObserver", source)
         self.assertIn("prefers-reduced-motion", source)
-
-
-class CachedDashboardTests(unittest.TestCase):
-    def test_snapshot_contract_reports_rows_and_empty_tables(self):
-        document = {
-            "cache_date": "2026-08-24",
-            "last_updated": "2026-08-24T12:00:00Z",
-            "data": {
-                "daily_stats": [{"date": "2026-08-24"}],
-                "membership_summary": [{"period_date": "2026-08-24"}],
-                "revenue_summary": [{"date": "2026-08-24"}],
-                "member_visits": [],
-            },
-        }
-        handle = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False)
-        with handle:
-            json.dump(document, handle)
-        path = Path(handle.name)
-        self.addCleanup(path.unlink)
-
-        snapshot = load_cached_analysis(path)
-
-        self.assertFalse(snapshot["available"])
-        self.assertEqual(snapshot["row_count"], 3)
-        self.assertEqual(snapshot["quality"][-1]["status"], "empty")
 
 
 class LiveTransitDashboardTests(unittest.TestCase):

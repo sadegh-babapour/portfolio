@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "heading": "Data Engineering & Analytics Projects",
-  "intro": "Case studies emphasize the data problem, pipeline, architecture, operational trade-offs, and honest limitations—not just screenshots.",
+  "heading": "Projects",
+  "intro": "What each one solves, how it's built and where it falls short.",
   "projects": [
     {
       "id": "calgary-transit-live",
@@ -9,9 +9,9 @@
       "status": "Live",
       "visibility": "public",
       "featured": true,
-      "summary": "A production GTFS and GTFS-Realtime pipeline with delayed vehicle playback, route context, stops, and alerts.",
-      "problem": "Vehicle positions are sparse and often omit the route and stop context needed for a useful map. The system joins realtime observations to static GTFS and exposes a stable frontend contract.",
-      "architecture": "Calgary feeds → Python poller → PostgreSQL transit schema → Express API → React/Leaflet, with NiceGUI serving the production bundle.",
+      "summary": "Calgary's realtime bus feed, joined to the schedule and played back on a live map.",
+      "problem": "Bus positions arrive bare: no route, no stops. Joining them to the static schedule makes them readable on a map.",
+      "architecture": "Calgary feeds → Python poller → PostgreSQL → Express API → React/Leaflet map. A live dashboard reads the same tables.",
       "data_sources": [
         "Calgary Transit static GTFS",
         "VehiclePositions GTFS-Realtime",
@@ -19,27 +19,34 @@
         "Alerts GTFS-Realtime"
       ],
       "pipeline": [
-        "Download and parse three protobuf feeds on a controlled schedule",
-        "Upsert current entities and retain a bounded vehicle observation history",
-        "Enrich trip, route, shape, stop, and alert context in PostgreSQL",
-        "Serve parameterized read queries through Express",
-        "Render playback approximately 45 seconds behind source time"
+        "Poll three realtime feeds from 08:00 to 21:00",
+        "Keep current state plus a short position history",
+        "Join trips to routes, shapes, stops and alerts in PostgreSQL",
+        "Serve read-only queries through Express",
+        "Play buses back slightly delayed, along their own route shape"
       ],
-      "stack": ["Python", "PostgreSQL", "Express", "React", "Leaflet", "Railway"],
+      "stack": [
+        "Python",
+        "PostgreSQL",
+        "Express",
+        "React",
+        "Leaflet",
+        "Railway"
+      ],
       "outcomes": [
-        "Deployed separate web, API, and worker services sharing PostgreSQL",
-        "Preserves source timestamps and distinguishes stopped and stale vehicles",
-        "Supports responsive route selection, upcoming stops, and alert context"
+        "Web, API and poller deployed as separate services on one database",
+        "Keeps source timestamps and marks stopped and stale buses",
+        "Route picker, upcoming stops and alerts"
       ],
       "limitations": [
-        "Calgary LRT does not currently provide confirmed VehiclePositions in the observed feed",
-        "The public UI deliberately presents delayed playback rather than implying exact instantaneous location",
-        "Active-alert presentation still needs a production example when the feed supplies one"
+        "The CTrain feed has no confirmed vehicle positions yet",
+        "Playback is deliberately delayed, not an exact live location",
+        "Alert display still needs a real alert from the feed to confirm"
       ],
       "data_mode": "live_database",
       "lab": {
-        "heading": "Project Lab: realtime data techniques",
-        "intro": "A closer look at the techniques and engineering concepts behind the public demonstration.",
+        "heading": "Build notes",
+        "intro": "The techniques behind the map.",
         "techniques": [
           {
             "title": "Sparse-feed enrichment",
@@ -69,38 +76,52 @@
         "working_method": "Codex was used as an AI-assisted development tool. The portfolio owner reviewed and validated the resulting work."
       },
       "links": [
-        {"label": "Open live project", "url": "/calgary-transit-live/"}
+        {
+          "label": "Open the map",
+          "url": "/calgary-transit-live/"
+        },
+        {
+          "label": "Live dashboard",
+          "url": "/dashboard"
+        }
       ]
     },
     {
-      "id": "theme-park-analytics",
-      "title": "Data Platform Analytics Dashboard",
-      "status": "Live + versioned snapshot",
+      "id": "canada-rates",
+      "title": "Canada Rates Pipeline",
+      "status": "In progress",
       "visibility": "public",
       "featured": false,
-      "summary": "A two-mode analytics product combining live PostgreSQL-backed Calgary pipeline quality with a committed theme-park analysis snapshot.",
-      "problem": "Show when an analytical question needs a fresh bounded query and when a validated versioned snapshot is the safer, faster delivery contract.",
-      "architecture": "Calgary GTFS pipeline → PostgreSQL aggregate queries → NiceGUI/ECharts, alongside validated snapshot JSON → quality contract → cached charts.",
-      "data_sources": ["Live aggregate transit tables in PostgreSQL", "Committed demonstration snapshot in dashboard_cache.json"],
-      "pipeline": [
-        "Query bounded recent transit windows without exposing vehicle identifiers",
-        "Calculate route enrichment, ingestion cadence, and active-route coverage",
-        "Validate a small source-controlled snapshot before calculating attendance and revenue series"
+      "summary": "Bank of Canada rates loaded into PostgreSQL and modelled with dbt for a rates page.",
+      "problem": "Policy rate, CORRA, bond yields and USD/CAD come from one public API in different shapes. They need one tested daily table before anything can chart them.",
+      "architecture": "Bank of Canada Valet API → Python loader → raw schema → dbt staging and marts → rates page.",
+      "data_sources": [
+        "Bank of Canada Valet API"
       ],
-      "stack": ["Python", "SQLAlchemy", "PostgreSQL", "NiceGUI", "ECharts", "JSON"],
+      "pipeline": [
+        "Upsert new observations and log every run",
+        "Model staging, a fact table and a daily mart in dbt",
+        "Test the models and check source freshness"
+      ],
+      "stack": [
+        "Python",
+        "PostgreSQL",
+        "dbt",
+        "SQL",
+        "NiceGUI",
+        "ECharts"
+      ],
       "outcomes": [
-        "Separates freshness-sensitive metrics from a low-change public snapshot",
-        "Publishes provenance timestamps, row counts, quality status, empty states, and accessible chart summaries",
-        "Adds private traffic charts without changing the anonymous path-and-time collection boundary"
+        "Re-runnable loads with a run log",
+        "Tested dbt models with documented lineage",
+        "Read-only rates page with charts and a rate-decision log"
       ],
       "limitations": [
-        "Theme-park values remain demonstration data and are not refreshed automatically",
-        "Transit coverage measures feed records and enrichment quality, not ridership or schedule performance"
+        "The production reporting database comes in the next stage, so the live rates page has no data yet",
+        "Daily values only, as the Bank publishes them"
       ],
-      "data_mode": "static_snapshot",
-      "links": [
-        {"label": "Open dashboard", "url": "/dashboard"}
-      ]
+      "data_mode": "scheduled_snapshot",
+      "links": []
     }
   ]
 }

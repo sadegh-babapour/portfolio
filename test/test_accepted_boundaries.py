@@ -186,11 +186,10 @@ class PortfolioContentTests(unittest.TestCase):
         timeline = load_resume_timeline()
         projects = load_projects()
 
-        self.assertGreaterEqual(len(timeline.entries), 1)
         self.assertEqual(len({entry.id for entry in timeline.entries}), len(timeline.entries))
         self.assertGreaterEqual(len(projects.projects), 2)
         self.assertTrue(any(project.data_mode == "live_database" for project in projects.projects))
-        self.assertTrue(any(project.data_mode == "static_snapshot" for project in projects.projects))
+        self.assertTrue(any(project.data_mode == "scheduled_snapshot" for project in projects.projects))
         self.assertTrue(any(project.lab is not None for project in projects.projects))
 
     def test_public_branding_and_project_disclosure_are_deliberate(self):

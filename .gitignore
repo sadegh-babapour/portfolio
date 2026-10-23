@@ -49,8 +49,7 @@ logs/
 # Railway
 .railway/
 
-# Cache files — dashboard_cache.json is intentionally committed
-# as static demo data, but exclude any future runtime caches
+# Runtime caches
 *_cache_runtime.json
 
 # Large static GTFS artifact; database bootstrap downloads the current archive

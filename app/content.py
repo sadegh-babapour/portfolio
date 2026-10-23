@@ -127,8 +127,9 @@ def _unique_ids(items: list[dict[str, Any]], field: str) -> None:
 def load_resume_timeline(path: Path | None = None) -> ResumeTimeline:
     document = _read_document(path or CONTENT_DIR / "resume_timeline.json")
     raw_entries = document.get("entries")
-    if not isinstance(raw_entries, list) or not raw_entries:
-        raise ContentValidationError("entries must be a non-empty list")
+    # Empty is allowed: the résumé page then shows only the PDF.
+    if not isinstance(raw_entries, list):
+        raise ContentValidationError("entries must be a list")
     if not all(isinstance(entry, dict) for entry in raw_entries):
         raise ContentValidationError("entries must contain objects")
     _unique_ids(raw_entries, "entries")

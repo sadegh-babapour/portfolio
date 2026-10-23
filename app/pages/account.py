@@ -24,28 +24,24 @@ def account():
             log.exception('Unable to read the account session')
 
     with ui.column().classes('w-full max-w-5xl mx-auto px-4 py-8 sm:px-8 gap-6'):
-        ui.label('Account').classes('text-4xl')
+        ui.label('Account').classes('text-4xl sm:text-5xl font-bold')
         if user is None:
-            with ui.card().classes('w-full p-6 sm:p-8 gap-4 border'):
-                with ui.row().classes('items-center gap-3 flex-wrap'):
-                    ui.icon('public', size='md').classes('text-primary')
-                    ui.label('Guest access').classes('text-2xl font-semibold')
-                    ui.badge('Signed out', color='grey').props('outline')
+            with ui.card().classes('w-full max-w-xl p-6 sm:p-8 gap-4'):
+                ui.label('Sign in').classes('text-2xl font-semibold')
                 ui.label(
-                    'You can browse the public portfolio, case studies, dashboard, and live '
-                    'transit demonstration without an account.'
+                    'Everything on the site is public. Sign in to read the build notes '
+                    'and save transit stops.'
                 ).classes('text-base text-grey-7 leading-relaxed')
-                ui.label(
-                    'Google sign-in creates a local registered account and unlocks the '
-                    'Project Lab technique notes attached to selected case studies.'
-                ).classes('text-sm text-grey-7 leading-relaxed')
                 if settings.configured:
                     query = urlencode({'return_to': '/account'})
-                    ui.link('Continue with Google', f'/api/auth/google/login?{query}').classes(
-                        'text-primary font-semibold no-underline hover:underline'
+                    ui.button('Sign in with Google', icon='login').props(
+                        f'unelevated no-caps href="/api/auth/google/login?{query}"'
                     )
                 else:
-                    ui.label('Google sign-in is being configured.').classes('text-sm text-grey-7')
+                    ui.label('Sign-in is not available yet.').classes('text-sm text-grey-7')
+                ui.link('How account data is used', '/privacy').classes(
+                    'text-sm text-primary no-underline hover:underline'
+                )
             return
 
         with ui.card().classes('w-full p-6 sm:p-8 gap-4 border'):
@@ -55,29 +51,27 @@ def account():
                 ui.badge('Signed in with Google', color='positive').props('outline')
             ui.label(user.email).classes('text-base text-grey-7')
             with ui.row().classes('items-center gap-2 flex-wrap'):
-                ui.label('Local access:').classes('text-sm text-grey-7')
+                ui.label('Access:').classes('text-sm text-grey-7')
                 for role in sorted(user.roles):
                     ui.chip(role.title()).props('dense outline')
 
         with ui.element('section').classes('grid w-full grid-cols-1 gap-5 md:grid-cols-2'):
             with ui.card().classes('w-full h-full p-5 gap-3'):
                 ui.icon('science', size='md').classes('text-primary')
-                ui.label('Member access is active').classes('text-xl font-semibold')
+                ui.label('Build notes').classes('text-xl font-semibold')
                 ui.label(
-                    'Your registered role unlocks the Calgary Transit Project Lab, including '
-                    'implementation techniques, engineering trade-offs, and the development note.'
+                    'Open under the Calgary Transit project.'
                 ).classes('text-sm text-grey-7 leading-relaxed')
-                ui.link('Open the Project Lab', '/projects#project-calgary-transit-live').classes(
+                ui.link('Read the build notes', '/projects#project-calgary-transit-live').classes(
                     'text-primary font-semibold no-underline hover:underline'
                 )
 
             with ui.card().classes('w-full h-full p-5 gap-3'):
                 ui.icon('privacy_tip', size='md').classes('text-primary')
-                ui.label('Account and privacy').classes('text-xl font-semibold')
+                ui.label('Your data').classes('text-xl font-semibold')
                 ui.label(
-                    'Bizqlab stores your Google stable identifier, verified email, display '
-                    'name, local roles, and bounded session/login records. It never stores '
-                    'your Google password or Google access and refresh tokens.'
+                    'Stored: your Google ID, verified email, name, roles and sign-in records. '
+                    'Never your Google password or tokens.'
                 ).classes('text-sm text-grey-7 leading-relaxed')
                 ui.link('Read the privacy notice', '/privacy').classes(
                     'text-primary font-semibold no-underline hover:underline'
@@ -86,23 +80,20 @@ def account():
             if 'admin' in user.roles:
                 with ui.card().classes('w-full h-full p-5 gap-3'):
                     ui.icon('monitor_heart', size='md').classes('text-primary')
-                    ui.label('Owner operations').classes('text-xl font-semibold')
+                    ui.label('Admin').classes('text-xl font-semibold')
                     ui.label(
-                        'Review privacy-bounded traffic aggregates, account and contact '
-                        'counts, and Calgary Transit feed freshness.'
+                        'Traffic, accounts, messages and feed health.'
                     ).classes('text-sm text-grey-7 leading-relaxed')
-                    ui.link('Open operational health', '/admin').classes(
+                    ui.link('Open admin', '/admin').classes(
                         'text-primary font-semibold no-underline hover:underline'
                     )
 
-        ui.label('Account controls').classes('text-xl font-semibold mt-2')
-        ui.button('Sign out', icon='logout').props('id=portfolio-sign-out')
-        with ui.expansion('Account help and deletion', icon='manage_accounts').classes('w-full'):
+        ui.button('Sign out', icon='logout').props('no-caps id=portfolio-sign-out')
+        with ui.expansion('Delete my account', icon='manage_accounts').classes('w-full'):
             with ui.column().classes('w-full gap-3 p-3'):
                 ui.label(
-                    'Account deletion is handled as a verified privacy request so it is '
-                    'not triggered accidentally. Send the request through Contact and we '
-                    'will respond within three business days.'
+                    'Send a request through Contact. I confirm it with you first and reply '
+                    'within three business days.'
                 ).classes('text-sm text-grey-7 leading-relaxed')
                 ui.link(
                     'Request account deletion',

@@ -40,7 +40,7 @@ def _traffic_charts(summary: dict) -> None:
                             }
                         ],
                     },
-                    classes="w-full h-72",
+                    classes="w-full h-60 sm:h-72",
                     aria_label="Daily page renders",
                 )
                 ui.label(
@@ -70,7 +70,7 @@ def _traffic_charts(summary: dict) -> None:
                             }
                         ],
                     },
-                    classes="w-full h-72",
+                    classes="w-full h-60 sm:h-72",
                     aria_label="Top page renders",
                 )
                 ui.label(

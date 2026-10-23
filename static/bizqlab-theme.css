@@ -240,6 +240,16 @@ html[data-theme="dark"] .bq-delta.is-up {
   height: 400px;
 }
 
+@media (max-width: 640px) {
+  .bq-chart {
+    height: 240px;
+  }
+
+  .bq-chart.is-tall {
+    height: 300px;
+  }
+}
+
 /* Rate decisions table */
 .bq-table-wrap {
   max-height: 360px;

@@ -1,20 +1,22 @@
 :root {
-  --viewer-bg: #e5e7eb;
+  --viewer-bg: #e8edf6;
   --toolbar-bg: #ffffff;
-  --toolbar-text: #111827;
-  --toolbar-border: #cbd5e1;
+  --toolbar-text: #0b1f4d;
+  --toolbar-muted: #586b8f;
+  --toolbar-border: #dbe3f1;
   --button-bg: #ffffff;
-  --button-border: #94a3b8;
-  --page-shadow: 0 6px 18px rgba(15, 23, 42, 0.2);
+  --button-border: #b7c3d9;
+  --page-shadow: 0 6px 18px rgba(11, 31, 77, 0.18);
 }
 
 :root[data-theme="dark"] {
-  --viewer-bg: #111827;
-  --toolbar-bg: #1f2937;
-  --toolbar-text: #f3f4f6;
-  --toolbar-border: #475569;
-  --button-bg: #273449;
-  --button-border: #64748b;
+  --viewer-bg: #0d1730;
+  --toolbar-bg: #13213f;
+  --toolbar-text: #e8eef9;
+  --toolbar-muted: #9aa9c6;
+  --toolbar-border: #24365e;
+  --button-bg: #1b2d55;
+  --button-border: #3a4f7a;
   --page-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
 }
 
@@ -28,7 +30,7 @@ body {
   margin: 0;
   background: var(--viewer-bg);
   color: var(--toolbar-text);
-  font-family: Arial, sans-serif;
+  font-family: "Avenir Next", Avenir, "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
 }
 
 .pdf-toolbar {
@@ -44,17 +46,13 @@ body {
   border-bottom: 1px solid var(--toolbar-border);
   background: var(--toolbar-bg);
   color: var(--toolbar-text);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.16);
+  box-shadow: 0 2px 8px rgba(11, 31, 77, 0.1);
 }
 
 #page-status {
   margin-left: 8px;
-  color: #64748b;
+  color: var(--toolbar-muted);
   font-size: 13px;
-}
-
-:root[data-theme="dark"] #page-status {
-  color: #cbd5e1;
 }
 
 .pdf-toolbar-actions {
@@ -67,12 +65,12 @@ body {
   min-height: 36px;
   padding: 6px 10px;
   border: 1px solid var(--button-border);
-  border-radius: 7px;
+  border-radius: 10px;
   background: var(--button-bg);
   color: var(--toolbar-text);
   cursor: pointer;
   font: inherit;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 #pdf-pages {

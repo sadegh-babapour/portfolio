@@ -5,7 +5,14 @@ from zoneinfo import ZoneInfo
 
 from nicegui import ui
 
-from app.components.charts import AXIS, LEGEND, TOOLTIP, enable_viewport_chart_animations, viewport_chart
+from app.components.charts import (
+    AXIS,
+    LEGEND,
+    MUTED,
+    TOOLTIP,
+    enable_viewport_chart_animations,
+    viewport_chart,
+)
 from app.components.navbar import with_layout
 from app.dashboard.service import build_live_transit_analysis
 
@@ -27,16 +34,16 @@ def _mode_label(mode: str) -> str:
 
 
 def _metric(title: str, value: object, note: str) -> None:
-    with ui.card().classes("w-full h-full p-5 gap-2"):
+    with ui.card().classes("w-full h-full p-4 sm:p-5 gap-1 sm:gap-2"):
         ui.label(title).classes("text-sm text-grey-7")
-        ui.label(str(value)).classes("text-3xl font-semibold")
+        ui.label(str(value)).classes("text-2xl sm:text-3xl font-semibold")
         ui.label(note).classes("text-xs text-grey-7")
 
 
 def _chart_card(title: str, summary: str, options: dict) -> None:
     with ui.card().classes("w-full min-w-0 p-4 sm:p-5 gap-3"):
         ui.label(title).classes("text-xl font-semibold")
-        viewport_chart(options, classes="w-full h-80", aria_label=title)
+        viewport_chart(options, classes="w-full h-64 sm:h-80", aria_label=title)
         ui.label(summary).classes("text-sm text-grey-7 leading-relaxed")
 
 
@@ -48,7 +55,7 @@ def _live_dashboard(live: dict) -> None:
 
     route_match = live["route_match_percent"]
     with ui.element("section").classes(
-        "grid w-full grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        "grid w-full grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
     ):
         _metric("Buses reporting", live["recent_vehicles"], "last 3 minutes")
         _metric("Active routes", live["active_routes"], "with a bus reporting")
@@ -66,32 +73,32 @@ def _live_dashboard(live: dict) -> None:
     cadence = live["observation_cadence"]
     routes = live["top_routes"]
     modes = live["route_modes"]
-    with ui.element("section").classes(
-        "grid w-full grid-cols-1 gap-5 lg:grid-cols-2 xl:grid-cols-3"
-    ):
-        if modes:
-            _chart_card(
-                "Buses by service type",
-                "Vehicles reporting, not riders.",
+    if modes:
+        with ui.card().classes("w-full p-4 sm:p-5 gap-2"):
+            ui.label("Buses by service type").classes("text-xl font-semibold")
+            viewport_chart(
                 {
                     "tooltip": {"trigger": "item", **TOOLTIP},
-                    "legend": {"type": "scroll", "bottom": 0, **LEGEND},
+                    "legend": {"bottom": 0, "left": 0, **LEGEND},
+                    "grid": {"left": 0, "right": 0, "top": 4, "bottom": 30},
+                    "xAxis": {"type": "value", "show": False, "max": "dataMax"},
+                    "yAxis": {"type": "category", "show": False, "data": ["Buses"]},
                     "series": [
                         {
-                            "name": "Buses",
-                            "type": "pie",
-                            "radius": ["42%", "68%"],
-                            "itemStyle": {"borderRadius": 6, "borderColor": "transparent", "borderWidth": 2},
-                            "center": ["50%", "44%"],
-                            "data": [
-                                {"name": _mode_label(row["mode"]), "value": row["vehicles"]}
-                                for row in modes
-                            ],
+                            "name": f"{_mode_label(row['mode'])} · {row['vehicles']}",
+                            "type": "bar",
+                            "stack": "modes",
+                            "barWidth": 22,
+                            "data": [row["vehicles"]],
                         }
+                        for row in modes
                     ],
                 },
+                classes="w-full h-20",
+                aria_label="Buses by service type",
             )
 
+    with ui.element("section").classes("grid w-full grid-cols-1 gap-5 lg:grid-cols-2"):
         if cadence:
             labels = [_calgary_time(row["minute"]) for row in cadence]
             _chart_card(
@@ -137,12 +144,18 @@ def _live_dashboard(live: dict) -> None:
                 {
                     "tooltip": {"trigger": "axis", **TOOLTIP},
                     "grid": {"left": 45, "right": 18, "top": 24, "bottom": 48},
-                    "xAxis": {"type": "category", "data": [row["route"] for row in routes], **AXIS},
+                    "xAxis": {
+                        "type": "category",
+                        "data": [row["route"] for row in routes],
+                        **AXIS,
+                        "axisLabel": {"color": MUTED, "interval": 0, "hideOverlap": False},
+                    },
                     "yAxis": {"type": "value", "minInterval": 1, **AXIS},
                     "series": [
                         {
                             "name": "Buses",
                             "type": "bar",
+                            "barMaxWidth": 34,
                             "data": [row["vehicles"] for row in routes],
                             "itemStyle": {"borderRadius": [6, 6, 0, 0]},
                         }
@@ -156,7 +169,7 @@ def _live_dashboard(live: dict) -> None:
                     "text-sm text-grey-7"
                 )
 
-    with ui.card().classes("w-full p-5 gap-2"):
+    with ui.card().classes("w-full p-4 sm:p-5 gap-2"):
         ui.label("Freshness").classes("text-xl font-semibold")
         ui.label(
             f"Page built {_calgary_time(live['generated_at'])} · "

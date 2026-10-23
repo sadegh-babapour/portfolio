@@ -26,14 +26,14 @@ def home():
         }
       </script>
     ''')
-    with ui.column().classes('w-full max-w-7xl mx-auto px-4 py-8 sm:px-8 gap-10'):
+    with ui.column().classes('w-full max-w-7xl mx-auto px-4 py-8 sm:px-8 gap-8 sm:gap-10'):
         with ui.element('section').classes(
             'grid w-full grid-cols-1 items-center gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,.65fr)]'
         ):
             with ui.column().classes('gap-5 max-w-4xl'):
                 ui.image('/static/bizqlab_logo.png').props(
                     'alt="Bizqlab logo" fit=contain'
-                ).classes('w-32 h-32 sm:w-40 sm:h-40 rounded-2xl bg-white shadow-sm')
+                ).classes('w-24 h-24 sm:w-40 sm:h-40 rounded-2xl bg-white shadow-sm')
                 ui.label('Bizqlab').classes('text-sm uppercase tracking-widest text-primary font-bold')
                 ui.label('Data systems, made understandable').classes(
                     'text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight'
@@ -66,16 +66,17 @@ def home():
                 'Working examples of data pipelines, databases and analytics, with notes on '
                 'how each is built and where it falls short.'
             ).classes('text-base text-grey-7 leading-relaxed max-w-4xl')
-            with ui.element('section').classes('grid w-full grid-cols-1 gap-5 md:grid-cols-3'):
+            with ui.element('section').classes('grid w-full grid-cols-1 gap-3 sm:gap-5 md:grid-cols-3'):
                 cards = (
-                    ('database', 'Data engineering', 'Ingestion, modelling, migrations and retention.'),
+                    ('storage', 'Data engineering', 'Ingestion, modelling, migrations and retention.'),
                     ('analytics', 'Analytics', 'Charts that say where the data came from and how fresh it is.'),
                     ('web', 'Apps', 'Interfaces you can use, not just a repository to read.'),
                 )
                 for icon, title, copy in cards:
-                    with ui.card().classes('w-full h-full p-6 gap-3'):
-                        ui.icon(icon, size='md').classes('text-primary')
-                        ui.label(title).classes('text-xl font-semibold')
+                    with ui.card().classes('w-full h-full p-5 sm:p-6 gap-2'):
+                        with ui.row().classes('items-center gap-3 no-wrap'):
+                            ui.icon(icon, size='md').classes('text-primary')
+                            ui.label(title).classes('text-xl font-semibold')
                         ui.label(copy).classes('text-sm text-grey-7 leading-relaxed')
 
         with ui.card().classes('w-full p-6 sm:p-8 gap-3'):

@@ -71,6 +71,41 @@ jobs:
       # Loads the Dagster definitions; the dbt manifest is parsed with placeholder settings.
       - run: .venv-data/bin/dagster definitions validate -m orchestration.definitions
       - run: .venv-data/bin/python -m unittest discover -s test_data -v
+      # The Railway `dagster` image builds, refuses the CI superuser, and starts as
+      # bizqlab_dagster with its run history in the `dagster` schema. The role's password
+      # is random per run.
+      - run: >-
+          docker build -f orchestration/Dockerfile -t bizqlab-dagster
+          --build-arg RAILWAY_SERVICE_ID=ci-service --build-arg RAILWAY_ENVIRONMENT_ID=ci-env .
+      - env:
+          PGHOST: localhost
+          PGPORT: "5432"
+          PGDATABASE: reporting_ci
+          PGUSER: ci
+          PGPASSWORD: ci-only-throwaway
+        run: |
+          railway_env="-e BIZQLAB_RUNTIME=production -e RAILWAY_PROJECT_ID=ci-project -e RAILWAY_SERVICE_ID=ci-service -e RAILWAY_ENVIRONMENT_ID=ci-env"
+          if docker run --rm --network host $railway_env \
+              -e DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@localhost:5432/$PGDATABASE" \
+              bizqlab-dagster > refused.txt 2>&1; then
+            cat refused.txt; echo "expected the superuser URL to be refused"; exit 1
+          fi
+          cat refused.txt
+          grep -q "BIZQLAB DAGSTER REFUSED: wrong_role" refused.txt
+
+          # Start clean, so the tables counted below are the daemon's own.
+          psql -v ON_ERROR_STOP=1 -q -c "drop schema if exists dagster cascade"
+          psql -v ON_ERROR_STOP=1 -q -f ops/sql/railway_dagster_role.sql
+          role_password="$(openssl rand -hex 16)"
+          psql -v ON_ERROR_STOP=1 -q -c "alter role bizqlab_dagster password '$role_password'"
+          timeout 90 docker run --rm --network host $railway_env \
+              -e DATABASE_URL="postgresql://bizqlab_dagster:$role_password@localhost:5432/$PGDATABASE" \
+              bizqlab-dagster > started.txt 2>&1 || true
+          grep -v "$role_password" started.txt | tail -20
+          grep -q "database role checked; starting dagster-daemon" started.txt
+          test "$(psql -tAc "select count(*) from pg_tables where schemaname = 'dagster'")" -gt 0
+          test "$(psql -tAc "select count(*) from pg_tables where schemaname = 'public'")" -eq 0
+          ! grep -q "$role_password" started.txt
 
   transit-api:
     runs-on: ubuntu-latest

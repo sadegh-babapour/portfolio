@@ -7,6 +7,7 @@ materializes the assets against the data CI's throwaway Postgres only.
   .venv-data/bin/python -m unittest discover -s test_data
 """
 import os
+import secrets
 import unittest
 from datetime import date, timedelta
 from decimal import Decimal
@@ -14,11 +15,16 @@ from types import SimpleNamespace
 from unittest import mock
 
 import psycopg2
+import psycopg2.errors
+import psycopg2.sql
 import yaml
-from dagster import AssetCheckSeverity, AssetKey, DefaultScheduleStatus, Failure, RetryPolicy, materialize
+from dagster import (AssetCheckSeverity, AssetKey, DagsterEventType, DagsterInstance, DefaultScheduleStatus,
+                     DefaultSensorStatus, Failure, RetryPolicy, build_run_status_sensor_context, instance_for_test,
+                     materialize)
 from dagster_dbt import DbtCliResource
 
 from app import runtime_db, runtime_env
+from orchestration import alerts, production
 from orchestration import definitions as d
 from pipelines import bank_of_canada as boc
 from pipelines import run_dbt
@@ -63,10 +69,35 @@ class GateTests(unittest.TestCase):
         self.assertFalse(caught.exception.allow_retries)
         self.connected.assert_not_called()
 
-    def test_production_mode_refuses(self):
-        with self.assertRaisesRegex(Failure, "production"):
+    def setup_in_production(self, connect):
+        with mock.patch.dict(os.environ, {"DATABASE_URL": "set"}), mock.patch.object(production, "connect", connect):
             self.setup_with(mock.Mock(return_value=SimpleNamespace(mode="production")))
+
+    def test_production_checks_the_role_instead_of_the_dev_identity(self):
+        conn = mock.MagicMock()
+        connect = mock.Mock(return_value=conn)
+        self.setup_in_production(connect)
+        connect.assert_called_once_with("set")
+        conn.close.assert_called_once()
         self.connected.assert_not_called()
+
+    def test_production_wrong_role_fails_without_retry(self):
+        with self.assertRaises(Failure) as caught:
+            self.setup_in_production(mock.Mock(side_effect=production.RoleRefused("wrong_role")))
+        self.assertIn("wrong_role", str(caught.exception))
+        self.assertFalse(caught.exception.allow_retries)
+
+    def test_production_connect_error_shows_only_its_class(self):
+        error = psycopg2.OperationalError('connection to server at "secret-host.internal" failed')
+        with self.assertRaises(Failure) as caught:
+            self.setup_in_production(mock.Mock(side_effect=error))
+        self.assertIn("OperationalError", str(caught.exception))
+        self.assertNotIn("secret-host", str(caught.exception))
+
+    def test_production_without_database_url_fails(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            with self.assertRaisesRegex(Failure, "database_url_missing"):
+                self.setup_with(mock.Mock(return_value=SimpleNamespace(mode="production")))
 
     def test_failed_identity_check_shows_only_the_code(self):
         fail = mock.Mock(side_effect=runtime_db.RuntimeConnectError("connect_failed", sqlstate="08001",
@@ -81,7 +112,7 @@ class GateTests(unittest.TestCase):
         target = SimpleNamespace(host="10.0.0.2", port=5432, database="portfolio_dev", user="role",
                                  password="pw", sslmode="prefer")
         with mock.patch("app.runtime_state.assert_usable",
-                        return_value=SimpleNamespace(development=SimpleNamespace(target=target))):
+                        return_value=SimpleNamespace(mode="development", development=SimpleNamespace(target=target))):
             env = d.ApprovedDatabase().dbt_env()
         self.assertTrue(all(k.startswith("DBT_") for k in env), sorted(env))
         self.assertEqual((env["DBT_PG_DBNAME"], env["DBT_ENV_SECRET_PG_PASSWORD"]), ("portfolio_dev", "pw"))
@@ -120,6 +151,13 @@ class DefinitionTests(unittest.TestCase):
         self.assertEqual((schedule.cron_schedule, schedule.execution_timezone),
                          ("0 18 * * 1-5", "America/Edmonton"))
         self.assertEqual(schedule.default_status, DefaultScheduleStatus.STOPPED)
+
+    def test_alert_sensors_exist_and_are_off_outside_production(self):
+        self.assertEqual({s.name: s.default_status for s in d.defs.sensors},
+                         {"email_on_run_failure": DefaultSensorStatus.STOPPED,
+                          "email_on_failed_check": DefaultSensorStatus.STOPPED})
+        self.assertTrue(production.in_production({"BIZQLAB_RUNTIME": "production"}))
+        self.assertFalse(production.in_production({"BIZQLAB_RUNTIME": "development"}))
 
     def test_no_configuration_can_hold_a_credential(self):
         self.assertEqual(d.ApprovedDatabase.model_fields, {})
@@ -162,6 +200,120 @@ class LoaderAssetTests(unittest.TestCase):
         # A step whose upstream failed never starts (in-process runs log no "skipped" event).
         started = {e.step_key for e in result.all_events if e.event_type_value == "STEP_START"}
         self.assertEqual(started, {"bank_of_canada"})
+
+
+class ProductionRoleTests(unittest.TestCase):
+    """orchestration/production.py without a database."""
+
+    def test_only_the_unprivileged_dagster_role_passes(self):
+        self.assertIsNone(production.role_problem(("bizqlab_dagster", False, "dagster", False)))
+        cases = {"wrong_role": ("postgres", True, "public", True),
+                 "privileged_role": ("bizqlab_dagster", True, "dagster", False),
+                 "site_schema_access": ("bizqlab_dagster", False, "dagster", True),
+                 "search_path_not_dagster": ("bizqlab_dagster", False, '"$user", public', False)}
+        for code, row in cases.items():
+            self.assertEqual(production.role_problem(row), code)
+
+    def test_dbt_target_comes_from_the_service_url(self):
+        user = production.ROLE
+        password = secrets.token_hex(8)
+        target = production.target(f"postgresql://{user}:{password}@postgres.railway.internal:5432/railway")
+        self.assertEqual((target.host, target.port, target.database, target.user, target.password, target.sslmode),
+                         ("postgres.railway.internal", 5432, "railway", user, password, "prefer"))
+
+    def start(self, mode, connect=None):
+        with mock.patch("app.runtime_state.bootstrap_entry_point", return_value=SimpleNamespace(mode=mode)), \
+                mock.patch.dict(os.environ, {"DATABASE_URL": "set"}), \
+                mock.patch.object(production, "connect", connect or mock.MagicMock()), \
+                mock.patch.object(production.os, "execv") as execv, \
+                mock.patch("sys.stderr") as stderr:
+            code = production.main()
+        return code, execv, "".join(str(c.args[0]) for c in stderr.write.call_args_list)
+
+    def test_start_refuses_outside_production(self):
+        code, execv, printed = self.start("development")
+        self.assertEqual(code, 2)
+        execv.assert_not_called()
+        self.assertIn("not_production", printed)
+
+    def test_start_refuses_the_wrong_role_before_dagster_starts(self):
+        code, execv, printed = self.start("production", mock.Mock(side_effect=production.RoleRefused("wrong_role")))
+        self.assertEqual(code, 2)
+        execv.assert_not_called()
+        self.assertIn("wrong_role", printed)
+
+    def test_start_becomes_the_daemon_once_the_role_is_checked(self):
+        _code, execv, _printed = self.start("production")
+        execv.assert_called_once_with(production.DAEMON,
+                                      [str(production.DAEMON), "run", "-m", "orchestration.definitions"])
+
+
+class AlertTests(unittest.TestCase):
+    """orchestration/alerts.py: the emails, and both sensors on real (in-memory) runs."""
+
+    SETTINGS = {"DAGSTER_ALERT_RESEND_KEY": "re_test", "DAGSTER_ALERT_FROM": "Dagster <alerts@example.com>",
+                "DAGSTER_ALERT_TO": "owner@example.com"}
+
+    def test_send_posts_one_plain_email_with_the_service_key(self):
+        post = mock.Mock()
+        alerts.send("subject", "body", env=self.SETTINGS, post=post)
+        (url,), kwargs = post.call_args
+        self.assertEqual(url, alerts.RESEND_EMAILS_URL)
+        self.assertEqual(kwargs["headers"]["Authorization"], "Bearer re_test")
+        self.assertEqual(kwargs["json"], {"from": "Dagster <alerts@example.com>", "to": ["owner@example.com"],
+                                          "subject": "subject", "text": "body"})
+
+    def test_missing_settings_name_the_keys_only(self):
+        with self.assertRaisesRegex(RuntimeError, "DAGSTER_ALERT_TO"):
+            alerts.send("s", "b", env={**self.SETTINGS, "DAGSTER_ALERT_TO": ""}, post=mock.Mock())
+
+    def test_error_lines_lose_urls_and_stay_short(self):
+        user = "someone"
+        password = secrets.token_hex(8)
+        line = alerts.first_line(f"could not connect to postgresql://{user}:{password}@host/db\nsecond line")
+        self.assertNotIn(password, line)
+        self.assertNotIn("second", line)
+        self.assertLessEqual(len(alerts.first_line("x" * 1000)), alerts.MAX_ERROR_CHARS + 1)
+
+    def run_loader(self, instance, newest_age_days, **loader):
+        with mock.patch.object(boc, "run", **loader), \
+                mock.patch.object(d, "newest_observation", return_value=date.today() - timedelta(days=newest_age_days)):
+            return materialize([d.loader_asset(None)], resources={"database": FakeDatabase()},
+                               instance=instance, raise_on_error=False)
+
+    def test_failure_sensor_emails_the_failed_step(self):
+        instance = DagsterInstance.ephemeral()
+        result = self.run_loader(instance, 0, side_effect=boc.SourceError("HTTP 503: down"))
+        (failure,) = instance.all_logs(result.run_id, of_type=DagsterEventType.RUN_FAILURE)
+        sensor = next(s for s in alerts.sensors(DefaultSensorStatus.STOPPED) if s.name == "email_on_run_failure")
+        context = build_run_status_sensor_context(sensor_name=sensor.name, dagster_event=failure.dagster_event,
+                                                  dagster_instance=instance,
+                                                  dagster_run=instance.get_run_by_id(result.run_id))
+        with mock.patch.object(alerts, "send") as send:
+            sensor(context.for_run_failure())
+        subject, body = send.call_args.args
+        self.assertIn("run failed", subject)
+        self.assertIn("step bank_of_canada", body)
+        self.assertIn("HTTP 503", body)
+
+    def test_an_error_check_emails_and_a_warning_does_not(self):
+        instance = DagsterInstance.ephemeral()
+        stale = self.run_loader(instance, 10, return_value=LOAD_RESULT)
+        self.assertTrue(stale.success)
+        self.assertEqual(alerts.failed_checks(instance, stale.run_id),
+                         ["raw/boc_observations: newest_observation_recent"])
+        warned = self.run_loader(instance, 5, return_value=LOAD_RESULT)
+        self.assertEqual(alerts.failed_checks(instance, warned.run_id), [])
+
+        sensor = next(s for s in alerts.sensors(DefaultSensorStatus.STOPPED) if s.name == "email_on_failed_check")
+        for run, emails in ((stale, 1), (warned, 0)):
+            (success,) = instance.all_logs(run.run_id, of_type=DagsterEventType.RUN_SUCCESS)
+            context = build_run_status_sensor_context(sensor_name=sensor.name, dagster_event=success.dagster_event,
+                                                      dagster_instance=instance,
+                                                      dagster_run=instance.get_run_by_id(run.run_id))
+            with mock.patch.object(alerts, "send") as send:
+                sensor(context)
+            self.assertEqual(send.call_count, emails)
 
 
 class CiDatabase(d.ApprovedDatabase):
@@ -242,6 +394,79 @@ class PostgresMaterializeTests(unittest.TestCase):
                                     "where series_id = 'FXUSDCAD' and obs_date = '2025-12-22'"),
                          [(Decimal("137.48"),)])
         self.assertEqual(self.query(mart), good)
+
+
+class RailwayRoleTests(unittest.TestCase):
+    """ops/sql/railway_dagster_role.sql, and the whole job as bizqlab_dagster, in CI's Postgres."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.target = ci_target()
+
+    def setUp(self):
+        self.admin = psycopg2.connect(**self.target)
+        self.addCleanup(self.admin.close)
+        password = secrets.token_hex(16)
+        with self.admin.cursor() as cur:
+            cur.execute("drop schema if exists raw, staging, marts, dagster, portfolio, transit cascade")
+            cur.execute("create schema portfolio; create table portfolio.users (email text); "
+                        "insert into portfolio.users values ('someone@example.com'); create schema transit")
+            cur.execute((ROOT / "ops" / "sql" / "railway_dagster_role.sql").read_text())
+            set_password = psycopg2.sql.SQL("alter role bizqlab_dagster password {}")
+            cur.execute(set_password.format(psycopg2.sql.Literal(password)))
+        self.admin.commit()
+        t = self.target
+        self.url = f"postgresql://bizqlab_dagster:{password}@{t['host']}:{t['port']}/{t['dbname']}"
+
+    def query(self, sql):
+        with self.admin.cursor() as cur:
+            cur.execute(sql)
+            return cur.fetchall()
+
+    def test_the_role_passes_its_check_and_cannot_read_the_site(self):
+        conn = production.connect(self.url)
+        self.addCleanup(conn.close)
+        with self.assertRaises(psycopg2.errors.InsufficientPrivilege), conn.cursor() as cur:
+            cur.execute("select email from portfolio.users")
+
+    def test_the_ci_superuser_and_a_role_with_site_access_are_refused(self):
+        t = self.target
+        with self.assertRaisesRegex(production.RoleRefused, "wrong_role"):
+            production.connect(f"postgresql://{t['user']}:{t['password']}@{t['host']}:{t['port']}/{t['dbname']}")
+        with self.admin.cursor() as cur:
+            cur.execute("grant usage on schema portfolio to bizqlab_dagster")
+        self.admin.commit()
+        with self.assertRaisesRegex(production.RoleRefused, "site_schema_access"):
+            production.connect(self.url)
+
+    def test_job_runs_as_the_role_with_history_in_the_dagster_schema(self):
+        url = self.url
+
+        class RoleDatabase(d.ApprovedDatabase):
+            """The production connections, without the gate (CI has no attestation)."""
+
+            def setup_for_execution(self, context) -> None:
+                pass
+
+            def connect(self):
+                return production.connect(url)
+
+            def dbt_env(self) -> dict[str, str]:
+                return run_dbt.dbt_env(production.target(url), base={})
+
+        real_run = boc.run
+        recorded = mock.patch.object(boc, "run", lambda conn: real_run(conn, since=date(2025, 12, 20),
+                                                                       session=RecordedSession()))
+        with instance_for_test(overrides={"storage": {"postgres": {"postgres_url": url}}}) as instance, recorded:
+            result = materialize([d.loader_asset(None), d.warehouse], instance=instance,
+                                 resources={"database": RoleDatabase(), "dbt": dbt_resource()})
+        self.assertTrue(result.success)
+        self.assertEqual(self.query("select gov_10y from marts.mart_canada_rates_daily where obs_date = '2025-12-22'"),
+                         [(Decimal("3.46"),)])
+        self.assertGreater(self.query("select count(*) from pg_tables where schemaname = 'dagster'")[0][0], 0)
+        self.assertEqual(self.query("select count(*) from pg_tables where schemaname = 'public'")[0][0], 0)
+        self.assertEqual(self.query("select distinct tableowner from pg_tables "
+                                    "where schemaname in ('raw', 'marts', 'dagster')"), [("bizqlab_dagster",)])
 
 
 if __name__ == "__main__":

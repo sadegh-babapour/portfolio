@@ -108,20 +108,22 @@ only the rebuildable warehouse, never the site's users or sessions.
 
 - An **`orchestration/Dockerfile`**:
   - Python 3.13 slim; installs only `requirements-data.txt` plus `dagster-postgres`;
-  - runs `dbt parse` at build time, so the manifest is fixed per commit;
+  - (as built) the dbt manifest is parsed when the definitions load, as on the Mac; no build-time parse;
   - writes the build attestation.
 - Why a Dockerfile and not Railway's auto-detection: the auto-builder would install the root `requirements.txt`, the web app's environment. dbt needs protobuf 6 and the app pins 5.
 - HYPOTHESIS: Railway passes `RAILWAY_SERVICE_ID` and the environment and commit IDs to a Docker build when they are declared as `ARG`s. Checked on the first deploy; if it fails, the attestation is written at start instead (design note in the PR).
-- Start: `dagster-daemon run -m orchestration.definitions`. One replica, never more: two daemons fire every schedule twice.
+- Start: `python -m orchestration.production`. It bootstraps the gate and checks the role, then becomes `dagster-daemon run`. **(Added while building:** Dagster's own storage connects with `DATABASE_URL` before any run, so a wrong URL must stop the service before Dagster creates tables.) One replica, never more: two daemons fire every schedule twice.
+- The schedule and both alert sensors are **on by default only when `BIZQLAB_RUNTIME=production`**, since there is no UI there to turn them on. On the Mac they stay off.
 
 ### 6. Failure email (decision 3)
 
 - A Dagster `run_failure_sensor` sends one short email per failed run (job name, step, time and a link-free summary) through **Resend**, which the contact form already uses.
 - It uses a **separate send-only Resend key**, so the Dagster service never holds the site's key.
-- No email for success. A freshness check that fails (data older than 4 days) counts as a failure.
+- No email for success. **(Changed while building:)** only checks that fail at ERROR severity send an email, so the freshness check emails at 7 days, not 4. At 4–6 days it only warns; a long weekend reaches 4 and would send a false alarm.
 
 ### 7. Tests and CI
 
+- **CI builds the Docker image** and starts it twice: as the CI superuser (it must refuse with `wrong_role`) and as `bizqlab_dagster` (the daemon starts; Dagster's tables land in `dagster`, none in `public`; the random password never appears in the log).
 - **CI runs the same SQL file** against its throwaway Postgres.
 - It then runs the whole job **as `bizqlab_dagster`** with `dagster.production.yaml` storage, and proves:
   - the job succeeds;
@@ -142,7 +144,7 @@ only the rebuildable warehouse, never the site's users or sessions.
    - run the role SQL;
    - create the `dagster` service: GitHub repo, Dockerfile path, no domain, 1 replica;
    - set its variables (references plus the two sealed secrets);
-   - deploy, then start one run by hand. One way is to turn the schedule on early in the day and let the 18:00 tick fire; or the PR adds a one-shot `RUN_ONCE` flag.
+   - deploy; the first run is the next weekday 18:00 tick (the schedule is on in production). No one-shot flag.
 3. **Check, public only:**
    - `/markets` shows data;
    - `raw.load_runs` (through the page's "last load") is recent.

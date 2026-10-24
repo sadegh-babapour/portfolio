@@ -6,6 +6,8 @@ dbt-postgres==1.11.0
 dagster==1.13.26
 dagster-webserver==1.13.26
 dagster-dbt==0.29.26
+# Dagster's run history in Postgres on Railway (orchestration/dagster.production.yaml).
+dagster-postgres==0.29.26
 # The runtime gate (app/runtime_*.py) and the Bank of Canada loader run here under Dagster.
 SQLAlchemy==2.0.51
 psycopg2-binary==2.9.10

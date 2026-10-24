@@ -6,13 +6,19 @@ What Dagster sees (one lineage graph):
 Every dbt test becomes an asset check, and raw/boc_observations has a freshness check
 with the same 4/7-day rule as warehouse/models/staging/_sources.yml.
 
-Safety: Dagster never holds a password. Each run bootstraps the runtime gate itself
-(ApprovedDatabase), opens only verified connections, and gives dbt only the approved
+Safety: Dagster's config never holds a password. Each run bootstraps the runtime gate
+itself (ApprovedDatabase), opens only checked connections, and gives dbt only that
 target, for the length of the dbt call. Loading these definitions (the UI, `dagster
 definitions validate`) needs no database: the dbt manifest is parsed with placeholder
 settings that point nowhere.
 
-Usage (development, through the approved database only):
+- Development: the approved database only, through the gate's verified connections.
+- Production (the Railway `dagster` service, openspec/changes/dagster-railway): the
+  service's own DATABASE_URL, which must log in as bizqlab_dagster, a role that can't
+  read the site's schemas (production.py). Anything else is refused. The schedule and
+  the alert emails (alerts.py) run by default only there.
+
+Usage (development):
   make dagster
 """
 # No `from __future__ import annotations`: Dagster reads the context and resource
@@ -23,6 +29,7 @@ from contextlib import contextmanager
 from datetime import date
 from pathlib import Path
 
+import psycopg2
 from dagster import (
     AssetCheckResult,
     AssetCheckSeverity,
@@ -32,6 +39,8 @@ from dagster import (
     AssetSelection,
     AssetSpec,
     ConfigurableResource,
+    DefaultScheduleStatus,
+    DefaultSensorStatus,
     Definitions,
     Failure,
     MaterializeResult,
@@ -43,6 +52,7 @@ from dagster import (
 )
 from dagster_dbt import DbtCliResource, dbt_assets
 
+from orchestration import alerts, production
 from pipelines import bank_of_canada as boc
 from pipelines import run_dbt
 
@@ -65,11 +75,13 @@ WARN_AFTER_DAYS, ERROR_AFTER_DAYS = 4, 7  # as in _sources.yml: weekends and hol
 LOADER_RETRY = RetryPolicy(max_retries=2, delay=600)
 
 
+
 class ApprovedDatabase(ConfigurableResource):
-    """The approved development database, through the runtime gate. No configuration.
+    """The database a run may use, through the runtime gate. No configuration.
 
     Set up once per run process: bootstrap the gate (a refusal fails the run before any
-    connection), refuse production, and verify the database's identity once.
+    connection), then check the database once: in development its identity, in
+    production the role (bizqlab_dagster, unprivileged, no access to the site's schemas).
     """
 
     def setup_for_execution(self, context) -> None:
@@ -79,24 +91,37 @@ class ApprovedDatabase(ConfigurableResource):
             state = runtime_state.bootstrap_runtime("dagster")
         except runtime_env.RuntimeConfigError as exc:
             raise Failure(f"runtime gate refused: {exc}", allow_retries=False) from None
-        if state.mode != "development":
-            raise Failure("production has no reporting database yet; refusing", allow_retries=False)
+        if state.mode == "production":
+            try:
+                production.connect(production.database_url()).close()
+            except production.RoleRefused as exc:
+                raise Failure(f"production role check failed: {exc}", allow_retries=False) from None
+            except psycopg2.Error as exc:  # the class name only: messages can name hosts
+                raise Failure(f"production connection failed: {type(exc).__name__}", allow_retries=False) from None
+            return
         try:
             runtime_db.connect_verified().close()
         except runtime_env.RuntimeConfigError as exc:  # the message is a code, never a value
             raise Failure(f"database identity check failed: {exc}", allow_retries=False) from None
 
     def connect(self):
-        """A verified psycopg2 connection. The caller closes it."""
-        from app import runtime_db
+        """A checked psycopg2 connection. The caller closes it."""
+        from app import runtime_db, runtime_state
 
+        if runtime_state.assert_usable().mode == "production":
+            return production.connect(production.database_url())
         return runtime_db.connect_verified()
 
     def dbt_env(self) -> dict[str, str]:
-        """The DBT_* settings for the approved target (the password as DBT_ENV_SECRET_)."""
+        """The DBT_* settings for this run's target (the password as DBT_ENV_SECRET_)."""
         from app import runtime_state
 
-        return run_dbt.dbt_env(runtime_state.assert_usable().development.target, base={})
+        state = runtime_state.assert_usable()
+        if state.mode == "production":
+            target = production.target(production.database_url())
+        else:
+            target = state.development.target
+        return run_dbt.dbt_env(target, base={})
 
 
 @contextmanager
@@ -198,12 +223,18 @@ def warehouse(context: AssetExecutionContext, dbt: DbtCliResource, database: App
 daily = define_asset_job("boc_daily", selection=AssetSelection.all(),
                          description="Load the Bank of Canada, then dbt build.")
 
+# Production has no UI to switch things on, so there the schedule and the alerts start
+# running; on the Mac they stay off until turned on in the UI.
+RUNNING = production.in_production()
+
 defs = Definitions(
     assets=[bank_of_canada, warehouse],
     jobs=[daily],
-    # Weekdays after the Bank's end-of-day publication. Off until turned on in the UI.
-    schedules=[ScheduleDefinition(job=daily, cron_schedule="0 18 * * 1-5",
-                                  execution_timezone="America/Edmonton")],
+    # Weekdays after the Bank's end-of-day publication.
+    schedules=[ScheduleDefinition(job=daily, cron_schedule="0 18 * * 1-5", execution_timezone="America/Edmonton",
+                                  default_status=DefaultScheduleStatus.RUNNING if RUNNING
+                                  else DefaultScheduleStatus.STOPPED)],
+    sensors=alerts.sensors(DefaultSensorStatus.RUNNING if RUNNING else DefaultSensorStatus.STOPPED),
     resources={
         "database": ApprovedDatabase(),
         "dbt": DbtCliResource(project_dir=str(WAREHOUSE), profiles_dir=str(WAREHOUSE), dbt_executable=str(DBT)),

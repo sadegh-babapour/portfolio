@@ -58,8 +58,7 @@ jobs:
           cache-dependency-path: |
             requirements.txt
             requirements-data.txt
-      # The loader's two libraries at the app's pins (the full app pins protobuf 5, dbt needs 6).
-      - run: python -m pip install $(grep -E '^(requests|psycopg2-binary)==' requirements.txt)
+      # dbt, Dagster and the loader's libraries (the full app pins protobuf 5, dbt needs 6).
       - run: python -m venv .venv-data && .venv-data/bin/pip install -r requirements-data.txt
       - run: .venv-data/bin/dbt parse --project-dir warehouse --profiles-dir warehouse
         env:
@@ -69,7 +68,9 @@ jobs:
           DBT_PG_USER: ci
           DBT_ENV_SECRET_PG_PASSWORD: ci-only-throwaway
           DBT_PG_SSLMODE: disable
-      - run: python -m unittest discover -s test_data -v
+      # Loads the Dagster definitions; the dbt manifest is parsed with placeholder settings.
+      - run: .venv-data/bin/dagster definitions validate -m orchestration.definitions
+      - run: .venv-data/bin/python -m unittest discover -s test_data -v
 
   transit-api:
     runs-on: ubuntu-latest

@@ -1,4 +1,12 @@
-# dbt for the reporting warehouse (warehouse/). Installed in .venv-data, never in the
-# web service: dbt needs protobuf 6 and the transit poller pins protobuf 5.
+# The data environment (.venv-data): dbt, Dagster and the loaders they run. Never installed
+# in the web service: dbt needs protobuf 6 and the transit poller pins protobuf 5.
 dbt-core==1.12.5
 dbt-postgres==1.11.0
+# Orchestration (orchestration/, `make dagster`).
+dagster==1.13.26
+dagster-webserver==1.13.26
+dagster-dbt==0.29.26
+# The runtime gate (app/runtime_*.py) and the Bank of Canada loader run here under Dagster.
+SQLAlchemy==2.0.51
+psycopg2-binary==2.9.10
+requests==2.34.2

@@ -1,6 +1,6 @@
 fastapi==0.116.1
 nicegui==2.22.1
-python-dotenv==1.1.1
+python-dotenv==1.2.2
 SQLAlchemy==2.0.51
 alembic==1.18.5
 google-auth==2.56.0
@@ -9,8 +9,8 @@ nh3==0.3.7
 
 # GTFS-Realtime worker
 gtfs-realtime-bindings==1.0.0
-protobuf==5.29.4
+protobuf==5.29.6
 
 # Current-state transit poller and database bootstrap
 psycopg2-binary==2.9.10
-requests==2.32.3
+requests==2.34.2

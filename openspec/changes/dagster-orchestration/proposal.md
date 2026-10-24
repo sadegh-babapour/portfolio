@@ -24,7 +24,8 @@ Railway service is a separate, later proposal.
      every dbt test becomes an **asset check**. Downstream of a failed test is skipped.
    - **Freshness check** on `raw/boc_observations` (same 4/7-day rule as `_sources.yml`).
    - **Job + schedule:** load, then `dbt build`; weekdays 18:00 Calgary time, after the
-     Bank's end-of-day publication.
+     Bank's end-of-day publication. The schedule ships **off**: opening the UI never writes
+     by surprise; it is turned on once in the UI.
    - **Retry policy** on the loader only: 2 retries, 10 minutes apart (network blips).
      dbt failures are not retried: a failed test is a data problem, not a blip.
    - **One run at a time** (a concurrency limit), so a manual run can't overlap the schedule.
@@ -39,8 +40,10 @@ Railway service is a separate, later proposal.
    The UI listens on localhost only; it has no login and must never be exposed.
 5. **Dependencies** in `requirements-data.txt` / `.venv-data` only (never the web service):
    `dagster==1.13.26`, `dagster-webserver==1.13.26`, `dagster-dbt==0.29.26`, plus explicit
-   `SQLAlchemy==2.0.51`, `requests==2.32.3`, `psycopg2-binary==2.9.10` at the app's pins (the
-   gate needs them). VERIFIED 2026-10-23: `pip install --dry-run` with the current dbt pins
+   `SQLAlchemy==2.0.51` and `psycopg2-binary==2.9.10` at the app's pins (the gate needs them)
+   and `requests==2.34.2`. **Changed 2026-10-23 (owner):** the app's `requests==2.32.3` has two
+   open Dependabot alerts, so the data environment uses a patched release; the app's own pin
+   is Codex's security work. VERIFIED 2026-10-23: `pip install --dry-run` with the current dbt pins
    resolves cleanly (116 packages, protobuf 6.33.6; nothing installed).
 6. **Data CI** (`data` job, same name, still required): installs the new pins,
    `dagster definitions validate`, and one test that materializes the job against the
@@ -59,7 +62,9 @@ Railway service is a separate, later proposal.
 
 - **API down / bad answer:** loader asset fails after its retries, `raw.load_runs` says
   failed, no observations committed, dbt assets skipped, failure visible in the UI.
-- **dbt test fails:** the asset check is red; downstream marts are not rebuilt from bad data.
+- **dbt test fails:** the asset check is red, and what comes after the test is skipped: the
+  mart `/markets` reads keeps its last good data. (dbt tests a table after building it, so
+  `marts.fct_rates_daily` itself holds the bad row until the source is fixed.)
 - **PC off or gate refuses** (policy missing, wrong DB): the run fails before any connection; nothing written.
 - **Mac asleep at 18:00:** that tick is missed; the next run's 30-day lookback fills the gap
   (no gap in `raw` once any run succeeds).

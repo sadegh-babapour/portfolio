@@ -1,0 +1,9 @@
+# Dagster instance settings. `make dagster` copies this into .dagster_home/ (git-ignored),
+# where Dagster keeps its own SQLite run history, event logs and schedule state.
+telemetry:
+  enabled: false
+
+# One run at a time: a manual run waits for the scheduled one, never two loads at once.
+concurrency:
+  runs:
+    max_concurrent_runs: 1

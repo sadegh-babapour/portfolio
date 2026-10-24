@@ -1,0 +1,21 @@
+# DAGSTER_HOME/dagster.yaml on the Railway `dagster` service (orchestration/Dockerfile).
+# Run history, schedule and sensor state live in Postgres, in the `dagster` schema (the
+# role's search_path). The URL comes from the service's environment, never from this file.
+telemetry:
+  enabled: false
+storage:
+  postgres:
+    postgres_url:
+      env: DATABASE_URL
+concurrency:
+  runs:
+    max_concurrent_runs: 1
+# The alert sensors tick every 30 seconds; keep their history short.
+retention:
+  schedule:
+    purge_after_days: 90
+  sensor:
+    purge_after_days:
+      skipped: 7
+      failure: 30
+      success: 30

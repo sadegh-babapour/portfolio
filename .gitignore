@@ -83,6 +83,7 @@ docs/CHAT_HISTORY_RAW.md
 !/openspec/changes/local-db-isolation/specs/local-db-isolation/spec.md
 !/openspec/changes/boc-reporting-pipeline/proposal.md
 !/openspec/changes/dagster-orchestration/proposal.md
+!/openspec/changes/dagster-railway/proposal.md
 
 # Railway build attestation markers (generated during the Railway build; never committed)
 /.bizqlab-build-attestation.json

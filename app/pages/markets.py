@@ -115,7 +115,7 @@ def _spark(points: list[list], color: str) -> None:
 
 def _card(title: str, note: str, options: dict, *, wide: bool = False, tall: bool = False) -> None:
     with ui.element("section").classes("bq-card" + (" is-wide" if wide else "")):
-        ui.html(f"<h3>{escape(title)}</h3><p class='bq-note'>{escape(note)}</p>")
+        ui.html(f"<h3>{escape(title)}</h3><p class='bq-note'>{escape(note)}</p>", sanitize=True)
         viewport_chart(options, classes="bq-chart" + (" is-tall" if tall else ""), aria_label=title)
 
 
@@ -127,7 +127,8 @@ def _hero(data: dict | None) -> None:
                     "<p class='bq-eyebrow'>Bizqlab data lab · Bank of Canada</p>"
                     "<h1>Canada rates</h1>"
                     "<p class='bq-lede'>Interest rates, government bond yields and the Canadian "
-                    "dollar, loaded daily from the Bank of Canada and modelled with dbt.</p>"
+                    "dollar, loaded daily from the Bank of Canada and modelled with dbt.</p>",
+                    sanitize=True,
                 )
                 return
             latest = data["latest"]
@@ -157,7 +158,8 @@ def _hero(data: dict | None) -> None:
                 f"Curve {escape(shape or 'unknown')}</span>"
                 f"<span class='bq-chip'>Data to {escape(_day(data['last_date']))}</span>"
                 + (f"<span class='bq-chip'>Loaded {escape(_day(loaded.date()))}</span>" if loaded else "")
-                + "</div>"
+                + "</div>",
+                sanitize=True,
             )
 
 
@@ -173,7 +175,8 @@ def _kpis(data: dict) -> None:
                 ui.html(
                     f"<div class='bq-label'>{escape(label)}</div>"
                     f"<div class='bq-value'>{escape(_fmt(kind, item['value']))}</div>"
-                    f"<div class='bq-delta {change_class}'>{escape(change)}</div>"
+                    f"<div class='bq-delta {change_class}'>{escape(change)}</div>",
+                    sanitize=True,
                 ).classes("bq-kpi-body")
                 _spark(item["spark"], color)
 
@@ -187,7 +190,8 @@ def _history(data: dict) -> None:
     with ui.element("section").classes("bq-section"):
         ui.html(
             "<h2>Rates and yields</h2>"
-            "<p>Drag the slider under a chart to change its period; it opens on the last five years.</p>"
+            "<p>Drag the slider under a chart to change its period; it opens on the last five years.</p>",
+            sanitize=True,
         ).classes("bq-section-head")
         with ui.element("div").classes("bq-grid"):
             _card(
@@ -273,7 +277,8 @@ def _policy(data: dict) -> None:
         ui.html(
             "<h2>Policy decisions</h2>"
             "<p>Every change to the policy rate since 2015, and how closely the overnight market "
-            "follows it.</p>"
+            "follows it.</p>",
+            sanitize=True,
         ).classes("bq-section-head")
         with ui.element("div").classes("bq-grid"):
             if decisions:
@@ -323,7 +328,8 @@ def _policy(data: dict) -> None:
                         "<div class='bq-table-wrap'><table class='bq-table'>"
                         "<thead><tr><th>Effective</th><th class='num'>Change</th>"
                         "<th class='num'>New rate</th></tr></thead>"
-                        f"<tbody>{body}</tbody></table></div>"
+                        f"<tbody>{body}</tbody></table></div>",
+                        sanitize=True,
                     )
 
 
@@ -332,7 +338,7 @@ def _currency(data: dict) -> None:
     if not points:
         return
     with ui.element("section").classes("bq-section"):
-        ui.html("<h2>Canadian dollar</h2>").classes("bq-section-head")
+        ui.html("<h2>Canadian dollar</h2>", sanitize=True).classes("bq-section-head")
         with ui.element("div").classes("bq-grid"):
             _card(
                 "US dollar in Canadian dollars",
@@ -365,7 +371,8 @@ def _pipeline(data: dict) -> None:
         ui.html(
             "<h2>How this page is built</h2>"
             "<p>A small version of what a bank's data team runs: extract, keep the raw data, "
-            "model it in SQL, test it, then publish one table for reporting.</p>"
+            "model it in SQL, test it, then publish one table for reporting.</p>",
+            sanitize=True,
         ).classes("bq-section-head")
         ui.html(
             "<div class='bq-flow'>"
@@ -378,7 +385,8 @@ def _pipeline(data: dict) -> None:
             "<div class='bq-step'><div class='bq-step-title'>Publish</div>"
             f"<p><code>marts.mart_canada_rates_daily</code>: {len(data['rows']):,} days from "
             f"{escape(_day(data['first_date']))}.</p></div>"
-            "</div>"
+            "</div>",
+            sanitize=True,
         )
 
 
@@ -397,7 +405,8 @@ def markets_page():
                 ui.html(
                     "<div class='bq-empty' style='margin-top:-56px;position:relative'>"
                     "The rates data isn't published here yet. It arrives with the reporting "
-                    "database in the next stage of the data platform.</div>"
+                    "database in the next stage of the data platform.</div>",
+                    sanitize=True,
                 )
             else:
                 _kpis(data)
@@ -407,6 +416,7 @@ def markets_page():
                 _pipeline(data)
             ui.html(
                 "<p class='bq-foot'>Source: Bank of Canada Valet API. Rates are as published; "
-                "the Bank's terms of use apply.</p>"
+                "the Bank's terms of use apply.</p>",
+                sanitize=True,
             )
     enable_viewport_chart_animations()

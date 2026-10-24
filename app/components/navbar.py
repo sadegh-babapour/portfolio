@@ -115,6 +115,7 @@ def navbar():
           </div>
         </header>
         ''',
+        sanitize=True,
     ).classes('w-full').style('position: sticky; top: 0; z-index: 1400;')
     ui.run_javascript('''
       (() => {

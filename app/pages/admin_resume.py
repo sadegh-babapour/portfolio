@@ -9,12 +9,14 @@ from datetime import datetime, timezone
 from functools import partial
 
 from nicegui import ui
+from nicegui.events import UploadEventArguments
 
 from app.admin.service import require_admin
 from app.auth.service import SESSION_COOKIE
 from app.components.admin_nav import admin_navigation
 from app.components.navbar import with_layout
-from app.resume.document import MAX_PDF_BYTES, ResumePdfError, replace_resume_pdf, resume_pdf_path
+from app.resume.document import MAX_PDF_BYTES, ResumePdfError, resume_pdf_path
+from app.resume.upload import save_uploaded_pdf
 from app.resume.service import (
     KINDS,
     ResumeValidationError,
@@ -102,12 +104,11 @@ def admin_resume():
         with ui.card().classes("w-full p-4 sm:p-6 gap-3"):
             ui.label("Résumé PDF").classes("text-xl font-semibold")
             pdf_status = ui.label().classes("text-sm text-grey-7")
-            ui.upload(
+            pdf_upload = ui.upload(
                 label="Upload a new PDF (replaces the current one)",
                 auto_upload=True,
                 max_files=1,
                 max_file_size=MAX_PDF_BYTES,
-                on_upload=lambda event: upload_pdf(event),
                 on_rejected=lambda: ui.notify("PDF only, 5 MB or smaller.", type="warning"),
             ).props('accept=".pdf,application/pdf" flat bordered').classes("w-full max-w-md")
 
@@ -135,10 +136,9 @@ def admin_resume():
         except OSError:
             pdf_status.set_text("No PDF yet; /resume shows a placeholder until you upload one.")
 
-    def upload_pdf(event) -> None:
+    async def upload_pdf(event: UploadEventArguments) -> None:
         try:
-            check_admin()
-            replace_resume_pdf(event.content.read(MAX_PDF_BYTES + 1))
+            await save_uploaded_pdf(event.file, check_admin)
             refresh_pdf_status()
             ui.notify("Résumé PDF replaced.", type="positive")
         except ResumePdfError as exc:
@@ -269,6 +269,7 @@ def admin_resume():
             log.exception("Unable to delete résumé entry %s", entry_id)
             ui.notify("The entry could not be deleted.", type="negative")
 
+    pdf_upload.on_upload(upload_pdf)
     new_button.on("click", reset_editor)
     save_button.on("click", persist)
     delete_button.on("click", delete_dialog.open)

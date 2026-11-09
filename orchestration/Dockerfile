@@ -15,6 +15,10 @@ ARG RAILWAY_GIT_COMMIT_SHA
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 DAGSTER_HOME=/app/.dagster_home
 WORKDIR /app
 
+# tini is PID 1: it forwards Railway's SIGTERM and reaps orphaned processes. Without it
+# their zombies filled the container's 1000-process limit and Dagster stopped (2026-11-09).
+RUN apt-get update && apt-get install -y --no-install-recommends tini && rm -rf /var/lib/apt/lists/*
+
 COPY requirements-data.txt ./
 RUN python -m venv .venv-data && .venv-data/bin/pip install --no-cache-dir -r requirements-data.txt
 
@@ -31,4 +35,5 @@ RUN .venv-data/bin/python ops/write_build_attestation.py \
     && chown -R dagster .dagster_home warehouse
 
 USER dagster
+ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD [".venv-data/bin/python", "-m", "orchestration.production"]

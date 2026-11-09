@@ -98,11 +98,27 @@ jobs:
           psql -v ON_ERROR_STOP=1 -q -f ops/sql/railway_dagster_role.sql
           role_password="$(openssl rand -hex 16)"
           psql -v ON_ERROR_STOP=1 -q -c "alter role bizqlab_dagster password '$role_password'"
-          timeout 90 docker run --rm --network host $railway_env \
+          docker run -d --name dagster-ci --network host $railway_env \
               -e DATABASE_URL="postgresql://bizqlab_dagster:$role_password@localhost:5432/$PGDATABASE" \
-              bizqlab-dagster > started.txt 2>&1 || true
+              bizqlab-dagster
+          # Past three of the daemon's 60-second workspace refreshes. Before tini and the
+          # single code server, each refresh started a code server and left zombies until
+          # the 1000-process limit stopped Dagster (2026-11-09).
+          sleep 200
+          pid1="$(docker exec dagster-ci cat /proc/1/comm)"
+          zombies="$(docker exec dagster-ci sh -c 'grep -l "^State:.Z" /proc/[0-9]*/status 2>/dev/null | wc -l')"
+          code_servers="$(docker exec dagster-ci sh -c \
+              'for f in /proc/[0-9]*/cmdline; do tr "\0" " " < "$f"; echo; done | grep -c "[d]agster api grpc"')"
+          docker logs dagster-ci > started.txt 2>&1
+          docker rm -f dagster-ci > /dev/null
           grep -v "$role_password" started.txt | tail -20
-          grep -q "database role checked; starting dagster-daemon" started.txt
+          echo "pid 1: $pid1, zombies: $zombies, code servers: $code_servers"
+          test "$pid1" = tini
+          test "$zombies" -le 1
+          test "$code_servers" -eq 1
+          grep -q "database role checked; starting the code server" started.txt
+          grep -q "code server ready; starting dagster-daemon" started.txt
+          if grep -q "BIZQLAB DAGSTER STOPPED" started.txt; then exit 1; fi
           test "$(psql -tAc "select count(*) from pg_tables where schemaname = 'dagster'")" -gt 0
           test "$(psql -tAc "select count(*) from pg_tables where schemaname = 'public'")" -eq 0
           ! grep -q "$role_password" started.txt

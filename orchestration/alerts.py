@@ -7,6 +7,10 @@ but with the service's own send-only key: the Dagster service never holds the si
 The emails carry the job, the failed steps or checks, and the first line of the error
 with any connection URL removed. Successes send nothing; a freshness warning (4-6 days,
 e.g. a long weekend) sends nothing; only checks that fail at ERROR severity do.
+
+Those emails can't report a daemon that has stopped working, so a third sensor pings
+an outside monitor (DAGSTER_HEARTBEAT_URL, e.g. a Healthchecks.io check) after each
+successful run. The monitor emails the owner when the pings stop, whatever the cause.
 """
 import os
 import re
@@ -25,6 +29,7 @@ from dagster import (
 
 RESEND_EMAILS_URL = "https://api.resend.com/emails"
 SETTINGS = ("DAGSTER_ALERT_RESEND_KEY", "DAGSTER_ALERT_FROM", "DAGSTER_ALERT_TO")
+HEARTBEAT_SETTING = "DAGSTER_HEARTBEAT_URL"
 URL_PATTERN = re.compile(r"\b[a-z][a-z0-9+.-]*://\S+", re.IGNORECASE)
 MAX_ERROR_CHARS = 300
 
@@ -89,8 +94,23 @@ def check_email(job: str, run_id: str, checks: list[str]) -> tuple[str, str]:
     return f"[bizqlab] Data check failed: {job}", "\n".join(lines)
 
 
+def ping_heartbeat(env=os.environ, get=requests.get) -> bool:
+    """Tell the outside monitor a run succeeded. False when no URL is set.
+
+    The URL is a secret (anyone holding it can ping), so errors name only their class.
+    """
+    url = env.get(HEARTBEAT_SETTING)
+    if not url:
+        return False
+    try:
+        get(url, headers={"User-Agent": "bizqlab-dagster-alerts/1.0"}, timeout=10).raise_for_status()
+    except requests.RequestException as exc:
+        raise RuntimeError(f"heartbeat ping failed: {type(exc).__name__}") from None
+    return True
+
+
 def sensors(default_status: DefaultSensorStatus) -> list:
-    """The two alert sensors. Running by default only in production (see definitions.py)."""
+    """The alert sensors. Running by default only in production (see definitions.py)."""
 
     @run_failure_sensor(name="email_on_run_failure", default_status=default_status,
                         description="Email the owner when a run fails.")
@@ -107,4 +127,11 @@ def sensors(default_status: DefaultSensorStatus) -> list:
         if checks:
             send(*check_email(context.dagster_run.job_name, context.dagster_run.run_id, checks))
 
-    return [email_on_run_failure, email_on_failed_check]
+    @run_status_sensor(run_status=DagsterRunStatus.SUCCESS, name="ping_heartbeat_on_success",
+                       default_status=default_status,
+                       description="Ping the outside monitor after a successful run; it emails when pings stop.")
+    def ping_heartbeat_on_success(context: RunStatusSensorContext):
+        if not ping_heartbeat():
+            context.log.warning(f"{HEARTBEAT_SETTING} is not set: nothing will notice if runs stop")
+
+    return [email_on_run_failure, email_on_failed_check, ping_heartbeat_on_success]

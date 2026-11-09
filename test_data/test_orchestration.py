@@ -155,7 +155,8 @@ class DefinitionTests(unittest.TestCase):
     def test_alert_sensors_exist_and_are_off_outside_production(self):
         self.assertEqual({s.name: s.default_status for s in d.defs.sensors},
                          {"email_on_run_failure": DefaultSensorStatus.STOPPED,
-                          "email_on_failed_check": DefaultSensorStatus.STOPPED})
+                          "email_on_failed_check": DefaultSensorStatus.STOPPED,
+                          "ping_heartbeat_on_success": DefaultSensorStatus.STOPPED})
         self.assertTrue(production.in_production({"BIZQLAB_RUNTIME": "production"}))
         self.assertFalse(production.in_production({"BIZQLAB_RUNTIME": "development"}))
 
@@ -225,27 +226,37 @@ class ProductionRoleTests(unittest.TestCase):
         with mock.patch("app.runtime_state.bootstrap_entry_point", return_value=SimpleNamespace(mode=mode)), \
                 mock.patch.dict(os.environ, {"DATABASE_URL": "set"}), \
                 mock.patch.object(production, "connect", connect or mock.MagicMock()), \
-                mock.patch.object(production.os, "execv") as execv, \
+                mock.patch.object(production, "run_services", return_value=0) as run_services, \
+                mock.patch.object(production.signal, "signal"), \
                 mock.patch("sys.stderr") as stderr:
             code = production.main()
-        return code, execv, "".join(str(c.args[0]) for c in stderr.write.call_args_list)
+        return code, run_services, "".join(str(c.args[0]) for c in stderr.write.call_args_list)
 
     def test_start_refuses_outside_production(self):
-        code, execv, printed = self.start("development")
+        code, run_services, printed = self.start("development")
         self.assertEqual(code, 2)
-        execv.assert_not_called()
+        run_services.assert_not_called()
         self.assertIn("not_production", printed)
 
     def test_start_refuses_the_wrong_role_before_dagster_starts(self):
-        code, execv, printed = self.start("production", mock.Mock(side_effect=production.RoleRefused("wrong_role")))
+        code, run_services, printed = self.start("production", mock.Mock(side_effect=production.RoleRefused("wrong_role")))
         self.assertEqual(code, 2)
-        execv.assert_not_called()
+        run_services.assert_not_called()
         self.assertIn("wrong_role", printed)
 
-    def test_start_becomes_the_daemon_once_the_role_is_checked(self):
-        _code, execv, _printed = self.start("production")
-        execv.assert_called_once_with(production.DAEMON,
-                                      [str(production.DAEMON), "run", "-m", "orchestration.definitions"])
+    def test_start_runs_the_services_once_the_role_is_checked(self):
+        code, run_services, _printed = self.start("production")
+        self.assertEqual(code, 0)
+        run_services.assert_called_once()
+
+    def test_the_daemon_uses_the_one_code_server_not_its_own(self):
+        workspace = yaml.safe_load(production.WORKSPACE.read_text())
+        (location,) = workspace["load_from"]
+        self.assertEqual(location["grpc_server"],
+                         {"host": production.CODE_SERVER_HOST, "port": production.CODE_SERVER_PORT,
+                          "location_name": "orchestration.definitions"})
+        self.assertEqual(production.DAEMON_RUN[1:], ["run", "-w", str(production.WORKSPACE)])
+        self.assertEqual(production.CODE_SERVER_HOST, "127.0.0.1")
 
 
 class AlertTests(unittest.TestCase):

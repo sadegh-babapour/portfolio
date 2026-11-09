@@ -1,0 +1,8 @@
+# Where dagster-daemon finds the definitions on the Railway `dagster` service: the one
+# code server orchestration/production.py starts on loopback. Pointing the daemon at a
+# running server stops it starting (and re-parsing dbt in) a new one every minute.
+load_from:
+  - grpc_server:
+      host: 127.0.0.1
+      port: 4266
+      location_name: orchestration.definitions

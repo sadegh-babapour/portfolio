@@ -193,3 +193,30 @@ only the rebuildable warehouse, never the site's users or sessions.
 2. **Database:** the `bizqlab_dagster` role and four schemas in the existing database, created by the reviewed SQL file that you run once on the PC. **Approved 2026-10-23.** How to reach the database from the PC (the proxy is off) goes in PR 1's checklist.
 3. **Failure email** through Resend with a separate send-only key. **Approved 2026-10-23.**
 4. **Tracking this file in git** (one `.gitignore` exception line, as for #27's proposal). **Approved 2026-10-23.**
+
+## Incident, 2026-11-09: the daemon stopped after ~8.5 hours, silently
+
+- **What happened:** after each start (2026-10-24 05:35 and 2026-11-06 02:51 UTC) the
+  service stayed "Online" but stopped working ~8.5 hours later with
+  `pthread_create failed: Resource temporarily unavailable`. Schedule ticks were
+  evaluated but never launched (Oct 27, Nov 7). No email: the failure sensors run in
+  the same daemon. Only the Nov 5 tick, right after a manual restart, ran.
+- **Cause (VERIFIED in the container):** the daemon was PID 1 (`os.execv`), and
+  `dagster-daemon run -m` starts a new code server every 60 s (Dagster's
+  `RELOAD_WORKSPACE_INTERVAL`), whose import re-parses dbt. The orphaned `python`
+  children were never reaped: 918 zombies against Railway's `pids.max` of 1000.
+  Reproduced locally (~1 zombie/min with the daemon as PID 1, 0 with an init).
+- **Cost (VERIFIED, Railway metrics):** while healthy, that reload loop used
+  ~0.15 vCPU and ~0.55 GB around the clock, about $8.50/month, twice the estimate above.
+- **Fix:**
+  - tini is PID 1 in the image (reaps orphans, forwards SIGTERM);
+  - `production.py` starts **one** code server on 127.0.0.1:4266 and points the
+    daemon at it (`orchestration/workspace.production.yaml`), so nothing is
+    re-spawned or re-parsed each minute; if either process exits, both stop and
+    the service fails, so Railway restarts it instead of leaving it half alive;
+  - **dead man's switch** (was a non-goal): `ping_heartbeat_on_success` pings
+    `DAGSTER_HEARTBEAT_URL` (an outside monitor such as Healthchecks.io, owner's
+    account, sealed variable) after each successful run; the monitor emails when
+    pings stop, whatever the reason;
+  - CI runs the image for 200 s and requires PID 1 = tini, at most one zombie and
+    exactly one code server.

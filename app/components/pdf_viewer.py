@@ -6,6 +6,12 @@ from nicegui import ui
 
 def create_pdf_viewer(pdf_url: str):
     """Render a same-origin PDF in a responsive browser frame."""
+    # This authored template includes an iframe, which DOMPurify removes. Only
+    # same-origin paths are allowed, and every interpolated attribute is escaped.
+    if not pdf_url.startswith("/") or pdf_url.startswith("//") or "\\" in pdf_url or any(
+        ord(char) < 32 for char in pdf_url
+    ):
+        raise ValueError("The PDF URL must be a same-origin path")
     safe_url = escape(pdf_url, quote=True)
     separator = '&amp;' if '?' in pdf_url else '?'
     download_url = f'{safe_url}{separator}download=true'
@@ -73,4 +79,4 @@ def create_pdf_viewer(pdf_url: str):
               loading="eager"></iframe>
     </div>
     """
-    ui.html(html).classes('w-full')
+    ui.html(html, sanitize=False).classes('w-full')

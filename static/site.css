@@ -84,10 +84,15 @@ html[data-theme="dark"] body {
   text-transform: none;
 }
 
-.text-grey-7,
-.text-grey-8,
-.text-grey {
-  color: var(--bq-muted) !important;
+/* Important declarations reverse layer priority. NiceGUI 3 puts Quasar's
+   important utilities in its last layer; use the earlier overrides layer so
+   our muted text keeps its intended contrast in both themes. */
+@layer overrides {
+  .text-grey-7,
+  .text-grey-8,
+  .text-grey {
+    color: var(--bq-muted) !important;
+  }
 }
 
 .q-separator {

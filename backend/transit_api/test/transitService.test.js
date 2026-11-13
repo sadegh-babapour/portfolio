@@ -68,6 +68,83 @@ test("transit health distinguishes fresh and after-hours data", async () => {
   assert.equal(afterHours.status, "outside_operating_hours");
 });
 
+test("transit health reports Calgary's feed next to what the poller stored", async () => {
+  const pool = {
+    async query(sql) {
+      if (sql.includes("poller_feed_status")) {
+        return {
+          rows: [
+            {
+              feed_name: "vehicle_positions",
+              finished_at: "2026-11-13T17:20:00Z",
+              seconds_since_previous: 30.2,
+              duration_seconds: 0.4,
+              feed_header_timestamp: "2026-11-13T17:19:52Z",
+              entities_in_feed: 355,
+              rows_written: 355,
+              timestamps_from_header: 266,
+              median_ingest_lag_seconds: "21.5",
+            },
+            {
+              feed_name: "trip_updates",
+              finished_at: "2026-11-13T17:20:02Z",
+              seconds_since_previous: 30.1,
+              duration_seconds: 2.1,
+              feed_header_timestamp: null,
+              entities_in_feed: 1785,
+              rows_written: 1785,
+              timestamps_from_header: 0,
+              median_ingest_lag_seconds: "21.5",
+            },
+          ],
+        };
+      }
+      return {
+        rows: [{
+          within_operating_hours: true,
+          vehicle_age_seconds: "20",
+          recent_vehicle_count: "354",
+          usable_vehicle_count: "350",
+          enriched_vehicle_count: "350",
+        }],
+      };
+    },
+  };
+
+  const health = await getTransitHealth(pool);
+  assert.equal(health.status, "healthy");
+  assert.equal(health.pipeline.median_ingest_lag_seconds, 21.5);
+  assert.deepEqual(health.pipeline.feeds.vehicle_positions, {
+    finished_at: "2026-11-13T17:20:00Z",
+    seconds_since_previous: 30.2,
+    duration_seconds: 0.4,
+    feed_header_timestamp: "2026-11-13T17:19:52Z",
+    city_entities: 355,
+    rows_written: 355,
+    timestamps_from_header: 266,
+  });
+  assert.equal(health.pipeline.feeds.trip_updates.duration_seconds, 2.1);
+});
+
+test("transit health still answers when the poller status cannot be read", async () => {
+  const pool = {
+    async query(sql) {
+      if (sql.includes("poller_feed_status")) throw new Error('relation "transit.poller_feed_status" does not exist');
+      return { rows: [{ within_operating_hours: true, vehicle_age_seconds: "20", recent_vehicle_count: "5",
+        usable_vehicle_count: "5", enriched_vehicle_count: "5" }] };
+    },
+  };
+  const originalError = console.error;
+  console.error = () => {};
+  try {
+    const health = await getTransitHealth(pool);
+    assert.equal(health.status, "healthy");
+    assert.equal(health.pipeline, null);
+  } finally {
+    console.error = originalError;
+  }
+});
+
 test("transit health is degraded when vehicles are stale during operating hours", async () => {
   const pool = poolReturning([{
     within_operating_hours: true,

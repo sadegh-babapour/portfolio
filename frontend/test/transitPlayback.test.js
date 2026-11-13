@@ -106,7 +106,7 @@ test("replayed live data plays smoothly with few frozen buses", () => {
         const before = lastShown.get(key);
         lastShown.set(key, vehicle);
         // Skip the first two minutes while the clock learns the feed's batch cycle.
-        if (!before || index < 4 || vehicle.isStopped) continue;
+        if (!before || index < 4 || vehicle.isStationary) continue;
         const step = distanceMeters(before.lat, before.lon, vehicle.lat, vehicle.lon);
         movingTicks += 1;
         if (step < 0.01) frozenTicks += 1;
@@ -155,4 +155,44 @@ test("moving observations produce an interpolated position and direction", () =>
   assert.equal(vehicle.lat, 51.004999999999995);
   assert.equal(Math.round(vehicle.heading), 0);
   assert.equal(vehicle.isStopped, false);
+});
+
+function vehicleWith(points) {
+  return {
+    vehicle_id: "bus-1",
+    trip_id: "trip-1",
+    observations: points.map(([time, lat, lon]) => ({ vehicle_timestamp: `2026-11-13T12:${time}Z`, lat, lon })),
+  };
+}
+
+test("a bus with a single report is locating, not stopped", () => {
+  const [vehicle] = computePlaybackVehicles([vehicleWith([["00:00", 51, -114]])], Date.parse("2026-11-13T12:00:20Z"));
+
+  assert.equal(vehicle.isLocating, true);
+  assert.equal(vehicle.isStopped, false);
+  assert.equal(vehicle.isStale, false);
+});
+
+test("a short pause between reports is not labelled stopped", () => {
+  // Same spot for 30 s, as at a red light, then moving again.
+  const [vehicle] = computePlaybackVehicles([
+    vehicleWith([["00:00", 51.0, -114], ["00:30", 51.002, -114], ["01:00", 51.002, -114], ["01:30", 51.004, -114]]),
+  ], Date.parse("2026-11-13T12:00:45Z"));
+
+  assert.equal(vehicle.isStationary, true);
+  assert.equal(vehicle.isStopped, false);
+  assert.equal(vehicle.isLocating, false);
+});
+
+test("a bus still across reports spanning a minute is stopped", () => {
+  const rows = [vehicleWith([["00:00", 51.0, -114], ["00:30", 51.002, -114], ["01:00", 51.002, -114],
+    ["01:30", 51.00201, -114]])];
+
+  const [early] = computePlaybackVehicles(rows, Date.parse("2026-11-13T12:00:45Z"));
+  const [late] = computePlaybackVehicles(rows, Date.parse("2026-11-13T12:01:15Z"));
+
+  // At 12:00:45 the still stretch known up to the next report (12:01:00) is 30 s.
+  assert.equal(early.isStopped, false);
+  // At 12:01:15 it runs 12:00:30-12:01:30: 60 s within 20 m.
+  assert.equal(late.isStopped, true);
 });

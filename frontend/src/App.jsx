@@ -467,7 +467,9 @@ function VehicleDrawer({
               ? "Stale"
               : vehicle.isStopped
                 ? "Stopped"
-                : "Moving"}
+                : vehicle.isLocating
+                  ? "Locating"
+                  : "Moving"}
           </div>
         </div>
         <div>

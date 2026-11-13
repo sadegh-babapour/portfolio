@@ -97,7 +97,7 @@ test("playback uses the road position for moving buses only", () => {
   );
 
   assert.ok(metresFrom(moving, 400, 0) < 1);
-  assert.equal(stopped.isStopped, true);
+  assert.equal(stopped.isStationary, true);
   assert.ok(metresFrom(stopped, 202.5, 0) < 0.5, "a stopped bus keeps the plain interpolation");
 });
 

@@ -160,6 +160,11 @@ def admin():
                 ui.label(f"Latest vehicle feed: {transit['latest_vehicle_timestamp']}").classes("text-sm text-grey-7")
                 ui.label(f"Latest trip feed: {transit['latest_trip_update_timestamp']}").classes("text-sm text-grey-7")
                 ui.label(f"Latest alert feed: {transit['latest_alert_timestamp']}").classes("text-sm text-grey-7")
+                # Calgary's data next to ours: tells a feed problem from a pipeline problem.
+                if transit.get("pipeline") is None:
+                    ui.label("Poller status is not available yet.").classes("text-sm text-grey-7")
+                for line in transit.get("pipeline") or []:
+                    ui.label(line).classes("text-sm")
             else:
                 ui.label("Transit freshness could not be read from PostgreSQL.").classes("text-negative")
 

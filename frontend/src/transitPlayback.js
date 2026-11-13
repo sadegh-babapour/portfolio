@@ -1,8 +1,8 @@
 // Why the buses glide instead of jumping (docs/lessons/09).
 //
-// Calgary's feed is late and lumpy: each bus reports about every 45 s, reports arrive in
-// batches about once a minute, and they are 40-100 s old when we fetch them. Drawing each
-// report as it arrives makes buses sit still, then leap.
+// Calgary's feed is late and lumpy: each bus reports about every 30-45 s, and reports are
+// tens of seconds old when we fetch them. Drawing each report as it arrives makes buses
+// sit still, then leap.
 //
 // So the map plays the recent past, like a video with a buffer:
 // 1. createPlaybackClock (below) runs a clock about 2 minutes behind real time, far enough
@@ -13,6 +13,14 @@
 // 3. App.jsx recomputes positions once a second, and a 1 s CSS transition (App.css,
 //    .bus-marker-glide) slides each marker to its new spot, so motion is continuous.
 //    glideGuard.js pauses the slide while Leaflet zooms; reduced-motion turns it off.
+//
+// Status flags on each bus:
+// - isLocating: only one report so far (or playback is before its first), so there is no
+//   movement to judge yet. It is not labelled "Stopped".
+// - isStationary: it did not move between the two reports around playback time.
+// - isStopped: stationary across reports spanning at least `stoppedMinSeconds` (60 s), so a
+//   bus pausing at a light or one repeated GPS fix is not labelled "Stopped".
+// - isStale: its newest report is more than `staleThresholdSeconds` behind playback.
 const EARTH_RADIUS_METERS = 6371000;
 
 
@@ -109,7 +117,7 @@ export function createPlaybackClock({
 export function computePlaybackVehicles(
   historyRows,
   playbackTimeMs,
-  { stoppedThresholdMeters = 20, staleThresholdSeconds = 120, snapper = null } = {},
+  { stoppedThresholdMeters = 20, stoppedMinSeconds = 60, staleThresholdSeconds = 120, snapper = null } = {},
 ) {
   const results = [];
 
@@ -129,24 +137,26 @@ export function computePlaybackVehicles(
         lat: first.lat,
         lon: first.lon,
         heading: null,
-        isStopped: true,
+        isLocating: true,
+        isStationary: true,
+        isStopped: false,
         isStale: latestTimeMs < playbackTimeMs - staleThresholdSeconds * 1000,
         latestObservationTimestamp: latest.vehicle_timestamp,
       });
       continue;
     }
 
-    let previous = sorted.at(-2);
-    let next = latest;
+    let nextIndex = sorted.length - 1;
     if (playbackTimeMs < latestTimeMs) {
       for (let index = 0; index < sorted.length - 1; index += 1) {
         if (playbackTimeMs <= toMillis(sorted[index + 1].vehicle_timestamp)) {
-          previous = sorted[index];
-          next = sorted[index + 1];
+          nextIndex = index + 1;
           break;
         }
       }
     }
+    const previous = sorted[nextIndex - 1];
+    const next = sorted[nextIndex];
 
     const previousTimeMs = toMillis(previous.vehicle_timestamp);
     const nextTimeMs = toMillis(next.vehicle_timestamp);
@@ -154,6 +164,16 @@ export function computePlaybackVehicles(
       ? Math.max(0, (playbackTimeMs - previousTimeMs) / (nextTimeMs - previousTimeMs))
       : 1;
     const movedMeters = distanceMeters(previous.lat, previous.lon, next.lat, next.lon);
+    const isStationary = movedMeters < stoppedThresholdMeters;
+    // How long the bus has stayed within the threshold of where it is at `next`.
+    let stillSinceMs = nextTimeMs;
+    if (isStationary) {
+      for (let index = nextIndex - 1; index >= 0; index -= 1) {
+        const point = sorted[index];
+        if (distanceMeters(point.lat, point.lon, next.lat, next.lon) >= stoppedThresholdMeters) break;
+        stillSinceMs = toMillis(point.vehicle_timestamp);
+      }
+    }
     // Follow the road when the reports fit the route's shape (routeSnapping.js).
     const onRoad = snapper && movedMeters >= stoppedThresholdMeters
       ? snapper.position(vehicle, previous, next, ratio)
@@ -168,7 +188,9 @@ export function computePlaybackVehicles(
         : movedMeters >= 5
           ? bearingDegrees(previous.lat, previous.lon, next.lat, next.lon)
           : null,
-      isStopped: movedMeters < stoppedThresholdMeters,
+      isLocating: false,
+      isStationary,
+      isStopped: isStationary && nextTimeMs - stillSinceMs >= stoppedMinSeconds * 1000,
       isStale: latestTimeMs < playbackTimeMs - staleThresholdSeconds * 1000,
       latestObservationTimestamp: latest.vehicle_timestamp,
     });

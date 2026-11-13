@@ -10,6 +10,7 @@ from app.admin.models import PageViewEvent
 from app.admin.service import (
     TRACKED_PAGE_PATHS,
     classify_transit_health,
+    describe_transit_pipeline,
     require_admin,
     tracked_page_path,
 )
@@ -76,3 +77,20 @@ class TransitHealthTests(unittest.TestCase):
         self.assertEqual(classify_transit_health(True, 181, 1), "degraded")
         self.assertEqual(classify_transit_health(True, 10, 0), "degraded")
         self.assertEqual(classify_transit_health(True, None, 5), "degraded")
+
+    def test_pipeline_lines_compare_calgary_with_what_was_stored(self):
+        feeds = [
+            {"feed_name": "vehicle_positions", "seconds_since_previous": 30.4, "duration_seconds": 0.12,
+             "entities_in_feed": 355, "rows_written": 355, "timestamps_from_header": 266},
+            {"feed_name": "trip_updates", "seconds_since_previous": None, "duration_seconds": 2.04,
+             "entities_in_feed": 1785, "rows_written": 1785, "timestamps_from_header": 0},
+        ]
+        self.assertEqual(
+            describe_transit_pipeline(feeds, 21.6),
+            [
+                "Calgary vehicle feed: 355 buses · stored 355 · 266 with impossible report times (timed by the feed)",
+                "Poller writes: vehicles 0.1 s every 30 s · trip updates 2.0 s",
+                "Median report age when stored: 22 s",
+            ],
+        )
+        self.assertEqual(describe_transit_pipeline([], None), [])

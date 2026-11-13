@@ -34,6 +34,7 @@ async function getTransitHealth(pool) {
 
   const result = await pool.query(sql);
   const row = result.rows[0] || {};
+  const pipeline = await getPipelineHealth(pool);
   const withinOperatingHours = row.within_operating_hours === true;
   const ageSeconds = row.vehicle_age_seconds === null
     || row.vehicle_age_seconds === undefined
@@ -68,7 +69,59 @@ async function getTransitHealth(pool) {
     enriched_vehicle_count: enrichedVehicleCount,
     latest_trip_update_timestamp: row.latest_trip_update_timestamp || null,
     latest_alert_timestamp: row.latest_alert_timestamp || null,
+    pipeline,
   };
+}
+
+function numberOrNull(value) {
+  return value === null || value === undefined ? null : Number(value);
+}
+
+// Calgary's feed against what we stored, from the row the poller writes per feed on every
+// pass (scripts/db/006_poller_feed_status.sql). It answers "is it their data or us?":
+// city_entities is what Calgary published, rows_written what reached the map tables,
+// timestamps_from_header how many buses arrived with an impossible report time, and
+// seconds_since_previous / duration_seconds how often and how long the poller runs.
+// median_ingest_lag_seconds is how old a report is when we first store it.
+// Informational only: it never changes `status`, and null means it could not be read.
+async function getPipelineHealth(pool) {
+  try {
+    const result = await pool.query(`
+      select
+        feed_name,
+        finished_at,
+        seconds_since_previous,
+        duration_seconds,
+        feed_header_timestamp,
+        entities_in_feed,
+        rows_written,
+        timestamps_from_header,
+        (select percentile_cont(0.5) within group (
+                  order by extract(epoch from (downloaded_at - vehicle_timestamp)))
+         from transit.vehicle_positions_raw
+         where downloaded_at >= now() - interval '3 minutes') as median_ingest_lag_seconds
+      from transit.poller_feed_status
+    `);
+    const feeds = {};
+    let medianIngestLagSeconds = null;
+    for (const feed of result.rows) {
+      if (!feed.feed_name) continue;
+      medianIngestLagSeconds = numberOrNull(feed.median_ingest_lag_seconds);
+      feeds[feed.feed_name] = {
+        finished_at: feed.finished_at || null,
+        seconds_since_previous: numberOrNull(feed.seconds_since_previous),
+        duration_seconds: numberOrNull(feed.duration_seconds),
+        feed_header_timestamp: feed.feed_header_timestamp || null,
+        city_entities: numberOrNull(feed.entities_in_feed),
+        rows_written: numberOrNull(feed.rows_written),
+        timestamps_from_header: numberOrNull(feed.timestamps_from_header),
+      };
+    }
+    return { median_ingest_lag_seconds: medianIngestLagSeconds, feeds };
+  } catch (error) {
+    console.error("pipeline health unavailable:", error.message);
+    return null;
+  }
 }
 
 function buildVehicleWhere(mode, params) {

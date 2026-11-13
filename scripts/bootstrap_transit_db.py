@@ -32,6 +32,7 @@ MIGRATIONS = (
     "003_create_transit_views.sql",
     "004_indexes.sql",
     "005_static_gtfs_import_state.sql",
+    "006_poller_feed_status.sql",
 )
 REQUIRED_GTFS_FILES = (
     "routes.txt",

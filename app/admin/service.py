@@ -118,7 +118,66 @@ def _transit_health(database) -> dict[str, Any]:
         "recent_vehicle_count": recent_count,
         "latest_trip_update_timestamp": row["latest_trip_update_timestamp"],
         "latest_alert_timestamp": row["latest_alert_timestamp"],
+        "pipeline": _transit_pipeline(database),
     }
+
+
+def describe_transit_pipeline(feeds: list[dict[str, Any]], median_lag_seconds: float | None) -> list[str]:
+    """Plain lines comparing Calgary's feeds with what the poller stored (poller_feed_status)."""
+    by_name = {feed["feed_name"]: feed for feed in feeds}
+    lines = []
+    vehicles = by_name.get("vehicle_positions")
+    if vehicles:
+        lines.append(
+            f"Calgary vehicle feed: {vehicles['entities_in_feed']} buses · stored {vehicles['rows_written']} · "
+            f"{vehicles['timestamps_from_header']} with impossible report times (timed by the feed)"
+        )
+    timings = []
+    for name, label in (("vehicle_positions", "vehicles"), ("trip_updates", "trip updates"), ("alerts", "alerts")):
+        feed = by_name.get(name)
+        if not feed:
+            continue
+        every = feed["seconds_since_previous"]
+        timings.append(
+            f"{label} {float(feed['duration_seconds']):.1f} s"
+            + (f" every {round(float(every))} s" if every is not None else "")
+        )
+    if timings:
+        lines.append("Poller writes: " + " · ".join(timings))
+    if median_lag_seconds is not None:
+        lines.append(f"Median report age when stored: {round(float(median_lag_seconds))} s")
+    return lines
+
+
+def _transit_pipeline(database) -> list[str] | None:
+    try:
+        feeds = [
+            dict(row)
+            for row in database.execute(
+                text(
+                    """
+                    select feed_name, seconds_since_previous, duration_seconds,
+                           entities_in_feed, rows_written, timestamps_from_header
+                    from transit.poller_feed_status
+                    """
+                )
+            ).mappings()
+        ]
+        lag = database.execute(
+            text(
+                """
+                select percentile_cont(0.5) within group (
+                         order by extract(epoch from (downloaded_at - vehicle_timestamp)))
+                from transit.vehicle_positions_raw
+                where downloaded_at >= now() - interval '3 minutes'
+                """
+            )
+        ).scalar()
+    except Exception:
+        database.rollback()
+        log.exception("Unable to read the transit poller status for the admin summary")
+        return None
+    return describe_transit_pipeline(feeds, lag)
 
 
 def build_admin_summary() -> dict[str, Any]:

@@ -4,12 +4,15 @@ No database and no dbt: this imports only orchestration.production and orchestra
 
   .venv-data/bin/python -m unittest discover -s test_data
 """
+import os
 import socket
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import unittest
+from pathlib import Path
 from unittest import mock
 
 import requests
@@ -98,6 +101,86 @@ class SupervisionTests(unittest.TestCase):
         self.assertEqual(popen.call_count, 1)  # the daemon never started
         self.assertIsNotNone(self.processes[0].poll())
         self.assertIn("code_server_not_ready", "".join(str(c.args[0]) for c in stderr.write.call_args_list))
+
+
+# A toy repository shaped like this one: the definitions import a sibling package lazily,
+# inside a resource, the way orchestration/definitions.py imports `app`.
+TOY_APP = 'MARKER = "imported"\n'
+TOY_DEFINITIONS = """
+import dagster as dg
+
+class Database(dg.ConfigurableResource):
+    def setup_for_execution(self, context):
+        from toyapp import MARKER
+        context.log.info(f"toyapp {MARKER}")
+
+@dg.op
+def step(database: Database):
+    return 1
+
+@dg.job
+def demo():
+    step()
+
+defs = dg.Definitions(jobs=[demo], resources={"database": Database()})
+"""
+
+
+class RunWorkerImportTests(unittest.TestCase):
+    """A run launched through the code server can import the repository's packages.
+
+    The 2026-11 failure: the service started fine, but every run's worker failed with
+    `No module named 'app'`. Startup checks could not see it; only a real run does.
+    """
+
+    def launch_run(self, env_for_children) -> tuple[str, list[str]]:
+        root = Path(tempfile.mkdtemp())
+        (root / "toyapp").mkdir()
+        (root / "toyapp" / "__init__.py").write_text(TOY_APP)
+        (root / "toyorch").mkdir()
+        (root / "toyorch" / "__init__.py").write_text("")
+        (root / "toyorch" / "definitions.py").write_text(TOY_DEFINITIONS)
+        home = root / "home"
+        home.mkdir()
+        (home / "dagster.yaml").write_text(
+            "run_coordinator:\n  module: dagster._core.run_coordinator\n  class: DefaultRunCoordinator\n"
+            "telemetry:\n  enabled: false\n")
+        port = free_port()
+        (root / "workspace.yaml").write_text(
+            f"load_from:\n  - grpc_server: {{host: 127.0.0.1, port: {port}, location_name: toyorch.definitions}}\n")
+        dagster = str(Path(sys.executable).parent / "dagster")
+        # The production command shape (production.CODE_SERVER) for the toy module.
+        command = [dagster, "api", "grpc", "-m", "toyorch.definitions", "-d", str(root),
+                   "--host", "127.0.0.1", "--port", str(port)]
+        env = {**env_for_children(root), "DAGSTER_HOME": str(home)}
+        server = POPEN(command, cwd=root, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.addCleanup(lambda: (server.kill(), server.wait()))
+        self.assertTrue(production.wait_until_listening(server, "127.0.0.1", port, 120, threading.Event()))
+        subprocess.run([dagster, "job", "launch", "-w", str(root / "workspace.yaml"), "-j", "demo"],
+                       cwd=root, env=env, check=True, capture_output=True, timeout=120)
+
+        with mock.patch.dict(os.environ, {"DAGSTER_HOME": str(home)}):
+            instance = DagsterInstance.get()
+            deadline = time.monotonic() + 120
+            while time.monotonic() < deadline:
+                records = instance.get_run_records(limit=1)
+                if records and records[0].dagster_run.is_finished:
+                    break
+                time.sleep(1)
+            run = records[0].dagster_run
+            messages = [entry.user_message or "" for entry in instance.all_logs(run.run_id)]
+            instance.dispose()
+        return run.status.value, messages
+
+    def test_runs_import_the_repository_with_the_services_environment(self):
+        status, messages = self.launch_run(lambda root: production.child_env(root=root, env=os.environ))
+        self.assertEqual(status, "SUCCESS")
+        self.assertIn("toyapp imported", messages)
+
+    def test_without_it_the_run_worker_cannot_import_the_repository(self):
+        # Shows the test above detects the bug: the code server's -d alone is not enough.
+        status, _messages = self.launch_run(lambda root: {k: v for k, v in os.environ.items() if k != "PYTHONPATH"})
+        self.assertEqual(status, "FAILURE")
 
 
 class HeartbeatTests(unittest.TestCase):

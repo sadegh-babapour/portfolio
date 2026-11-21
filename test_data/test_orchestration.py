@@ -249,6 +249,25 @@ class ProductionRoleTests(unittest.TestCase):
         self.assertEqual(code, 0)
         run_services.assert_called_once()
 
+    def test_start_warns_when_alerts_cannot_be_sent(self):
+        with mock.patch.object(production, "missing_alert_settings", return_value=["DAGSTER_ALERT_TO"]):
+            code, run_services, printed = self.start("production")
+        self.assertEqual(code, 0)
+        run_services.assert_called_once()
+        self.assertIn("alerts are not configured: missing DAGSTER_ALERT_TO", printed)
+
+    def test_missing_alert_settings_names_only_unset_ones(self):
+        full = {key: "set" for key in (*alerts.SETTINGS, alerts.HEARTBEAT_SETTING)}
+        self.assertEqual(production.missing_alert_settings(full), [])
+        partial = {**full, "DAGSTER_ALERT_FROM": "", "DAGSTER_ALERT_TO": None}
+        self.assertEqual(production.missing_alert_settings(partial), ["DAGSTER_ALERT_FROM", "DAGSTER_ALERT_TO"])
+
+    def test_children_get_the_repository_root_first_on_pythonpath(self):
+        env = production.child_env(env={"PYTHONPATH": "/extra", "KEEP": "1"})
+        self.assertEqual(env["PYTHONPATH"].split(os.pathsep), [str(production.ROOT), "/extra"])
+        self.assertEqual(env["KEEP"], "1")
+        self.assertEqual(production.child_env(env={})["PYTHONPATH"], str(production.ROOT))
+
     def test_the_daemon_uses_the_one_code_server_not_its_own(self):
         workspace = yaml.safe_load(production.WORKSPACE.read_text())
         (location,) = workspace["load_from"]

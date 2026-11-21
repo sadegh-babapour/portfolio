@@ -75,7 +75,7 @@ def contact():
                   <button id="contact-submit" type="submit">Send</button>
                 </form>
                 """
-                ui.html(form_html).classes("w-full min-w-0")
+                ui.html(form_html, sanitize=True).classes("w-full min-w-0")
 
             with ui.card().classes("w-full p-5 gap-3 self-start"):
                 ui.label("Good to know").classes("text-xl font-semibold")

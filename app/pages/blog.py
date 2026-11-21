@@ -97,4 +97,4 @@ def blog_post(slug: str):
             f"Published {_published_label(post.published_at)} · Updated {_published_label(post.updated_at)}"
         ).classes("text-sm text-grey-7")
         ui.separator()
-        ui.html(render_markdown(post.body_markdown)).classes("blog-body w-full")
+        ui.html(render_markdown(post.body_markdown), sanitize=True).classes("blog-body w-full")

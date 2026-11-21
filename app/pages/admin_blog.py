@@ -132,7 +132,8 @@ def admin_blog():
                     "w-full border rounded-lg"
                 ) as preview_panel:
                     preview_output = ui.html(
-                        "<p>Choose Preview to render the current Markdown. Preview does not save.</p>"
+                        "<p>Choose Preview to render the current Markdown. Preview does not save.</p>",
+                        sanitize=True,
                     ).classes("blog-preview-output w-full p-4")
 
                 with ui.expansion("Revision history", icon="history").classes(

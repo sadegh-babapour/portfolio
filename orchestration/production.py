@@ -16,6 +16,11 @@ and each one re-parses dbt. That cost ~0.15 vCPU around the clock, and its orpha
 children filled the container's 1000-process limit in about 8.5 hours, after which no
 schedule could fire (2026-11-09). tini, PID 1 in the image, reaps any orphans left.
 
+Both children get the repository root on PYTHONPATH (child_env). The code server's `-d`
+puts it on sys.path only while the definitions load, and the run workers it starts for
+each run then could not import `app` lazily, so scheduled runs failed at resource start
+after 2026-11-09 (seen 2026-11-20: ModuleNotFoundError: No module named 'app').
+
 Start command (orchestration/Dockerfile, under tini):
   .venv-data/bin/python -m orchestration.production
 """
@@ -110,6 +115,20 @@ def target(url: str):
                            sslmode=parts.get("sslmode", "prefer"))
 
 
+def child_env(root: Path = ROOT, env=os.environ) -> dict:
+    """The environment for the code server and daemon: `root` first on PYTHONPATH, so the run
+    workers they start can import the repository's packages (app, pipelines) at run time."""
+    paths = [str(root)] + [path for path in env.get("PYTHONPATH", "").split(os.pathsep) if path]
+    return {**env, "PYTHONPATH": os.pathsep.join(paths)}
+
+
+def missing_alert_settings(env=os.environ) -> list[str]:
+    """The alert settings that are unset: with any missing, failure emails cannot be sent."""
+    from orchestration.alerts import HEARTBEAT_SETTING, SETTINGS
+
+    return [key for key in (*SETTINGS, HEARTBEAT_SETTING) if not env.get(key)]
+
+
 def listening(host: str, port: int) -> bool:
     try:
         with socket.create_connection((host, port), timeout=1):
@@ -166,7 +185,8 @@ def watch(processes: dict, stop: threading.Event, interval: float = 1.0) -> int:
 
 def run_services(stop: threading.Event) -> int:
     """The code server, then (once it listens) the daemon; both stop when either stops."""
-    code_server = subprocess.Popen(CODE_SERVER, cwd=ROOT)
+    env = child_env()
+    code_server = subprocess.Popen(CODE_SERVER, cwd=ROOT, env=env)
     if not wait_until_listening(code_server, CODE_SERVER_HOST, CODE_SERVER_PORT, CODE_SERVER_READY_SECONDS, stop):
         stop_all([code_server])
         if stop.is_set():
@@ -174,7 +194,7 @@ def run_services(stop: threading.Event) -> int:
         print("BIZQLAB DAGSTER STOPPED: code_server_not_ready", file=sys.stderr, flush=True)
         return 1
     print("bizqlab dagster: code server ready; starting dagster-daemon", flush=True)
-    daemon = subprocess.Popen(DAEMON_RUN, cwd=ROOT)
+    daemon = subprocess.Popen(DAEMON_RUN, cwd=ROOT, env=env)
     return watch({"code_server": code_server, "daemon": daemon}, stop)
 
 
@@ -197,6 +217,11 @@ def main() -> int:
         print(f"BIZQLAB DAGSTER REFUSED: {failure}", file=sys.stderr, flush=True)
         return 2
     print("bizqlab dagster: database role checked; starting the code server", flush=True)
+    missing = missing_alert_settings()
+    if missing:
+        # Not fatal (the data still loads), but nobody hears about a failure: say so at start.
+        print(f"BIZQLAB DAGSTER WARNING: alerts are not configured: missing {', '.join(missing)}",
+              file=sys.stderr, flush=True)
     stop = threading.Event()
     for signum in (signal.SIGTERM, signal.SIGINT):
         signal.signal(signum, lambda *_: stop.set())

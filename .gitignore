@@ -98,3 +98,5 @@ docs/CHAT_HISTORY_RAW.md
 /warehouse/dbt_packages/
 # Dagster's local run history, logs and schedule state (make dagster).
 /.dagster_home/
+# The local stack's build folder: exported source, Railpack plans, dev-layer context (ops/local_stack.py).
+/.local-stack/

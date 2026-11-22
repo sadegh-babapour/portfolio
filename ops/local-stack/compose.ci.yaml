@@ -1,0 +1,24 @@
+# CI only (.github/workflows/local-stack.yml): a throwaway Postgres on a fixed address, so the
+# CI's root-owned DB policy can name the address the server reports (inet_server_addr()).
+# Combined with compose.local.yaml: `ops/local_stack.py ... --with ops/local-stack/compose.ci.yaml`.
+services:
+  postgres:
+    image: postgres:16
+    environment:   # the password is passed through by name from the CI job's environment
+      - POSTGRES_DB=stack_ci
+      - POSTGRES_USER=ci
+      - POSTGRES_PASSWORD
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ci -d stack_ci"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks:
+      default:
+        ipv4_address: 172.30.0.10
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24

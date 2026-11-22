@@ -1,0 +1,16 @@
+#!/bin/sh
+# Local stack only (compose.local.yaml). Copies the read-only mounted .env.local into this
+# container's own profile file, then starts the service.
+#
+# Why a copy: Colima's file sharing (virtiofs) reports a mounted file's owner as root until
+# it is opened and as the opener afterwards, so the runtime gate (app/runtime_env.py)
+# correctly refuses to trust a mounted profile. A file owned by this user, inside the
+# container, is stable. The password stays in the container's filesystem, never in an image.
+set -eu
+source_file=/run/bizqlab/env.local
+if [ ! -r "$source_file" ]; then
+    echo "bizqlab-dev-start: $source_file is not mounted (start the stack with make dev)" >&2
+    exit 2
+fi
+cat "$source_file" > "$BIZQLAB_PROFILE"
+exec "$@"

@@ -5,7 +5,7 @@ import logging
 from nicegui import ui
 from app.components.pdf_viewer import create_pdf_viewer
 from app.components.navbar import with_layout
-from app.resume.document import resume_pdf_version
+from app.resume.document import resume_pdf_path, resume_pdf_version
 from app.resume.service import list_entries
 
 
@@ -54,6 +54,13 @@ def resume():
                             with ui.row().classes('gap-1 flex-wrap pt-1'):
                                 for skill in entry.skills:
                                     ui.chip(skill).props('outline dense').classes('text-xs')
+        # Without the file the viewer would show an empty frame with buttons that 404.
+        if not resume_pdf_path().is_file():
+            ui.label('The PDF version is being updated. Please check back soon.').classes(
+                'w-full max-w-4xl mx-auto text-base text-grey-7'
+            )
+            return
+        if entries:
             ui.separator().classes('my-8')
             ui.label('Full résumé').classes('text-2xl font-semibold mb-4')
         create_pdf_viewer(f'/resume/document.pdf?v={resume_pdf_version()}')

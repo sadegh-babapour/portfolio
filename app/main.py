@@ -95,6 +95,7 @@ def _import_pages():
     import app.pages.blog  # noqa: F401
     import app.pages.admin_blog  # noqa: F401
     import app.pages.admin_resume  # noqa: F401
+    import app.pages.not_found  # noqa: F401  (replaces NiceGUI's default 404 page)
 
 
 # ── run ───────────────────────────────────────────────────────────

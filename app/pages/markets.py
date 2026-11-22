@@ -1,5 +1,5 @@
-"""/markets: Canada rates from the dbt mart (app/markets/service.py). Not in the nav until
-production has the warehouse (stage 2).
+"""/markets: Canada rates from the dbt mart (app/markets/service.py), loaded by Dagster on
+weekdays. In the nav (content/navigation.json) since stage 2 went live.
 """
 from __future__ import annotations
 

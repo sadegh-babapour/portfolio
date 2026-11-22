@@ -1,0 +1,86 @@
+# The local stack starts (compose.local.yaml, ops/local_stack.py), against a throwaway
+# Postgres on the stack's own network. Not part of the offline `checks` workflow: it pulls
+# images and packages from the network. No secrets, no deployment, no Railway.
+#
+# It builds the same images `make dev` builds (Railpack 0.43.0, checksum-pinned, plus
+# orchestration/Dockerfile and the dev layers), writes a CI DB policy and .env.local the way a
+# workstation has them, applies the schema, starts the services and checks that each answers.
+name: local-stack
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  local-stack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      RAILPACK_VERSION: "0.43.0"
+      RAILPACK_SHA256: 248a8f60f36854aabed6124113631078a802de3461660855fc4de9c26065c1fb
+      STACK: .venv/bin/python ops/local_stack.py --expected-db stack_ci --with ops/local-stack/compose.ci.yaml
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Host environment for the preflight (ops/dev.py)
+        run: python -m venv .venv && .venv/bin/pip install -r requirements.txt
+
+      - name: Railpack ${{ env.RAILPACK_VERSION }} (checksum-pinned)
+        run: |
+          curl -fsSL -o railpack.tgz \
+            "https://github.com/railwayapp/railpack/releases/download/v${RAILPACK_VERSION}/railpack-v${RAILPACK_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          echo "${RAILPACK_SHA256}  railpack.tgz" | sha256sum -c -
+          mkdir -p "$HOME/.local/bin" && tar -xzf railpack.tgz -C "$HOME/.local/bin" railpack && rm railpack.tgz
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Throwaway Postgres and the CI database target (policy + .env.local)
+        run: |
+          POSTGRES_PASSWORD="$(openssl rand -hex 16)"   # random per run, masked in the log
+          echo "::add-mask::$POSTGRES_PASSWORD"
+          echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" >> "$GITHUB_ENV"
+          export POSTGRES_PASSWORD
+          docker compose -p bizqlab-local -f compose.local.yaml -f ops/local-stack/compose.ci.yaml up -d --wait postgres
+          # What a workstation has: a root-owned policy (no password) and a mode-600 .env.local.
+          sudo install -d -o root -g root -m 0755 /etc/bizqlab
+          python3 ops/local-stack/ci_target.py policy | sudo tee /etc/bizqlab/db-policy.json > /dev/null
+          sudo chmod 0644 /etc/bizqlab/db-policy.json
+          python3 ops/local-stack/ci_target.py profile
+
+      - name: Build (preflight, export, Railpack, dagster image, dev layers)
+        run: $STACK build
+
+      - name: Schema (Alembic + transit scripts, no data)
+        run: $STACK migrate --yes
+
+      - name: Start and check every service answers
+        run: $STACK up --no-build --timeout 300
+
+      - name: Dagster runs like production, with nothing scheduled
+        run: |
+          compose="docker compose -p bizqlab-local -f compose.local.yaml -f ops/local-stack/compose.ci.yaml"
+          test "$($compose exec -T dagster cat /proc/1/comm)" = tini
+          servers="$($compose exec -T dagster sh -c 'for f in /proc/[0-9]*/cmdline; do tr "\0" " " < "$f"; echo; done' | grep -c '[d]agster api grpc')"
+          test "$servers" -eq 1
+          curl -fsS http://127.0.0.1:3000/graphql -H 'content-type: application/json' \
+            -d '{"query":"{ schedulesOrError(repositorySelector:{repositoryName:\"__repository__\",repositoryLocationName:\"orchestration.definitions\"}) { ... on Schedules { results { name scheduleState { status } } } } }"}' \
+            | tee schedules.json
+          grep -q '"status":"STOPPED"' schedules.json
+          ! grep -q '"status":"RUNNING"' schedules.json
+
+      - name: No password in any log
+        if: always()
+        run: |
+          docker compose -p bizqlab-local -f compose.local.yaml -f ops/local-stack/compose.ci.yaml logs --no-color > stack.log 2>&1 || true
+          ! grep -qF "$POSTGRES_PASSWORD" stack.log
+          tail -n 80 stack.log
+
+      - name: Stop
+        if: always()
+        run: $STACK down --volumes

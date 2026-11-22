@@ -1,0 +1,93 @@
+# The local stack: production's images and start commands on the approved development
+# database. Start it with `make dev` (ops/local_stack.py builds the images first); never with
+# a bare `docker compose up`, which would skip the preflight and the image builds.
+#
+# - Images: Railpack builds of this repository (portfolio, transit-poller) and of
+#   backend/transit_api, and orchestration/Dockerfile (dagster), each with a thin development
+#   layer from ops/local-stack/ (DB policy, unprivileged user). Railway never uses this file.
+# - Database: whatever .env.local names, accepted only if the root-owned DB policy agrees;
+#   every process checks the server's identity before its first query (the runtime gate).
+# - Every port is published on 127.0.0.1 only. Dagster's UI has no login.
+# - Not started by default: the poller (`make dev POLLER=1`); it writes realtime rows into a
+#   database the Railway VM shares.
+name: bizqlab-local
+
+x-env-local: &env-local
+  type: bind
+  source: ./.env.local
+  target: /run/bizqlab/env.local
+  read_only: true
+
+services:
+  web:
+    image: bizqlab-local/web
+    pull_policy: never
+    build:
+      context: .local-stack/devlayer
+      dockerfile: python.Dockerfile
+      args: {BASE: bizqlab-local/portfolio-base, APP_UID: "${BIZQLAB_UID:-1000}"}
+    command: ["bizqlab-dev-start python -m app.main"]   # one string: Railpack's ENTRYPOINT is bash -c
+    environment:
+      PORT: "8086"
+    ports: ["127.0.0.1:8086:8086"]
+    volumes: [*env-local]
+
+  transit-api:
+    image: bizqlab-local/transit-api
+    pull_policy: never
+    build:
+      context: .local-stack/devlayer
+      dockerfile: node.Dockerfile
+      args: {BASE: bizqlab-local/transit-api-base, APP_UID: "${BIZQLAB_UID:-1000}"}
+    command: ["bizqlab-dev-start npm run start"]   # one string: Railpack's ENTRYPOINT is bash -c
+    environment:
+      TRANSIT_API_PORT: "4000"
+    ports: ["127.0.0.1:4000:4000"]
+    volumes: [*env-local]
+
+  poller:
+    profiles: [poller]
+    image: bizqlab-local/web          # Railway builds the poller from the same root image
+    pull_policy: never
+    command: ["bizqlab-dev-start python -m poller.poll_calgary_gtfs_rt_current"]   # one string: Railpack's ENTRYPOINT is bash -c
+    volumes: [*env-local]
+    depends_on: [web]
+
+  dagster:
+    image: bizqlab-local/dagster
+    pull_policy: never
+    build:
+      context: .local-stack/devlayer
+      dockerfile: dagster.Dockerfile
+      args: {BASE: bizqlab-local/dagster-base, APP_UID: "${BIZQLAB_UID:-1000}"}
+    # tini stays PID 1 (the base image's ENTRYPOINT); orchestration/local.py adds the UI.
+    command: ["bizqlab-dev-start", ".venv-data/bin/python", "-m", "orchestration.local"]
+    environment:
+      DAGSTER_WEBSERVER_HOST: 0.0.0.0   # inside the container; published on 127.0.0.1 only
+    ports: ["127.0.0.1:3000:3000"]
+    volumes:
+      - *env-local
+      - dagster-home:/app/.dagster_local
+
+  # The map's Vite dev server (Railway serves the committed frontend/dist instead). It talks
+  # to the local transit-api above; http://127.0.0.1:8086/calgary-transit-live/ still uses
+  # the production API, because that is the committed release build.
+  frontend:
+    image: node:22.23.4-bookworm-slim
+    working_dir: /repo/frontend
+    command: >-
+      sh -c "cmp -s package-lock.json node_modules/.installed-lock || { npm ci --no-audit --no-fund
+      && cp package-lock.json node_modules/.installed-lock; }; exec npx vite --host 0.0.0.0 --port 5173"
+    environment:
+      VITE_TRANSIT_API_BASE_URL: http://localhost:4000/api
+    ports: ["127.0.0.1:5173:5173"]
+    volumes:   # the map imports ../../content and ../../static, so keep the repo layout
+      - ./frontend:/repo/frontend
+      - ./content:/repo/content:ro
+      - ./static:/repo/static:ro
+      - frontend-node-modules:/repo/frontend/node_modules
+    depends_on: [transit-api]
+
+volumes:
+  dagster-home:
+  frontend-node-modules:
